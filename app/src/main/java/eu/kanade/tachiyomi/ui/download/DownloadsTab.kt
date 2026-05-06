@@ -14,11 +14,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
@@ -588,6 +590,7 @@ data object DownloadsTab : Tab {
                         contentDescription = stringResource(MR.strings.action_sort),
                     )
                 }
+                Spacer(modifier = Modifier.width(4.dp))
                 Box {
                     AuroraTopBarIconButton(
                         onClick = { overflowExpanded = true },
@@ -717,6 +720,7 @@ data object DownloadsTab : Tab {
                         contentDescription = stringResource(MR.strings.action_sort),
                     )
                 }
+                Spacer(modifier = Modifier.width(4.dp))
                 Box {
                     AuroraTopBarIconButton(
                         onClick = { overflowExpanded = true },

@@ -2,6 +2,7 @@ package eu.kanade.presentation.more.settings
 
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -216,7 +217,10 @@ internal fun AuroraTopBarLayout(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(start = if (onNavigateUp != null) 12.dp else 4.dp),
+                    .padding(
+                        start = if (onNavigateUp != null) 12.dp else 4.dp,
+                        end = 12.dp,
+                    ),
                 contentAlignment = Alignment.CenterStart,
             ) {
                 titleContent()
@@ -226,12 +230,16 @@ internal fun AuroraTopBarLayout(
                 title = title,
                 modifier = Modifier
                     .weight(1f)
-                    .padding(start = if (onNavigateUp != null) 12.dp else 4.dp),
+                    .padding(
+                        start = if (onNavigateUp != null) 12.dp else 4.dp,
+                        end = 12.dp,
+                    ),
             )
         }
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             content = actions,
         )
     }
