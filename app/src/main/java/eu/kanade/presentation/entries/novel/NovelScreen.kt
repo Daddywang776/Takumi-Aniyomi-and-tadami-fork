@@ -30,7 +30,7 @@ import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material.icons.outlined.Sync
-import androidx.compose.material.icons.outlined.Translate
+import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -672,7 +672,7 @@ fun NovelScreen(
                         }
                         if (onOpenTranslatedDownloadDialog != null) {
                             TextButton(onClick = onOpenTranslatedDownloadDialog) {
-                                Icon(imageVector = Icons.Outlined.Translate, contentDescription = null)
+                                Icon(imageVector = Icons.Rounded.Translate, contentDescription = null)
                                 Text(
                                     text = stringResource(AYMR.strings.novel_translated_download_short),
                                     modifier = Modifier.padding(start = 4.dp),
@@ -1472,7 +1472,7 @@ private fun NovelClassicChapterRow(
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 val translateState = chapterActionState.translateState
                                 NovelChapterActionButton(
-                                    icon = Icons.Outlined.Translate,
+                                    icon = Icons.Rounded.Translate,
                                     iconTint = when (translateState) {
                                         NovelChapterActionIconState.Active -> MaterialTheme.colorScheme.primary
                                         NovelChapterActionIconState.InProgress -> MaterialTheme.colorScheme.tertiary
