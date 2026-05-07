@@ -672,6 +672,8 @@
     <string name="novel_reader_custom_js">Custom JavaScript</string>
     <string name="novel_reader_custom_js_hint">JavaScript executed after chapter loads</string>
     <string name="novel_reader_custom_js_set">%d characters</string>
+    <string name="novel_reader_text_selection_enabled">Text selection</string>
+    <string name="novel_reader_text_selection_enabled_summary">Select text for copying without translation</string>
     <string name="novel_reader_selected_text_translation_section">Selected text translation</string>
     <string name="novel_reader_selected_text_translation_enabled">Enable selected-text translation</string>
     <string name="novel_reader_selected_text_translation_target_language">Target language</string>

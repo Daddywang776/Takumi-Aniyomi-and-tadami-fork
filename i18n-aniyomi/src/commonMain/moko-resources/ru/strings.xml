@@ -421,6 +421,8 @@
     <string name="novel_reader_custom_js">Пользовательский JavaScript</string>
     <string name="novel_reader_custom_js_hint">JavaScript выполняется после загрузки главы</string>
     <string name="novel_reader_custom_js_set">%d символов</string>
+    <string name="novel_reader_text_selection_enabled">Выделение текста</string>
+    <string name="novel_reader_text_selection_enabled_summary">Выделяйте и копируйте текст без перевода</string>
     <string name="novel_reader_selected_text_translation_section">Перевод выделенного текста</string>
     <string name="novel_reader_selected_text_translation_enabled">Включить перевод выделенного текста</string>
     <string name="novel_reader_selected_text_translation_target_language">Язык перевода</string>

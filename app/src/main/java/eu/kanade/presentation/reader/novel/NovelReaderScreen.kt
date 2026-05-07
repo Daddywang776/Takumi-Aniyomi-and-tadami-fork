@@ -6720,6 +6720,8 @@ private fun SelectedTextTranslationOverlay(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    if (!state.readerSettings.selectedTextTranslationEnabled) return
+
     val selection = state.selectedTextTranslationSelection
     val translationState = state.selectedTextTranslationUiState
 
