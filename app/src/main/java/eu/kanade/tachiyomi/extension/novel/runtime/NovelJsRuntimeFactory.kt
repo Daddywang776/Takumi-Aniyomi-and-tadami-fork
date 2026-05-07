@@ -316,6 +316,8 @@ class NovelJsRuntimeFactory(
 
         override fun domAttr(handle: Int, name: String): String? = domStore.getAttr(handle, name)
 
+        override fun domRemoveAttr(handle: Int, name: String) = domStore.removeAttr(handle, name)
+
         override fun domAttrs(handle: Int): String =
             json.encodeToString(domStore.getAllAttrs(handle))
 

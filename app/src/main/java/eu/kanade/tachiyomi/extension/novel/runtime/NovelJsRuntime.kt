@@ -142,6 +142,7 @@ class NovelJsRuntime(
         fun domOuterHtml(handle: Int): String
         fun domText(handle: Int): String
         fun domAttr(handle: Int, name: String): String?
+        fun domRemoveAttr(handle: Int, name: String)
         fun domAttrs(handle: Int): String
         fun domHasClass(handle: Int, className: String): Boolean
         fun domData(handle: Int, key: String): String?
@@ -592,6 +593,14 @@ class NovelJsRuntime(
                 null
             },
             "domAddClass",
+        )
+
+        nativeObject.registerJavaMethod(
+            JavaCallback { _, parameters ->
+                nativeApi.domRemoveAttr(parameters.intArg(0), parameters.stringArg(1))
+                null
+            },
+            "domRemoveAttr",
         )
 
         nativeObject.registerJavaMethod(
@@ -1942,6 +1951,12 @@ class NovelJsModuleRegistry(
               addClass: function(className) {
                 for (var i = 0; i < handles.length; i++) {
                   __native.domAddClass(handles[i], String(className));
+                }
+                return api;
+              },
+              removeAttr: function(name) {
+                for (var i = 0; i < handles.length; i++) {
+                  __native.domRemoveAttr(handles[i], String(name));
                 }
                 return api;
               },
