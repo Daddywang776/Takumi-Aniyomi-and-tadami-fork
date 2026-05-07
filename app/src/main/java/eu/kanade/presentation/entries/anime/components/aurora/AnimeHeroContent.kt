@@ -155,8 +155,8 @@ fun AnimeHeroContent(
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 lineHeight = 30.sp,
-                maxLines = Int.MAX_VALUE,
-                overflow = TextOverflow.Clip,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
                 color = titleColor,
                 style = TextStyle(
                     fontFamily = coverTitleFontFamily,
