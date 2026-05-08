@@ -19,7 +19,9 @@ import androidx.lifecycle.ProcessLifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import coil3.ImageLoader
 import coil3.SingletonImageLoader
+import okio.Path.Companion.toOkioPath
 import coil3.annotation.DelicateCoilApi
+import coil3.disk.DiskCache
 import coil3.memory.MemoryCache
 import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.allowRgb565
@@ -326,6 +328,12 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             memoryCache {
                 MemoryCache.Builder()
                     .maxSizePercent(this@App, 0.25)
+                    .build()
+            }
+            diskCache {
+                DiskCache.Builder()
+                    .directory(this@App.cacheDir.resolve("coil_cache").toOkioPath())
+                    .maxSizeBytes(128 * 1024 * 1024)
                     .build()
             }
             if (networkPreferences.verboseLogging().get()) logger(DebugLogger())
