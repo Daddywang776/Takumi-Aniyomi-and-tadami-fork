@@ -94,9 +94,9 @@ fun resolveMangaDetailsSnapshot(
         metadataError == MetadataLoadError.NotAuthenticated ->
             context?.let { MangaStatusFormatter.formatStatus(it, manga.status) }
                 ?: MangaStatusFormatter.formatStatus(manga.status)
-        else -> mangaMetadata?.displayStatus() ?: context?.let {
-            MangaStatusFormatter.formatStatus(it, manga.status)
-        } ?: MangaStatusFormatter.formatStatus(manga.status)
+        else -> context?.let { ctx ->
+            mangaMetadata?.displayStatus(ctx) ?: MangaStatusFormatter.formatStatus(ctx, manga.status)
+        } ?: (mangaMetadata?.displayStatus() ?: MangaStatusFormatter.formatStatus(manga.status))
     }
     val progress = resolveMangaProgressSnapshot(chapters)
     val metadataCompleted = mangaMetadata?.let { it.isCompleted() } == true
