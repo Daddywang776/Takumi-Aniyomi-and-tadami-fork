@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Badge
@@ -47,6 +48,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -199,13 +201,26 @@ object HomeScreen : Screen() {
                             val navModifier = if (useAuroraBottomNav) {
                                 val baseModifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)
                                 if (auroraColors!!.isDark) {
-                                    baseModifier.border(
-                                        BorderStroke(
-                                            width = 1.dp,
-                                            brush = auroraMenuRimLightBrush(auroraColors),
-                                        ),
-                                        shape = navBarShape,
-                                    )
+                                    baseModifier
+                                        .shadow(
+                                            elevation = 10.dp,
+                                            shape = navBarShape,
+                                            ambientColor = Color.White.copy(alpha = 0.12f),
+                                            spotColor = Color.White.copy(alpha = 0.08f),
+                                        )
+                                        .shadow(
+                                            elevation = 3.dp,
+                                            shape = navBarShape,
+                                            ambientColor = Color.White.copy(alpha = 0.18f),
+                                            spotColor = Color.White.copy(alpha = 0.12f),
+                                        )
+                                        .border(
+                                            BorderStroke(
+                                                width = 1.dp,
+                                                brush = auroraMenuRimLightBrush(auroraColors),
+                                            ),
+                                            shape = navBarShape,
+                                        )
                                 } else {
                                     baseModifier
                                 }
@@ -495,7 +510,8 @@ object HomeScreen : Screen() {
         Box(
             modifier = Modifier
                 .weight(1f)
-                .padding(horizontal = 2.dp, vertical = 4.dp)
+                .padding(horizontal = 1.dp)
+                .padding(top = 8.dp, bottom = 0.dp)
                 .selectable(
                     selected = selected,
                     role = Role.Tab,
@@ -515,7 +531,7 @@ object HomeScreen : Screen() {
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(5.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Box(
                     modifier = Modifier
@@ -538,18 +554,24 @@ object HomeScreen : Screen() {
                                 Modifier
                             },
                         )
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                        .padding(horizontal = 14.dp, vertical = 7.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     CompositionLocalProvider(LocalContentColor provides iconColor) {
-                        NavigationIconItem(tab, selected)
+                        NavigationIconItem(
+                            tab = tab,
+                            selected = selected,
+                            modifier = Modifier.size(21.dp),
+                        )
                     }
                 }
 
                 Text(
                     text = tab.options.title,
                     color = labelColor,
-                    style = MaterialTheme.typography.labelLarge,
+                    style = MaterialTheme.typography.labelLarge.copy(
+                        fontSize = MaterialTheme.typography.labelLarge.fontSize * 0.92f,
+                    ),
                     fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -606,7 +628,11 @@ object HomeScreen : Screen() {
     }
 
     @Composable
-    private fun NavigationIconItem(tab: eu.kanade.presentation.util.Tab, selected: Boolean) {
+    private fun NavigationIconItem(
+        tab: eu.kanade.presentation.util.Tab,
+        selected: Boolean,
+        modifier: Modifier = Modifier,
+    ) {
         BadgedBox(
             badge = {
                 when {
@@ -677,6 +703,7 @@ object HomeScreen : Screen() {
             },
         ) {
             Icon(
+                modifier = modifier,
                 painter = tab.options.icon!!,
                 contentDescription = tab.options.title,
                 // TODO: https://issuetracker.google.com/u/0/issues/316327367
