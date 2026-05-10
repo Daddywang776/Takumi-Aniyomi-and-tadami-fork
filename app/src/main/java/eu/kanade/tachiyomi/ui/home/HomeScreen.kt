@@ -179,9 +179,8 @@ object HomeScreen : Screen() {
                                 )
                             }
                             val navContainerColor = if (useAuroraBottomNav) {
-                                val colors = auroraColors!!
-                                if (colors.isDark) {
-                                    colors.surface.copy(alpha = 0.96f)
+                                if (auroraColors!!.isDark) {
+                                    auroraColors.surface.copy(alpha = 0.99f)
                                 } else {
                                     Color.Transparent
                                 }
@@ -194,7 +193,7 @@ object HomeScreen : Screen() {
                                 0.dp
                             }
                             val navTonalElevation = if (useAuroraBottomNav) {
-                                if (auroraColors!!.isDark) 6.dp else 0.dp
+                                if (auroraColors!!.isDark) 0.dp else 0.dp
                             } else {
                                 0.dp
                             }
