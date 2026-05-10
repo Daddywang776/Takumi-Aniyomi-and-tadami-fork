@@ -48,6 +48,7 @@ import com.tadami.aurora.BuildConfig
 import eu.kanade.domain.ui.model.NavStyle
 import eu.kanade.presentation.components.AuroraBackground
 import eu.kanade.presentation.components.LocalHostScaffoldContentPadding
+import eu.kanade.presentation.more.resolveAuroraMoreSwitchColors
 import eu.kanade.presentation.more.settings.AuroraTopBarTitleText
 import eu.kanade.presentation.theme.AuroraSurfaceLevel
 import eu.kanade.presentation.theme.AuroraTheme
@@ -367,10 +368,7 @@ fun AuroraToggleItem(
                 androidx.compose.material3.Switch(
                     checked = checked,
                     onCheckedChange = null,
-                    colors = androidx.compose.material3.SwitchDefaults.colors(
-                        checkedThumbColor = colors.accent,
-                        checkedTrackColor = resolveAuroraMoreCheckedTrackColor(colors),
-                    ),
+                    colors = resolveAuroraMoreSwitchColors(colors, colors.accent),
                 )
             }
         }
