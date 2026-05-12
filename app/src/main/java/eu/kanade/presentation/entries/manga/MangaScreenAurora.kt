@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SnackbarHost
@@ -153,6 +154,7 @@ fun MangaScreenAuroraImpl(
     onDownloadActionClicked: ((DownloadAction) -> Unit)?,
     onEditCategoryClicked: (() -> Unit)?,
     onEditFetchIntervalClicked: (() -> Unit)?,
+    onEditNotesClicked: (() -> Unit)?,
     onMigrateClicked: (() -> Unit)?,
     onMultiBookmarkClicked: (List<Chapter>, bookmarked: Boolean) -> Unit,
     onMultiMarkAsReadClicked: (List<Chapter>, markAsRead: Boolean) -> Unit,
@@ -410,6 +412,8 @@ fun MangaScreenAuroraImpl(
                                     manga = manga,
                                     translation = auroraEntryTranslation,
                                     detailsSnapshot = detailsSnapshot,
+                                    note = manga.notes,
+                                    onEditNotesClicked = onEditNotesClicked,
                                     hasProgress = detailsSnapshot.progress?.hasProgress == true,
                                     onContinueReading = onContinueReading,
                                 )
@@ -876,6 +880,8 @@ fun MangaScreenAuroraImpl(
                             manga = manga,
                             translation = auroraEntryTranslation,
                             detailsSnapshot = detailsSnapshot,
+                            note = manga.notes,
+                            onEditNotesClicked = onEditNotesClicked,
                             hasProgress = detailsSnapshot.progress?.hasProgress == true,
                             onContinueReading = onContinueReading,
                         )
@@ -974,6 +980,7 @@ fun MangaScreenAuroraImpl(
                             hasGlobalSearch = globalSearchQuery != null,
                             hasShare = onShareClicked != null,
                             hasSettings = onSettingsClicked != null,
+                            hasNotes = onEditNotesClicked != null,
                             hasMigrate = onMigrateClicked != null,
                         ).forEach { action ->
                             AuroraEntryDropdownMenuItem(
@@ -988,6 +995,8 @@ fun MangaScreenAuroraImpl(
                                         stringResource(MR.strings.action_share)
                                     AuroraMangaOverflowAction.Settings ->
                                         stringResource(MR.strings.action_settings)
+                                    AuroraMangaOverflowAction.Notes ->
+                                        stringResource(MR.strings.action_notes)
                                     AuroraMangaOverflowAction.Migrate ->
                                         stringResource(MR.strings.action_migrate)
                                 },
@@ -998,9 +1007,15 @@ fun MangaScreenAuroraImpl(
                                         AuroraMangaOverflowAction.GlobalSearch -> onSearch(globalSearchQuery!!, true)
                                         AuroraMangaOverflowAction.Share -> onShareClicked!!()
                                         AuroraMangaOverflowAction.Settings -> onSettingsClicked!!()
+                                        AuroraMangaOverflowAction.Notes -> onEditNotesClicked!!()
                                         AuroraMangaOverflowAction.Migrate -> onMigrateClicked!!()
                                     }
                                     showMenu = false
+                                },
+                                leadingIcon = if (action == AuroraMangaOverflowAction.Notes) {
+                                    Icons.Outlined.EditNote
+                                } else {
+                                    null
                                 },
                             )
                         }
@@ -1104,6 +1119,7 @@ internal enum class AuroraMangaOverflowAction {
     GlobalSearch,
     Share,
     Settings,
+    Notes,
     Migrate,
 }
 
@@ -1111,6 +1127,7 @@ internal fun resolveMangaAuroraOverflowActions(
     hasGlobalSearch: Boolean,
     hasShare: Boolean,
     hasSettings: Boolean,
+    hasNotes: Boolean,
     hasMigrate: Boolean,
 ): List<AuroraMangaOverflowAction> {
     return buildList {
@@ -1119,6 +1136,7 @@ internal fun resolveMangaAuroraOverflowActions(
         if (hasGlobalSearch) add(AuroraMangaOverflowAction.GlobalSearch)
         if (hasShare) add(AuroraMangaOverflowAction.Share)
         if (hasSettings) add(AuroraMangaOverflowAction.Settings)
+        if (hasNotes) add(AuroraMangaOverflowAction.Notes)
         if (hasMigrate) add(AuroraMangaOverflowAction.Migrate)
     }
 }

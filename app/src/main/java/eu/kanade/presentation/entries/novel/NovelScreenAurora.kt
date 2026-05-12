@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.ChevronLeft
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Close
@@ -131,6 +132,7 @@ fun NovelScreenAuroraImpl(
     isReading: Boolean,
     onToggleFavorite: () -> Unit,
     onEditCategoryClicked: (() -> Unit)? = null,
+    onEditNotesClicked: (() -> Unit)? = null,
     onRefresh: () -> Unit,
     onSearch: (query: String, global: Boolean) -> Unit,
     onPosterLongClicked: (() -> Unit)? = null,
@@ -376,6 +378,8 @@ fun NovelScreenAuroraImpl(
                                     translation = auroraEntryTranslation,
                                     chapterCount = totalChapterCount,
                                     rating = state.rating,
+                                    note = novel.notes,
+                                    onEditNotesClicked = onEditNotesClicked,
                                     onContinueReading = onStartReading,
                                     isReading = isReading,
                                     modifier = Modifier.fillMaxWidth(),
@@ -773,6 +777,16 @@ fun NovelScreenAuroraImpl(
                                             },
                                         )
                                     }
+                                    if (onEditNotesClicked != null) {
+                                        AuroraEntryDropdownMenuItem(
+                                            text = stringResource(MR.strings.action_notes),
+                                            onClick = {
+                                                onEditNotesClicked()
+                                                showMenu = false
+                                            },
+                                            leadingIcon = Icons.Outlined.EditNote,
+                                        )
+                                    }
                                 } else {
                                     AuroraEntryDropdownMenuItem(
                                         text = stringResource(MR.strings.action_webview_refresh),
@@ -797,6 +811,16 @@ fun NovelScreenAuroraImpl(
                                                 onShare()
                                                 showMenu = false
                                             },
+                                        )
+                                    }
+                                    if (onEditNotesClicked != null) {
+                                        AuroraEntryDropdownMenuItem(
+                                            text = stringResource(MR.strings.action_notes),
+                                            onClick = {
+                                                onEditNotesClicked()
+                                                showMenu = false
+                                            },
+                                            leadingIcon = Icons.Outlined.EditNote,
                                         )
                                     }
                                     if (onMigrateClicked != null) {
@@ -1205,6 +1229,8 @@ fun NovelScreenAuroraImpl(
                         translation = auroraEntryTranslation,
                         chapterCount = totalChapterCount,
                         rating = state.rating,
+                        note = novel.notes,
+                        onEditNotesClicked = onEditNotesClicked,
                         onContinueReading = onStartReading,
                         isReading = isReading,
                     )
@@ -1343,6 +1369,16 @@ fun NovelScreenAuroraImpl(
                                             onShare()
                                             showMenu = false
                                         },
+                                    )
+                                }
+                                if (onEditNotesClicked != null) {
+                                    AuroraEntryDropdownMenuItem(
+                                        text = stringResource(MR.strings.action_notes),
+                                        onClick = {
+                                            onEditNotesClicked()
+                                            showMenu = false
+                                        },
+                                        leadingIcon = Icons.Outlined.EditNote,
                                     )
                                 }
                                 if (onMigrateClicked != null) {
