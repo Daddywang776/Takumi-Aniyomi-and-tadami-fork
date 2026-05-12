@@ -37,7 +37,6 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.SnackbarHost
@@ -1011,11 +1010,6 @@ fun MangaScreenAuroraImpl(
                                         AuroraMangaOverflowAction.Migrate -> onMigrateClicked!!()
                                     }
                                     showMenu = false
-                                },
-                                leadingIcon = if (action == AuroraMangaOverflowAction.Notes) {
-                                    Icons.Outlined.EditNote
-                                } else {
-                                    null
                                 },
                             )
                         }

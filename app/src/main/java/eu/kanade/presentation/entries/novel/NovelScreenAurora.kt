@@ -33,7 +33,6 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.ChevronLeft
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Close
@@ -784,7 +783,6 @@ fun NovelScreenAuroraImpl(
                                                 onEditNotesClicked()
                                                 showMenu = false
                                             },
-                                            leadingIcon = Icons.Outlined.EditNote,
                                         )
                                     }
                                 } else {
@@ -820,7 +818,6 @@ fun NovelScreenAuroraImpl(
                                                 onEditNotesClicked()
                                                 showMenu = false
                                             },
-                                            leadingIcon = Icons.Outlined.EditNote,
                                         )
                                     }
                                     if (onMigrateClicked != null) {
@@ -1378,7 +1375,6 @@ fun NovelScreenAuroraImpl(
                                             onEditNotesClicked()
                                             showMenu = false
                                         },
-                                        leadingIcon = Icons.Outlined.EditNote,
                                     )
                                 }
                                 if (onMigrateClicked != null) {

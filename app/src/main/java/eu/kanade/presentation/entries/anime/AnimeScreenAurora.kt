@@ -36,7 +36,6 @@ import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.SelectAll
 import androidx.compose.material3.Icon
@@ -1047,7 +1046,6 @@ fun AnimeScreenAuroraImpl(
                                     onEditNotesClicked()
                                     showMenu = false
                                 },
-                                leadingIcon = Icons.Outlined.EditNote,
                             )
                         }
                         if (onSettingsClicked != null) {
