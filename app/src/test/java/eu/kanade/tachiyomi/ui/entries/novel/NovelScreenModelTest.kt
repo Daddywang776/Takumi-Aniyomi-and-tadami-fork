@@ -24,7 +24,9 @@ import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.data.translation.TranslationQueueItem
 import eu.kanade.tachiyomi.data.translation.TranslationQueueManager
 import eu.kanade.tachiyomi.data.translation.TranslationStatus
+import eu.kanade.tachiyomi.extension.novel.runtime.NovelJsSource
 import eu.kanade.tachiyomi.novelsource.NovelSource
+import eu.kanade.tachiyomi.novelsource.model.SNovelChapter
 import eu.kanade.tachiyomi.ui.reader.novel.translation.GeminiTranslationCacheEntry
 import eu.kanade.tachiyomi.ui.reader.novel.translation.NovelReaderTranslationDiskCacheStore
 import io.kotest.matchers.shouldBe
@@ -461,6 +463,51 @@ class NovelScreenModelTest {
             try {
                 awaitResumeScreenModel(screenModel)
                 screenModel.getResumeOrNextChapter()?.id shouldBe chapter2.id
+            } finally {
+                screenModel.onDispose()
+            }
+        }
+    }
+
+    @Test
+    fun `jaomix entries do not boot into manual chapter page mode`() {
+        runBlocking {
+            val novel = novelForResumeTests(104L)
+            val chapter1 = novelChapter(id = 1L, novelId = novel.id, chapterNumber = 1.0, read = false)
+            val chapter2 = novelChapter(id = 2L, novelId = novel.id, chapterNumber = 2.0, read = false)
+            val sourceChapters = listOf(chapter1, chapter2).map { chapter ->
+                SNovelChapter.create().apply {
+                    url = chapter.url
+                    name = chapter.name
+                    chapter_number = chapter.chapterNumber.toFloat()
+                    date_upload = 0L
+                }
+            }
+            val source = mockk<NovelJsSource>(relaxed = true).also { jaomixSource ->
+                every { jaomixSource.id } returns novel.source
+                every { jaomixSource.name } returns "Jaomix"
+                every { jaomixSource.isJaomixPagedPlugin() } returns true
+                coEvery { jaomixSource.getChapterList(any()) } returns sourceChapters
+            }
+
+            val screenModel = createResumeScreenModel(
+                novel = novel,
+                chapters = listOf(chapter1, chapter2),
+                source = source,
+            )
+
+            try {
+                withTimeout(1_000) {
+                    while (screenModel.state.value is NovelScreenModel.State.Loading) {
+                        yield()
+                    }
+                }
+
+                val state = screenModel.state.value as NovelScreenModel.State.Success
+                state.chapterPageEnabled shouldBe false
+                state.chapterPageVisibleUrls shouldBe emptySet()
+                state.chapterPageEstimatedTotal shouldBe 0
+                state.chapterPageNominalSize shouldBe 0
             } finally {
                 screenModel.onDispose()
             }
@@ -1306,6 +1353,7 @@ class NovelScreenModelTest {
             eu.kanade.tachiyomi.data.download.novel.NovelDownloadQueueManager.enqueueOriginal(novel, queuedChapters)
         },
         snackbarHostState: SnackbarHostState = SnackbarHostState(),
+        source: NovelSource? = null,
     ): NovelScreenModel {
         val novelRepository = FakeNovelRepository(novel)
         val preferenceStore = FakePreferenceStore()
@@ -1314,7 +1362,7 @@ class NovelScreenModelTest {
             preferenceStore = preferenceStore,
         )
         val libraryPreferences = LibraryPreferences(preferenceStore)
-        val sourceManager = FakeNovelSourceManager()
+        val sourceManager = FakeNovelSourceManager(source)
         val trackerManager = mockk<TrackerManager>().also { manager ->
             every { manager.loggedInTrackersFlow() } returns MutableStateFlow(emptyList())
             every { manager.loggedInNovelTrackersFlow() } returns MutableStateFlow(emptyList())
@@ -1591,13 +1639,15 @@ class NovelScreenModelTest {
         override suspend fun upsertNovelHistory(historyUpdate: NovelHistoryUpdate) = Unit
     }
 
-    private class FakeNovelSourceManager : NovelSourceManager {
+    private class FakeNovelSourceManager(
+        private val source: NovelSource? = null,
+    ) : NovelSourceManager {
         override val isInitialized = MutableStateFlow(true)
         override val catalogueSources =
             MutableStateFlow(emptyList<eu.kanade.tachiyomi.novelsource.NovelCatalogueSource>())
-        override fun get(sourceKey: Long): NovelSource? = null
+        override fun get(sourceKey: Long): NovelSource? = source?.takeIf { it.id == sourceKey }
         override fun getOrStub(sourceKey: Long): NovelSource =
-            object : NovelSource {
+            source?.takeIf { it.id == sourceKey } ?: object : NovelSource {
                 override val id: Long = sourceKey
                 override val name: String = "Stub"
             }

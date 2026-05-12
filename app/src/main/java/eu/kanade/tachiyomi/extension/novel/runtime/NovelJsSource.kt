@@ -417,16 +417,31 @@ class NovelJsSource internal constructor(
             }
 
             val directChapters = sourceNovel.chapters ?: emptyList()
+            val totalPages = sourceNovel.totalPages
+            if (isJaomixPlugin() && totalPages != null && capabilities?.hasParsePage == true) {
+                val startPage = if (directChapters.isEmpty()) 1 else 2
+                val collected = buildList {
+                    addAll(directChapters)
+                    if (startPage <= totalPages) {
+                        addAll(collectChaptersFromParsePage(runtime, novel.url, startPage..totalPages))
+                    }
+                }
+                logcat(LogPriority.DEBUG) {
+                    "Novel chapterList jaomix auto-load plugin=${plugin.id} url=${novel.url} " +
+                        "count=${collected.size} totalPages=$totalPages startPage=$startPage"
+                }
+                return@runPluginSafe normalizeChapters(collected.asReversed()).mapNotNull { it.toSChapterOrNull() }
+            }
+
             if (directChapters.isNotEmpty()) {
                 logcat(LogPriority.DEBUG) {
                     "Novel chapterList direct plugin=${plugin.id} url=${novel.url} " +
-                        "count=${directChapters.size} totalPages=${sourceNovel.totalPages?.toString() ?: "null"}"
+                        "count=${directChapters.size} totalPages=${totalPages?.toString() ?: "null"}"
                 }
                 return@runPluginSafe normalizeChapters(directChapters).mapNotNull { it.toSChapterOrNull() }
             }
 
             // Standard parsePage-based chapter collection (not a fallback)
-            val totalPages = sourceNovel.totalPages
             if (totalPages != null && capabilities?.hasParsePage == true) {
                 val collected = collectChaptersFromParsePage(runtime, novel.url, totalPages)
                 logcat(LogPriority.DEBUG) {

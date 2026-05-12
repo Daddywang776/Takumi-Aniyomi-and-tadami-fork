@@ -117,6 +117,35 @@ class NovelJsSourceTest {
     }
 
     @Test
+    fun `getChapterList auto-loads all jaomix pages`() {
+        val runtimeFactory = mockk<NovelJsRuntimeFactory>()
+        val runtime = mockk<NovelJsRuntime>()
+        val parsePageCalls = AtomicInteger(0)
+
+        every { runtimeFactory.create(any()) } returns runtime
+        every { runtime.evaluate(any(), any(), any()) } answers {
+            evaluateJaomixAutoLoadScript(firstArg(), parsePageCalls)
+        }
+
+        val source = createSource(
+            hasSettings = false,
+            runtimeFactory = runtimeFactory,
+            runtimeOverride = NovelPluginRuntimeOverride(pluginId = "jaomix"),
+        )
+        val novel = SNovel.create().apply {
+            url = "/novel"
+            title = "Novel"
+        }
+
+        val chapters = kotlinx.coroutines.runBlocking {
+            source.getChapterList(novel)
+        }
+
+        chapters.size shouldBe 3
+        chapters.map { it.name } shouldBe listOf("Ch 3", "Ch 2", "Ch 1")
+    }
+
+    @Test
     fun `getChapterListPage falls back to parsePage when parseNovel fails`() {
         val runtimeFactory = mockk<NovelJsRuntimeFactory>()
         val runtime = mockk<NovelJsRuntime>()
@@ -319,6 +348,83 @@ class NovelJsSourceTest {
             // Polling: setup script with wrapped plugin method call
             script.contains("(function()") && script.contains("__plugin.parseNovel") -> {
                 // parseNovel call: return null (success) but empty result
+                null
+            }
+            script.contains("(function()") && script.contains("__plugin.parsePage") -> {
+                parsePageCalls.incrementAndGet()
+                null
+            }
+            script.contains("(function()") -> null
+
+            else -> null
+        }
+    }
+
+    private fun evaluateJaomixAutoLoadScript(
+        script: String,
+        parsePageCalls: AtomicInteger,
+    ): Any? {
+        return when {
+            script.contains("Array.isArray(__plugin && __plugin.settings)") -> false
+            script.contains("JSON.stringify(__plugin.settings || [])") -> "[]"
+            script.contains("typeof __plugin.parsePage") -> true
+            script.contains("typeof __plugin.resolveUrl") -> false
+            script.contains("typeof __plugin.fetchImage") -> false
+
+            // Polling: drain job queue
+            script.contains("__drainJobs") -> null
+
+            // Polling: cleanup
+            script.contains("delete globalThis") -> null
+
+            // Polling: done check
+            script.startsWith("globalThis.__d_") -> true
+
+            // Polling: error read - simulate success
+            script.startsWith("globalThis.__e_") -> null
+
+            // Polling: result read
+            script.startsWith("globalThis.__r_") -> {
+                when (parsePageCalls.get()) {
+                    0 -> """
+                        {
+                            "totalPages": 3,
+                            "chapters": [
+                                {
+                                    "name": "Ch 1",
+                                    "path": "/c1",
+                                    "chapterNumber": 1
+                                }
+                            ]
+                        }
+                    """.trimIndent()
+                    1 -> """
+                        {
+                            "chapters": [
+                                {
+                                    "name": "Ch 2",
+                                    "path": "/c2",
+                                    "chapterNumber": 2
+                                }
+                            ]
+                        }
+                    """.trimIndent()
+                    else -> """
+                        {
+                            "chapters": [
+                                {
+                                    "name": "Ch 3",
+                                    "path": "/c3",
+                                    "chapterNumber": 3
+                                }
+                            ]
+                        }
+                    """.trimIndent()
+                }
+            }
+
+            // Polling: setup script with wrapped plugin method call
+            script.contains("(function()") && script.contains("__plugin.parseNovel") -> {
                 null
             }
             script.contains("(function()") && script.contains("__plugin.parsePage") -> {

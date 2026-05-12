@@ -45,7 +45,6 @@ import eu.kanade.tachiyomi.data.translation.TranslationQueueManager
 import eu.kanade.tachiyomi.data.translation.TranslationStatus
 import eu.kanade.tachiyomi.extension.novel.runtime.NovelJsSource
 import eu.kanade.tachiyomi.novelsource.NovelSource
-import eu.kanade.tachiyomi.novelsource.model.SNovelChapter
 import eu.kanade.tachiyomi.source.novel.NovelSiteSource
 import eu.kanade.tachiyomi.source.novel.NovelWebUrlSource
 import eu.kanade.tachiyomi.ui.entries.mergeNewItemIds
@@ -455,18 +454,10 @@ class NovelScreenModel(
                     isTranslatedDownloading = { false },
                     isTranslating = { false },
                 ),
-                chapterPageEnabled = isJaomixPagedSource,
-                chapterPageEstimatedTotal = if (isJaomixPagedSource && chapters.isNotEmpty()) {
-                    chapters.size
-                } else {
-                    0
-                },
-                chapterPageNominalSize = if (isJaomixPagedSource) chapters.size else 0,
-                chapterPageVisibleUrls = if (isJaomixPagedSource) {
-                    chapters.mapTo(mutableSetOf()) { it.url }
-                } else {
-                    emptySet()
-                },
+                chapterPageEnabled = false,
+                chapterPageEstimatedTotal = 0,
+                chapterPageNominalSize = 0,
+                chapterPageVisibleUrls = emptySet(),
                 resumeChapterId = resumeChapterId,
                 hasCompletedChapterRefresh = chapters.isNotEmpty(),
             )
@@ -1262,118 +1253,11 @@ class NovelScreenModel(
         page: Int,
         manualFetch: Boolean,
     ): Boolean {
-        val source = state.source as? NovelJsSource ?: return false
-        if (!source.isJaomixPagedPlugin()) return false
-
-        val pageResult = source.getChapterListPage(
-            novel = state.novel.toSNovel(),
-            page = page,
-        ) ?: run {
-            updateSuccessState { current ->
-                current.copy(
-                    chapterPageEnabled = true,
-                    chapterPageLoading = false,
-                )
-            }
-            return true
-        }
-
-        val pageChapters = normalizeJaomixPageChapters(pageResult.chapters)
-        logcat {
-            "Fetched jaomix chapter page for id=${state.novel.id} source=${state.source.name}, " +
-                "page=${pageResult.page}/${pageResult.totalPages}, count=${pageChapters.size}, manualFetch=$manualFetch"
-        }
-        if (isLikelyWebViewLoginRequired(state.source, state.novel, pageChapters.size)) {
-            logcat(LogPriority.WARN) {
-                "Novel ${state.novel.id} (${state.source.name}) likely requires " +
-                    "WebView login after page fetch: page=${pageResult.page}, chapters=0, descriptionBlank=true"
-            }
-        }
-
-        if (pageChapters.isNotEmpty()) {
-            val newChapters = syncNovelChaptersWithSource.await(
-                rawSourceChapters = pageChapters,
-                novel = state.novel,
-                source = state.source,
-                manualFetch = manualFetch,
-                retainMissingChapters = true,
-                sourceOrderOffset = (pageResult.page - 1L) * JAOMIX_PAGE_SOURCE_ORDER_STRIDE,
-            )
-            updateNewChapterIds(
-                addedIds = newChapters.asSequence()
-                    .filterNot { it.read }
-                    .map { it.id }
-                    .toList(),
-            )
-        }
-
-        updateSuccessState { current ->
-            current.copy(
-                chapterPageEnabled = true,
-                chapterPageCurrent = pageResult.page,
-                chapterPageTotal = pageResult.totalPages.coerceAtLeast(1),
-                chapterPageLoading = false,
-                chapterPageNominalSize = resolveJaomixNominalPageSize(
-                    currentNominalSize = current.chapterPageNominalSize,
-                    loadedPageSize = pageChapters.size,
-                ),
-                chapterPageEstimatedTotal = resolveJaomixEstimatedChapterTotal(
-                    totalPages = pageResult.totalPages.coerceAtLeast(1),
-                    currentPage = pageResult.page,
-                    loadedPageSize = pageChapters.size,
-                    currentNominalSize = current.chapterPageNominalSize,
-                ),
-                chapterPageVisibleUrls = if (pageChapters.isNotEmpty()) {
-                    pageChapters.mapTo(mutableSetOf()) { chapter -> chapter.url }
-                } else {
-                    current.chapterPageVisibleUrls
-                },
-            )
-        }
-
-        return true
+        return false
     }
 
     private fun NovelSource.isJaomixPagedSource(): Boolean {
         return (this as? NovelJsSource)?.isJaomixPagedPlugin() == true
-    }
-
-    private fun normalizeJaomixPageChapters(chapters: List<SNovelChapter>): List<SNovelChapter> {
-        if (chapters.size < 2) return chapters
-
-        val hasChapterNumbers = chapters.any { it.chapter_number > 0f }
-        return if (hasChapterNumbers) {
-            chapters.sortedWith(
-                compareBy<SNovelChapter> { it.chapter_number }
-                    .thenBy { it.name },
-            )
-        } else {
-            chapters.asReversed()
-        }
-    }
-
-    private fun resolveJaomixNominalPageSize(
-        currentNominalSize: Int,
-        loadedPageSize: Int,
-    ): Int {
-        return maxOf(currentNominalSize, loadedPageSize).coerceAtLeast(0)
-    }
-
-    private fun resolveJaomixEstimatedChapterTotal(
-        totalPages: Int,
-        currentPage: Int,
-        loadedPageSize: Int,
-        currentNominalSize: Int,
-    ): Int {
-        val safeTotalPages = totalPages.coerceAtLeast(1)
-        val nominalSize = resolveJaomixNominalPageSize(currentNominalSize, loadedPageSize)
-        if (nominalSize <= 0) return 0
-
-        return if (currentPage >= safeTotalPages) {
-            ((safeTotalPages - 1) * nominalSize + loadedPageSize).coerceAtLeast(loadedPageSize)
-        } else {
-            (safeTotalPages * nominalSize).coerceAtLeast(loadedPageSize)
-        }
     }
 
     fun toggleChapterRead(chapterId: Long) {
@@ -2218,7 +2102,6 @@ class NovelScreenModel(
 
     companion object {
         private const val FAST_CACHE_MAX_ITEMS = 24
-        private const val JAOMIX_PAGE_SOURCE_ORDER_STRIDE = 1_000L
         private val stateCache = object : LinkedHashMap<Long, State.Success>(
             FAST_CACHE_MAX_ITEMS + 1,
             1f,
