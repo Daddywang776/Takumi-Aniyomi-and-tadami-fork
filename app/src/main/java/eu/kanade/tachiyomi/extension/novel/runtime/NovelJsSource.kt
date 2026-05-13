@@ -72,7 +72,17 @@ class NovelJsSource internal constructor(
     override val name: String = plugin.name
     override val lang: String = plugin.lang
     override val supportsLatest: Boolean = true
-    override val siteUrl: String? = plugin.site
+    override val siteUrl: String?
+        get() {
+            // Prefer the user-configured URL from settings (e.g. Komga's "url" setting).
+            // This allows plugins whose site is dynamically configured (stored via
+            // storage.get/set) to expose the correct base URL without requiring a
+            // static value baked into the plugin manifest.
+            val userConfiguredUrl = settingsBridge.getSettingWithDefault("url")
+                ?.trim()
+                ?.takeIf { it.isNotBlank() && (it.startsWith("http://") || it.startsWith("https://")) }
+            return userConfiguredUrl ?: plugin.site?.takeIf { it.isNotBlank() }
+        }
     override val pluginId: String = plugin.id
 
     private val mutex = Mutex()
@@ -135,6 +145,11 @@ class NovelJsSource internal constructor(
                     summary = settingsBridge.getSettingWithDefault(definition.key) ?: ""
                     setOnPreferenceChangeListener { _, newValue ->
                         settingsBridge.setSetting(definition.key, newValue.toString())
+                        // Sync to storage namespace so storage.get(key) reads the updated
+                        // value after the runtime is reloaded, and clear the cached runtime
+                        // so the plugin reinitialises with the new setting.
+                        settingsBridge.syncSettingToStorage(definition.key, newValue.toString())
+                        clearInMemoryCaches()
                         summary = newValue.toString()
                         true
                     }
@@ -145,6 +160,8 @@ class NovelJsSource internal constructor(
                     isChecked = settingsBridge.getSettingBooleanWithDefault(definition.key)
                     setOnPreferenceChangeListener { _, newValue ->
                         settingsBridge.setSetting(definition.key, newValue.toString())
+                        settingsBridge.syncSettingToStorage(definition.key, newValue.toString())
+                        clearInMemoryCaches()
                         true
                     }
                 }
@@ -162,6 +179,8 @@ class NovelJsSource internal constructor(
                             setOnPreferenceChangeListener { _, newValue ->
                                 val selected = (newValue as? Set<*>)?.mapNotNull { it as? String }.orEmpty()
                                 settingsBridge.setSettingValues(definition.key, selected)
+                                settingsBridge.syncSettingValuesToStorage(definition.key, selected)
+                                clearInMemoryCaches()
                                 summary = selected.joinToString(", ")
                                 true
                             }
@@ -173,6 +192,8 @@ class NovelJsSource internal constructor(
                             isChecked = settingsBridge.getSettingBooleanWithDefault(definition.key)
                             setOnPreferenceChangeListener { _, newValue ->
                                 settingsBridge.setSetting(definition.key, newValue.toString())
+                                settingsBridge.syncSettingToStorage(definition.key, newValue.toString())
+                                clearInMemoryCaches()
                                 true
                             }
                         }
@@ -189,6 +210,8 @@ class NovelJsSource internal constructor(
                     summary = currentValue ?: ""
                     setOnPreferenceChangeListener { _, newValue ->
                         settingsBridge.setSetting(definition.key, newValue.toString())
+                        settingsBridge.syncSettingToStorage(definition.key, newValue.toString())
+                        clearInMemoryCaches()
                         summary = newValue.toString()
                         true
                     }
