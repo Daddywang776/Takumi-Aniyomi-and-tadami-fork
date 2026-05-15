@@ -2377,9 +2377,7 @@ internal fun resolveNovelRefreshErrorMessage(
     likelyWebViewLoginRequired: Boolean,
 ): String? {
     val isConnectivityLikeError = error.message?.contains("Could not reach", ignoreCase = true) == true
-    // Always surface NoChaptersException so the user knows chapters weren't found,
-    // even for WebView-based sources — silent suppression leaves the UI stuck at 0 chapters.
-    if (likelyWebViewLoginRequired && (isConnectivityLikeError)) {
+    if (likelyWebViewLoginRequired && (isConnectivityLikeError || error is NoChaptersException)) {
         return null
     }
     return when (error) {

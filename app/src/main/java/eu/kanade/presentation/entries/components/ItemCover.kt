@@ -104,9 +104,9 @@ internal fun isLoadableCoverData(data: Any?): Boolean {
     return when (data) {
         null -> false
         is String -> data.isNotBlank()
-        is NovelCover -> !data.url.isNullOrBlank()
-        is AnimeCover -> !data.url.isNullOrBlank()
-        is MangaCover -> !data.url.isNullOrBlank()
+        is NovelCover -> true
+        is AnimeCover -> true
+        is MangaCover -> true
         else -> true
     }
 }

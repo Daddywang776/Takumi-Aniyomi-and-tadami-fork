@@ -1888,18 +1888,16 @@ class NovelReaderScreenModel(
     }
     override fun onDispose() {
         val chapterId = currentChapter?.id
-        if (chapterId != null) {
-            val finalReadDurationMs = (System.currentTimeMillis() - chapterReadStartTimeMs).coerceAtLeast(0L)
-            screenModelScope.launch(NonCancellable + Dispatchers.IO) {
+        kotlinx.coroutines.runBlocking(NonCancellable + Dispatchers.IO) {
+            if (chapterId != null) {
+                val finalReadDurationMs = (System.currentTimeMillis() - chapterReadStartTimeMs).coerceAtLeast(0L)
                 awaitPendingProgressPersistence()
                 flushPendingHistorySnapshot(
                     chapterId = chapterId,
                     additionalReadDurationMs = finalReadDurationMs,
                 )
             }
-        }
-        clearChapterTransientState()
-        screenModelScope.launch(NonCancellable + Dispatchers.IO) {
+            clearChapterTransientState()
             settingsJob?.cancelAndJoin()
             nextChapterPrefetchJob?.cancelAndJoin()
             nextChapterGeminiPrefetchJob?.cancelAndJoin()

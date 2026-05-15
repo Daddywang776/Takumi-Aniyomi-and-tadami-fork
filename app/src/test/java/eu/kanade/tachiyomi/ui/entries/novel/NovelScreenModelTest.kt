@@ -1018,7 +1018,7 @@ class NovelScreenModelTest {
     @Test
     fun `chapter status updates do not rescan downloaded ids when chapter ids are unchanged`() {
         runBlocking {
-            val novel = novelForResumeTests(105L)
+            val novel = novelForResumeTests(1051L)
             val initialChapters = listOf(
                 novelChapter(id = 1L, novelId = novel.id, chapterNumber = 1.0, read = false),
                 novelChapter(id = 2L, novelId = novel.id, chapterNumber = 2.0, read = false),
