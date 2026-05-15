@@ -31,7 +31,6 @@ import eu.kanade.tachiyomi.ui.reader.novel.translation.GeminiTranslationCacheEnt
 import eu.kanade.tachiyomi.ui.reader.novel.translation.NovelReaderTranslationDiskCacheStore
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
-import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
@@ -42,13 +41,11 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import kotlinx.serialization.json.Json
-import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import tachiyomi.core.common.preference.Preference
@@ -163,12 +160,6 @@ class NovelScreenModelTest {
         @BeforeAll
         fun setupMainDispatcher() {
             Dispatchers.setMain(Dispatchers.Unconfined)
-        }
-
-        @JvmStatic
-        @AfterAll
-        fun resetMainDispatcher() {
-            Dispatchers.resetMain()
         }
     }
 
