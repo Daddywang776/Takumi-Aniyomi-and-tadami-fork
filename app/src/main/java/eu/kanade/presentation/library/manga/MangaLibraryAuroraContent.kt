@@ -246,6 +246,7 @@ private fun MangaLibraryAuroraList(
 
         listItems(
             items = items,
+            key = { it.id },
             contentType = { "manga_library_aurora_list_item" },
         ) { libraryItem ->
             val isSeries = libraryItem is MangaLibraryItem.Series
@@ -425,6 +426,7 @@ private fun MangaLibraryAuroraCardGrid(
 
         gridItems(
             items = items,
+            key = { it.id },
             contentType = {
                 if (showMetadata) {
                     "manga_library_aurora_comfortable_grid_item"
