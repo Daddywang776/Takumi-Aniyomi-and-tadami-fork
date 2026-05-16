@@ -28,6 +28,7 @@ import tachiyomi.domain.source.novel.repository.NovelStubSourceRepository
 import tachiyomi.domain.source.novel.resolver.repository.OmniRuleRepository
 import tachiyomi.source.local.image.novel.LocalNovelCoverManager
 import tachiyomi.source.local.io.novel.LocalNovelSourceFileSystem
+import tachiyomi.source.local.entries.novel.LocalNovelSource
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.fullType
 import uy.kohesive.injekt.api.get
@@ -130,6 +131,32 @@ class AndroidNovelSourceManagerTest {
             source.shouldNotBeNull()
             source.id shouldBe IMPORTED_EPUB_NOVEL_SOURCE_ID
             source.name shouldBe IMPORTED_EPUB_NOVEL_SOURCE_NAME
+        }
+    }
+
+    @Test
+    fun `source manager stays initialized when omni source initialization fails`() {
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val extensionManager = FakeNovelExtensionManager()
+            val repository = FakeNovelStubSourceRepository()
+            val manager = AndroidNovelSourceManager(
+                context = context,
+                extensionManager = extensionManager,
+                sourceRepository = repository,
+                dispatcher = dispatcher,
+                omniSourceFactory = {
+                    throw IllegalStateException("boom")
+                },
+            )
+
+            extensionManager.emitSources(emptyList())
+            advanceUntilIdle()
+
+            manager.isInitialized.value shouldBe true
+            manager.get(OmniSource.OMNI_SOURCE_ID) shouldBe null
+            manager.get(IMPORTED_EPUB_NOVEL_SOURCE_ID).shouldNotBeNull()
+            manager.get(LocalNovelSource.ID).shouldNotBeNull()
         }
     }
 
