@@ -804,7 +804,6 @@ fun NovelReaderScreen(
     // Р’С‹СЃРѕС‚Р° Bottom bar (~80dp + navigation bar)
     val bottomBarHeight = with(density) { (80.dp + navigationBarHeight.toDp()).toPx().toInt() }
     val statusBarTopPadding = with(density) { statusBarHeight.toDp() }
-    val tapScrollStepPx = with(density) { (configuration.screenHeightDp.dp * 0.8f).toPx() }
     val volumeScrollStepPx = with(density) { (configuration.screenHeightDp.dp * 0.25f).toPx() }
     val baseContentPadding = MaterialTheme.padding.small
     val contentPaddingPx = with(density) {
