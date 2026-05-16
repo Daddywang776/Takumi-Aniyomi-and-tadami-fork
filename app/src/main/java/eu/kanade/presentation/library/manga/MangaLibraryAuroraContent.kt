@@ -250,7 +250,14 @@ private fun MangaLibraryAuroraList(
         ) { libraryItem ->
             val isSeries = libraryItem is MangaLibraryItem.Series
             val libraryManga = libraryItem.libraryManga
-            val manga = libraryItem.coverManga ?: libraryManga.manga
+            val targetManga = if (isSeries) {
+                libraryItem.librarySeries.entries.firstOrNull {
+                    it.manga.id == libraryItem.librarySeries.activeManga?.id
+                } ?: libraryManga
+            } else {
+                libraryManga
+            }
+            val manga = libraryItem.coverManga ?: targetManga.manga
             val title = if (isSeries) libraryItem.title else manga.title
             val subtitle = if (libraryItem.totalChapters > 0) {
                 stringResource(
@@ -265,13 +272,6 @@ private fun MangaLibraryAuroraList(
                 libraryItem.unreadCount > 0 ||
                 libraryItem.isLocal ||
                 libraryItem.sourceLanguage.isNotBlank()
-            val targetManga = if (isSeries) {
-                libraryItem.librarySeries.entries.firstOrNull {
-                    it.manga.id == libraryItem.librarySeries.activeManga?.id
-                } ?: libraryManga
-            } else {
-                libraryManga
-            }
             val seriesHeaderText = if (isSeries) {
                 stringResource(AYMR.strings.manga_series_caption_label)
             } else {
@@ -435,7 +435,14 @@ private fun MangaLibraryAuroraCardGrid(
         ) { libraryItem ->
             val isSeries = libraryItem is MangaLibraryItem.Series
             val libraryManga = libraryItem.libraryManga
-            val manga = libraryItem.coverManga ?: libraryManga.manga
+            val targetManga = if (isSeries) {
+                libraryItem.librarySeries.entries.firstOrNull {
+                    it.manga.id == libraryItem.librarySeries.activeManga?.id
+                } ?: libraryManga
+            } else {
+                libraryManga
+            }
+            val manga = libraryItem.coverManga ?: targetManga.manga
             val title = if (isSeries) libraryItem.title else manga.title
             val subtitle = if (showMetadata && libraryItem.totalChapters > 0) {
                 stringResource(
@@ -445,13 +452,6 @@ private fun MangaLibraryAuroraCardGrid(
                 )
             } else {
                 null
-            }
-            val targetManga = if (isSeries) {
-                libraryItem.librarySeries.entries.firstOrNull {
-                    it.manga.id == libraryItem.librarySeries.activeManga?.id
-                } ?: libraryManga
-            } else {
-                libraryManga
             }
             val seriesHeaderText = if (isSeries) {
                 stringResource(AYMR.strings.manga_series_caption_label)

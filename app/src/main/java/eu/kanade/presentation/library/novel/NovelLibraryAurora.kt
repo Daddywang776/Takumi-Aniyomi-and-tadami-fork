@@ -273,7 +273,7 @@ fun NovelLibraryAuroraContent(
                 modifier = Modifier
                     .fillMaxSize()
                     .auroraCenteredMaxWidth(auroraAdaptiveSpec.listMaxWidthDp),
-                columns = columns.coerceAtLeast(0),
+                columns = columns,
                 adaptiveMinCellDp = displaySpec.adaptiveMinCellDp,
                 contentPadding = contentPadding,
             ) {

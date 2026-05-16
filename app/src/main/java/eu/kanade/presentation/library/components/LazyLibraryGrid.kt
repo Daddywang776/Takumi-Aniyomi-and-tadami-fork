@@ -21,7 +21,7 @@ internal fun LazyLibraryGrid(
     content: LazyGridScope.() -> Unit,
 ) {
     val gridCells = remember(columns, adaptiveMinCellDp) {
-        if (columns == 0) {
+        if (columns <= 0) {
             GridCells.Adaptive((adaptiveMinCellDp ?: 128).dp)
         } else {
             GridCells.Fixed(columns)
