@@ -6,11 +6,34 @@ import org.junit.jupiter.api.Test
 class AuroraCardOverlaySizingTest {
 
     @Test
-    fun `unspecified grid columns keeps large overlay tier`() {
+    fun `unspecified grid columns falls back to card width thresholds`() {
+        resolveAuroraOverlayScaleTier(
+            gridColumns = null,
+            cardWidthDp = 120f,
+        ) shouldBe AuroraOverlayScaleTier.Large
+
         resolveAuroraOverlayScaleTier(
             gridColumns = null,
             cardWidthDp = 72f,
-        ) shouldBe AuroraOverlayScaleTier.Large
+        ) shouldBe AuroraOverlayScaleTier.Small
+    }
+
+    @Test
+    fun `wide cards trigger xlarge overlay tier`() {
+        resolveAuroraOverlayScaleTier(
+            gridColumns = 1,
+            cardWidthDp = 350f,
+        ) shouldBe AuroraOverlayScaleTier.XLarge
+
+        resolveAuroraOverlayScaleTier(
+            gridColumns = 2,
+            cardWidthDp = 220f,
+        ) shouldBe AuroraOverlayScaleTier.XLarge
+
+        resolveAuroraOverlayScaleTier(
+            gridColumns = null,
+            cardWidthDp = 200f,
+        ) shouldBe AuroraOverlayScaleTier.XLarge
     }
 
     @Test
@@ -51,6 +74,18 @@ class AuroraCardOverlaySizingTest {
 
     @Test
     fun `overlay spec uses matching button and progress sizes for each tier`() {
+        resolveAuroraCardOverlaySpec(
+            gridColumns = 1,
+            cardWidthDp = 350f,
+        ).let { spec ->
+            spec.buttonSizeDp.value shouldBe 36f
+            spec.buttonIconSizeDp.value shouldBe 22f
+            spec.progressTextSizeSp.value shouldBe 14f
+            spec.footerHorizontalPaddingDp.value shouldBe 12f
+            spec.footerVerticalPaddingDp.value shouldBe 11f
+            spec.progressTextEndInsetDp.value shouldBe 4f
+        }
+
         resolveAuroraCardOverlaySpec(
             gridColumns = 3,
             cardWidthDp = null,

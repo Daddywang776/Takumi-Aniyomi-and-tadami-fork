@@ -6,6 +6,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 internal enum class AuroraOverlayScaleTier {
+    XLarge,
     Large,
     Medium,
     Small,
@@ -24,9 +25,10 @@ internal fun resolveAuroraOverlayScaleTier(
     gridColumns: Int?,
     cardWidthDp: Float?,
 ): AuroraOverlayScaleTier {
-    if (gridColumns == null) return AuroraOverlayScaleTier.Large
+    val widthDp = cardWidthDp
+    if (widthDp != null && widthDp >= 200f) return AuroraOverlayScaleTier.XLarge
 
-    val fixedColumns = gridColumns.takeIf { it > 0 }
+    val fixedColumns = gridColumns?.takeIf { it > 0 }
     if (fixedColumns != null) {
         return when {
             fixedColumns <= 3 -> AuroraOverlayScaleTier.Large
@@ -35,8 +37,8 @@ internal fun resolveAuroraOverlayScaleTier(
         }
     }
 
-    val widthDp = cardWidthDp ?: return AuroraOverlayScaleTier.Large
     return when {
+        widthDp == null -> AuroraOverlayScaleTier.Large
         widthDp >= 112f -> AuroraOverlayScaleTier.Large
         widthDp >= 92f -> AuroraOverlayScaleTier.Medium
         else -> AuroraOverlayScaleTier.Small
@@ -48,6 +50,14 @@ internal fun resolveAuroraCardOverlaySpec(
     cardWidthDp: Float?,
 ): AuroraCardOverlaySpec {
     return when (resolveAuroraOverlayScaleTier(gridColumns, cardWidthDp)) {
+        AuroraOverlayScaleTier.XLarge -> AuroraCardOverlaySpec(
+            buttonSizeDp = 36.dp,
+            buttonIconSizeDp = 22.dp,
+            progressTextSizeSp = 14.sp,
+            footerHorizontalPaddingDp = 12.dp,
+            footerVerticalPaddingDp = 11.dp,
+            progressTextEndInsetDp = 4.dp,
+        )
         AuroraOverlayScaleTier.Large -> AuroraCardOverlaySpec(
             buttonSizeDp = 30.dp,
             buttonIconSizeDp = 18.dp,
