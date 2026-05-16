@@ -235,7 +235,7 @@ private fun AnimeLibraryAuroraList(
 
         listItems(
             items = items,
-            key = { it.id },
+            key = { it.libraryAnime.id },
             contentType = { "anime_library_aurora_list_item" },
         ) { libraryItem ->
             val libraryAnime = libraryItem.libraryAnime
@@ -376,7 +376,7 @@ private fun AnimeLibraryAuroraCardGrid(
 
         gridItems(
             items = items,
-            key = { it.id },
+            key = { it.libraryAnime.id },
             contentType = {
                 if (showMetadata) {
                     "anime_library_aurora_comfortable_grid_item"
@@ -575,8 +575,7 @@ private fun AnimeLibraryAuroraEmptyScreen(
     Column(
         modifier = Modifier
             .padding(contentPadding + PaddingValues(8.dp))
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
+            .fillMaxSize(),
     ) {
         if (!searchQuery.isNullOrEmpty()) {
             eu.kanade.presentation.library.components.GlobalSearchItem(
