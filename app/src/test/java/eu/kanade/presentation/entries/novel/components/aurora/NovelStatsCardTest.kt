@@ -25,4 +25,31 @@ class NovelStatsCardTest {
             now = now,
         ) shouldBe 0
     }
+
+    @Test
+    fun `next update label delegates localized day formatting for future updates`() {
+        resolveNovelNextUpdateLabel(
+            nextUpdateDays = 3,
+            notApplicableLabel = "n/a",
+            soonLabel = "soon",
+            formattedDaysLabel = "3 days",
+        ) shouldBe "3 days"
+    }
+
+    @Test
+    fun `next update label keeps soon and not applicable states explicit`() {
+        resolveNovelNextUpdateLabel(
+            nextUpdateDays = 0,
+            notApplicableLabel = "n/a",
+            soonLabel = "soon",
+            formattedDaysLabel = "3 days",
+        ) shouldBe "soon"
+
+        resolveNovelNextUpdateLabel(
+            nextUpdateDays = null,
+            notApplicableLabel = "n/a",
+            soonLabel = "soon",
+            formattedDaysLabel = "3 days",
+        ) shouldBe "n/a"
+    }
 }

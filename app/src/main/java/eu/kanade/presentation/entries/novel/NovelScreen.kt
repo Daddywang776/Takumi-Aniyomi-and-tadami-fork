@@ -1,7 +1,6 @@
 package eu.kanade.presentation.entries.novel
 
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -80,7 +79,6 @@ import eu.kanade.presentation.entries.novel.components.NovelChapterActionButton
 import eu.kanade.presentation.entries.resolveEntryAutoJumpTargetIndex
 import eu.kanade.presentation.entries.resolveTitleListFastScrollSpec
 import eu.kanade.presentation.novel.buildNovelCoverImageRequest
-import eu.kanade.presentation.theme.AuroraTheme
 import eu.kanade.presentation.util.formatChapterNumber
 import eu.kanade.tachiyomi.data.coil.staticBlur
 import eu.kanade.tachiyomi.source.model.SManga
@@ -248,9 +246,6 @@ fun NovelScreen(
     }
 
     // Standard implementation (non-Aurora)
-    val isAurora = theme.isAuroraStyle
-    val auroraColors = AuroraTheme.colors
-
     val chapters = state.processedChapters
     val groupedByChapter = false
     val chapterGroups = remember(chapters, groupedByChapter) {
@@ -527,17 +522,8 @@ fun NovelScreen(
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(
-                                containerColor = if (isAurora) {
-                                    auroraColors.glass
-                                } else {
-                                    MaterialTheme.colorScheme.surfaceContainer
-                                },
+                                containerColor = MaterialTheme.colorScheme.surfaceContainer,
                             ),
-                            border = if (isAurora) {
-                                BorderStroke(1.dp, auroraColors.divider.copy(alpha = 0.35f))
-                            } else {
-                                null
-                            },
                         ) {
                             Row(
                                 modifier = Modifier
@@ -570,11 +556,7 @@ fun NovelScreen(
                                     Text(
                                         text = state.source.name,
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = if (isAurora) {
-                                            auroraColors.textSecondary
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                        },
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                     Text(
                                         text = pluralStringResource(
@@ -583,21 +565,13 @@ fun NovelScreen(
                                             totalChapterCount,
                                         ),
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = if (isAurora) {
-                                            auroraColors.textSecondary
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                        },
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                     novelStatusText(state.novel.status)?.let {
                                         Text(
                                             text = it,
                                             style = MaterialTheme.typography.bodySmall,
-                                            color = if (isAurora) {
-                                                auroraColors.accent
-                                            } else {
-                                                MaterialTheme.colorScheme.primary
-                                            },
+                                            color = MaterialTheme.colorScheme.primary,
                                         )
                                     }
                                 }
@@ -609,11 +583,7 @@ fun NovelScreen(
                                     style = MaterialTheme.typography.bodySmall,
                                     maxLines = 6,
                                     overflow = TextOverflow.Ellipsis,
-                                    color = if (isAurora) {
-                                        auroraColors.textSecondary
-                                    } else {
-                                        MaterialTheme.colorScheme.onSurfaceVariant
-                                    },
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(

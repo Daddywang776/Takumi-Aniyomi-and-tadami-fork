@@ -21,6 +21,62 @@ class NovelScreenAuroraLayoutTest {
     }
 
     @Test
+    fun `novel aurora fast scroll block start index accounts for header rows before chapters`() {
+        resolveNovelAuroraFastScrollBlockStartIndex(
+            useTwoPaneLayout = false,
+            chapterPageEnabled = false,
+            showScanlatorSelector = false,
+        ) shouldBe 3
+
+        resolveNovelAuroraFastScrollBlockStartIndex(
+            useTwoPaneLayout = true,
+            chapterPageEnabled = true,
+            showScanlatorSelector = true,
+        ) shouldBe 3
+    }
+
+    @Test
+    fun `novel aurora chapter page navigation is disabled while loading or at list boundaries`() {
+        canNavigateNovelAuroraChapterPage(
+            chapterPageCurrent = 1,
+            chapterPageTotal = 5,
+            chapterPageLoading = false,
+            direction = NovelAuroraChapterPageDirection.Previous,
+        ) shouldBe false
+
+        canNavigateNovelAuroraChapterPage(
+            chapterPageCurrent = 5,
+            chapterPageTotal = 5,
+            chapterPageLoading = false,
+            direction = NovelAuroraChapterPageDirection.Next,
+        ) shouldBe false
+
+        canNavigateNovelAuroraChapterPage(
+            chapterPageCurrent = 2,
+            chapterPageTotal = 5,
+            chapterPageLoading = true,
+            direction = NovelAuroraChapterPageDirection.Previous,
+        ) shouldBe false
+    }
+
+    @Test
+    fun `novel aurora chapter page navigation is enabled for reachable pages`() {
+        canNavigateNovelAuroraChapterPage(
+            chapterPageCurrent = 2,
+            chapterPageTotal = 5,
+            chapterPageLoading = false,
+            direction = NovelAuroraChapterPageDirection.Previous,
+        ) shouldBe true
+
+        canNavigateNovelAuroraChapterPage(
+            chapterPageCurrent = 2,
+            chapterPageTotal = 5,
+            chapterPageLoading = false,
+            direction = NovelAuroraChapterPageDirection.Next,
+        ) shouldBe true
+    }
+
+    @Test
     fun `collapsed novel aurora list shows only preview chapters until expanded`() {
         resolveNovelAuroraVisibleChapterCount(
             chaptersExpanded = false,

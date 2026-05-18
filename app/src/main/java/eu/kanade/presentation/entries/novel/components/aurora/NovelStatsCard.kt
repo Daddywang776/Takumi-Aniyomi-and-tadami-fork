@@ -19,6 +19,7 @@ import eu.kanade.tachiyomi.source.model.SManga
 import tachiyomi.domain.entries.novel.model.Novel
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.aniyomi.AYMR
+import tachiyomi.presentation.core.i18n.pluralStringResource
 import tachiyomi.presentation.core.i18n.stringResource
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -35,6 +36,9 @@ fun NovelStatsCard(
     modifier: Modifier = Modifier,
 ) {
     val nextUpdateDays = rememberNovelNextUpdateDays(nextUpdate)
+    val nextUpdateDayLabel = nextUpdateDays
+        ?.takeIf { it > 0 }
+        ?.let { days -> pluralStringResource(MR.plurals.day, count = days, days) }
     val clampedReadCount = readChapterCount.coerceIn(0, chapterCount.coerceAtLeast(0))
     val progressFraction = if (chapterCount > 0) clampedReadCount / chapterCount.toFloat() else null
 
@@ -86,11 +90,12 @@ fun NovelStatsCard(
                     )
                     QuietMetricTile(
                         label = stringResource(AYMR.strings.aurora_update),
-                        value = when (nextUpdateDays) {
-                            null -> stringResource(MR.strings.not_applicable)
-                            0 -> stringResource(MR.strings.manga_interval_expected_update_soon)
-                            else -> "${nextUpdateDays}d"
-                        },
+                        value = resolveNovelNextUpdateLabel(
+                            nextUpdateDays = nextUpdateDays,
+                            notApplicableLabel = stringResource(MR.strings.not_applicable),
+                            soonLabel = stringResource(MR.strings.manga_interval_expected_update_soon),
+                            formattedDaysLabel = nextUpdateDayLabel,
+                        ),
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -121,6 +126,19 @@ fun NovelStatsCard(
 
 internal fun rememberNovelNextUpdateDays(nextUpdate: Instant?, now: Instant = Instant.now()): Int? {
     return nextUpdate?.let { now.until(it, ChronoUnit.DAYS).toInt().coerceAtLeast(0) }
+}
+
+internal fun resolveNovelNextUpdateLabel(
+    nextUpdateDays: Int?,
+    notApplicableLabel: String,
+    soonLabel: String,
+    formattedDaysLabel: String?,
+): String {
+    return when (nextUpdateDays) {
+        null -> notApplicableLabel
+        0 -> soonLabel
+        else -> formattedDaysLabel ?: notApplicableLabel
+    }
 }
 
 @Composable

@@ -428,7 +428,6 @@ fun NovelScreenAuroraImpl(
                         val paneTopPaddingPx = with(paneDensity) { topContentPadding.roundToPx() }
                         val paneFastScrollBlockStartIndex = resolveNovelAuroraFastScrollBlockStartIndex(
                             useTwoPaneLayout = true,
-                            isSelectionMode = isSelectionMode,
                             chapterPageEnabled = chapterPageEnabled,
                             showScanlatorSelector = state.showScanlatorSelector,
                         )
@@ -622,7 +621,7 @@ fun NovelScreenAuroraImpl(
                                                                 formatChapterNumber(row.displayNumber.toDouble()),
                                                             )
                                                         }
-                                                        "$scanlator · $baseTitle"
+                                                        "$scanlator - $baseTitle"
                                                     }
                                                 NovelChapterCardCompactUi.Render(
                                                     novel = novel,
@@ -913,7 +912,6 @@ fun NovelScreenAuroraImpl(
             val fastScrollBaseTopPaddingPx = with(density) { fastScrollBaseTopPadding.roundToPx() }
             val fastScrollBlockStartIndex = resolveNovelAuroraFastScrollBlockStartIndex(
                 useTwoPaneLayout = false,
-                isSelectionMode = isSelectionMode,
                 chapterPageEnabled = chapterPageEnabled,
                 showScanlatorSelector = state.showScanlatorSelector,
             )
@@ -1149,7 +1147,7 @@ fun NovelScreenAuroraImpl(
                                                     formatChapterNumber(row.displayNumber.toDouble()),
                                                 )
                                             }
-                                            "$scanlator · $baseTitle"
+                                            "$scanlator - $baseTitle"
                                         }
                                     NovelChapterCardCompactUi.Render(
                                         novel = novel,
@@ -1543,12 +1541,29 @@ internal fun resolveNovelAuroraTargetScrollIndex(
 
 internal fun resolveNovelAuroraFastScrollBlockStartIndex(
     useTwoPaneLayout: Boolean,
-    isSelectionMode: Boolean,
     chapterPageEnabled: Boolean,
     showScanlatorSelector: Boolean,
 ): Int {
     val baseIndex = if (useTwoPaneLayout) 1 else 3
     return baseIndex + listOf(chapterPageEnabled, showScanlatorSelector).count { it }
+}
+
+internal enum class NovelAuroraChapterPageDirection {
+    Previous,
+    Next,
+}
+
+internal fun canNavigateNovelAuroraChapterPage(
+    chapterPageCurrent: Int,
+    chapterPageTotal: Int,
+    chapterPageLoading: Boolean,
+    direction: NovelAuroraChapterPageDirection,
+): Boolean {
+    if (chapterPageLoading) return false
+    return when (direction) {
+        NovelAuroraChapterPageDirection.Previous -> chapterPageCurrent > 1
+        NovelAuroraChapterPageDirection.Next -> chapterPageCurrent < chapterPageTotal
+    }
 }
 
 internal fun shouldShowNovelAuroraHeroContent(
@@ -1612,6 +1627,18 @@ private fun AuroraChapterPageControls(
     modifier: Modifier = Modifier,
 ) {
     val colors = AuroraTheme.colors
+    val canNavigatePrevious = canNavigateNovelAuroraChapterPage(
+        chapterPageCurrent = chapterPageCurrent,
+        chapterPageTotal = chapterPageTotal,
+        chapterPageLoading = chapterPageLoading,
+        direction = NovelAuroraChapterPageDirection.Previous,
+    )
+    val canNavigateNext = canNavigateNovelAuroraChapterPage(
+        chapterPageCurrent = chapterPageCurrent,
+        chapterPageTotal = chapterPageTotal,
+        chapterPageLoading = chapterPageLoading,
+        direction = NovelAuroraChapterPageDirection.Next,
+    )
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -1622,10 +1649,12 @@ private fun AuroraChapterPageControls(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        SelectionChip(
-            text = "←",
+        SelectionIconChip(
+            icon = Icons.Outlined.ChevronLeft,
+            contentDescription = stringResource(MR.strings.spen_previous_page),
+            enabled = canNavigatePrevious,
             onClick = {
-                if (!chapterPageLoading && chapterPageCurrent > 1) {
+                if (canNavigatePrevious) {
                     onChapterPageChange(chapterPageCurrent - 1)
                 }
             },
@@ -1648,10 +1677,12 @@ private fun AuroraChapterPageControls(
                 )
             }
         }
-        SelectionChip(
-            text = "→",
+        SelectionIconChip(
+            icon = Icons.Outlined.ChevronRight,
+            contentDescription = stringResource(MR.strings.spen_next_page),
+            enabled = canNavigateNext,
             onClick = {
-                if (!chapterPageLoading && chapterPageCurrent < chapterPageTotal) {
+                if (canNavigateNext) {
                     onChapterPageChange(chapterPageCurrent + 1)
                 }
             },
@@ -1660,8 +1691,10 @@ private fun AuroraChapterPageControls(
 }
 
 @Composable
-private fun SelectionChip(
-    text: String,
+private fun SelectionIconChip(
+    icon: ImageVector,
+    contentDescription: String,
+    enabled: Boolean,
     onClick: () -> Unit,
 ) {
     val colors = AuroraTheme.colors
@@ -1676,14 +1709,14 @@ private fun SelectionChip(
                     ),
                 ),
             )
-            .clickable(onClick = onClick)
+            .clickable(enabled = enabled, onClick = onClick)
             .padding(horizontal = 10.dp, vertical = 6.dp),
     ) {
-        Text(
-            text = text,
-            color = colors.textPrimary,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium,
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            tint = if (enabled) colors.textPrimary else colors.textSecondary.copy(alpha = 0.6f),
+            modifier = Modifier.size(16.dp),
         )
     }
 }

@@ -30,21 +30,18 @@ class TitleListFastScrollStartIndexTest {
     fun `novel aurora block start index matches phone and two pane layouts`() {
         resolveNovelAuroraFastScrollBlockStartIndex(
             useTwoPaneLayout = false,
-            isSelectionMode = false,
             chapterPageEnabled = false,
             showScanlatorSelector = false,
         ) shouldBe 3
 
         resolveNovelAuroraFastScrollBlockStartIndex(
             useTwoPaneLayout = false,
-            isSelectionMode = true,
             chapterPageEnabled = true,
             showScanlatorSelector = true,
         ) shouldBe 5
 
         resolveNovelAuroraFastScrollBlockStartIndex(
             useTwoPaneLayout = true,
-            isSelectionMode = true,
             chapterPageEnabled = true,
             showScanlatorSelector = false,
         ) shouldBe 2
