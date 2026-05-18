@@ -140,6 +140,8 @@ class SyncNovelChaptersWithSource(
 
         val deletedChapterNumberDateFetchMap = removedChapters.sortedByDescending { it.dateFetch }
             .associate { it.chapterNumber to it.dateFetch }
+        val deletedChapterNumberLastPageReadMap = removedChapters.sortedByDescending { it.dateFetch }
+            .associate { it.chapterNumber to it.lastPageRead }
 
         val markDuplicateAsRead = libraryPreferences.markDuplicateReadChapterAsRead().get()
             .contains(LibraryPreferences.MARK_DUPLICATE_CHAPTER_READ_NEW)
@@ -161,6 +163,9 @@ class SyncNovelChaptersWithSource(
                 read = chapter.chapterNumber in deletedReadChapterNumbers,
                 bookmark = chapter.chapterNumber in deletedBookmarkedChapterNumbers,
             )
+            deletedChapterNumberLastPageReadMap[chapter.chapterNumber]?.let { lastPageRead ->
+                chapter = chapter.copy(lastPageRead = lastPageRead)
+            }
 
             // Try to to use the fetch date of the original entry to not pollute 'Updates' tab
             deletedChapterNumberDateFetchMap[chapter.chapterNumber]?.let {

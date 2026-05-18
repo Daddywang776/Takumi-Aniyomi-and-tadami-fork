@@ -178,6 +178,59 @@ class SyncNovelChaptersWithSourceTest {
         }
     }
 
+    @Test
+    fun `preserves in progress last page read when matching chapter number is re added with a new url`() {
+        runTest {
+            val existingChapter = NovelChapter.create().copy(
+                id = 1L,
+                novelId = 10L,
+                url = "/chapter-old",
+                name = "Chapter 12",
+                chapterNumber = 12.0,
+                sourceOrder = 0L,
+                read = false,
+                bookmark = true,
+                lastPageRead = 47L,
+            )
+            val repository = FakeNovelChapterRepository().apply {
+                chapters = listOf(existingChapter)
+            }
+            val updateNovel = mockk<eu.kanade.domain.entries.novel.interactor.UpdateNovel>()
+            val preferences = mockk<LibraryPreferences>()
+            val duplicatePref = mockk<Preference<Set<String>>>()
+
+            every { duplicatePref.get() } returns emptySet()
+            every { preferences.markDuplicateReadChapterAsRead() } returns duplicatePref
+            coEvery { updateNovel.await(any()) } returns true
+
+            val interactor = SyncNovelChaptersWithSource(
+                novelChapterRepository = repository,
+                shouldUpdateDbNovelChapter = ShouldUpdateDbNovelChapter(),
+                updateNovel = updateNovel,
+                libraryPreferences = preferences,
+            )
+
+            val novel = Novel.create().copy(id = 10L, title = "Novel")
+            val replacementChapter = SNovelChapter.create().apply {
+                url = "/chapter-new"
+                name = "Chapter 12"
+                date_upload = 0L
+                chapter_number = 12f
+            }
+
+            interactor.await(
+                rawSourceChapters = listOf(replacementChapter),
+                novel = novel,
+                source = FakeNovelSource(),
+            )
+
+            repository.removedIds shouldBe listOf(existingChapter.id)
+            repository.addedChapters.single().bookmark shouldBe true
+            repository.addedChapters.single().lastPageRead shouldBe 47L
+            repository.addedChapters.single().read shouldBe false
+        }
+    }
+
     private class FakeNovelSource : NovelSource {
         override val id = 1L
         override val name = "Test"

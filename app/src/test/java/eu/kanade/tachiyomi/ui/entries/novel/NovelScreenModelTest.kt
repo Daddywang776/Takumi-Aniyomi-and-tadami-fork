@@ -31,6 +31,7 @@ import eu.kanade.tachiyomi.ui.reader.novel.translation.GeminiTranslationCacheEnt
 import eu.kanade.tachiyomi.ui.reader.novel.translation.NovelReaderTranslationDiskCacheStore
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CompletableDeferred
@@ -1346,6 +1347,83 @@ class NovelScreenModelTest {
         }
     }
 
+    @Test
+    fun `invalidate all download cache event clears stale downloaded ids after full rescan`() {
+        runBlocking {
+            val novel = novelForResumeTests(305L)
+            val chapters = listOf(
+                novelChapter(id = 1L, novelId = novel.id, chapterNumber = 1.0, read = false),
+            )
+            val downloadCacheChanges = MutableSharedFlow<NovelDownloadCacheEvent>(replay = 1, extraBufferCapacity = 1)
+            var resolvedDownloadedIds = emptySet<Long>()
+            val screenModel = createResumeScreenModel(
+                novel = novel,
+                chapters = chapters,
+                downloadCacheChanges = downloadCacheChanges,
+                resolveDownloadedChapterIds = { _, _ -> resolvedDownloadedIds },
+            )
+
+            try {
+                awaitResumeScreenModel(screenModel)
+
+                screenModel.handleDownloadCacheEvent(
+                    NovelDownloadCacheEvent.ChaptersChanged(
+                        novelId = novel.id,
+                        chapterIds = setOf(1L),
+                        downloaded = true,
+                    ),
+                )
+                withTimeout(1_000) {
+                    while ((screenModel.state.value as? NovelScreenModel.State.Success)?.downloadedChapterIds !=
+                        setOf(1L)
+                    ) {
+                        yield()
+                    }
+                }
+
+                resolvedDownloadedIds = emptySet()
+                screenModel.handleDownloadCacheEvent(NovelDownloadCacheEvent.InvalidateAll)
+
+                withTimeout(1_000) {
+                    while ((screenModel.state.value as? NovelScreenModel.State.Success)?.downloadedChapterIds !=
+                        emptySet<Long>()
+                    ) {
+                        yield()
+                    }
+                }
+            } finally {
+                screenModel.onDispose()
+            }
+        }
+    }
+
+    @Test
+    fun `toggle chapter read does not auto track when no logged in trackers exist`() {
+        runBlocking {
+            val novel = novelForResumeTests(401L)
+            val chapters = listOf(
+                novelChapter(id = 1L, novelId = novel.id, chapterNumber = 1.0, read = false),
+            )
+            val trackNovelChapter = mockk<TrackNovelChapter>(relaxed = true)
+            val screenModel = createResumeScreenModel(
+                novel = novel,
+                chapters = chapters,
+                trackNovelChapter = trackNovelChapter,
+            )
+
+            try {
+                awaitResumeScreenModel(screenModel)
+
+                screenModel.toggleChapterRead(1L)
+                delay(100)
+
+                coVerify(exactly = 0) { trackNovelChapter.await(any(), any(), any()) }
+            } finally {
+                screenModel.onDispose()
+            }
+        }
+    }
+
     private class FakeLifecycleOwner : LifecycleOwner {
         private class NoopStartedLifecycle : Lifecycle() {
             override val currentState: State
@@ -1372,6 +1450,7 @@ class NovelScreenModelTest {
         geminiEnabled: Boolean = false,
         excludedScanlators: Set<String> = emptySet(),
         refreshNovelTracks: RefreshNovelTracks = mockk(relaxed = true),
+        trackNovelChapter: TrackNovelChapter = mockk(relaxed = true),
         resolveDownloadedChapterIds: (Novel, List<NovelChapter>) -> Set<Long> = { _, _ -> emptySet() },
         enqueueOriginal: (Novel, List<NovelChapter>) -> Int = { novel, queuedChapters ->
             eu.kanade.tachiyomi.data.download.novel.NovelDownloadQueueManager.enqueueOriginal(novel, queuedChapters)
@@ -1467,6 +1546,7 @@ class NovelScreenModelTest {
             trackerManager = trackerManager,
             getTracks = getNovelTracks,
             refreshNovelTracks = refreshNovelTracks,
+            trackNovelChapter = trackNovelChapter,
             downloadCacheChanges = downloadCacheChanges,
             downloadQueueState = downloadQueueState,
             downloadCache = null,

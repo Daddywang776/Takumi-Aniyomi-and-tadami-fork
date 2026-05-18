@@ -136,6 +136,40 @@ class NovelDownloadSelectionTest {
         ).map { it.id }.shouldContainExactly(200, 202)
     }
 
+    @Test
+    fun `selectTranslatedChaptersForDownload returns only not downloaded chapters for ALL action`() {
+        val novel = Novel.create()
+        val chaptersWithCache = listOf(
+            chapter(id = 210, unread = false, order = 1),
+            chapter(id = 211, unread = true, order = 2),
+            chapter(id = 212, unread = true, order = 3),
+        )
+
+        NovelScreenModel.selectTranslatedChaptersForDownload(
+            action = NovelDownloadAction.ALL,
+            novel = novel,
+            chaptersWithCache = chaptersWithCache,
+            downloadedTranslatedChapterIds = setOf(211L),
+            amount = 0,
+        ).map { it.id }.shouldContainExactly(210, 212)
+    }
+
+    @Test
+    fun `selectTranslatedChaptersForDownloadByIds skips already downloaded translated chapters`() {
+        val chapters = listOf(
+            chapter(id = 300, unread = true, order = 1),
+            chapter(id = 301, unread = true, order = 2),
+            chapter(id = 302, unread = true, order = 3),
+        )
+
+        NovelScreenModel.selectTranslatedChaptersForDownloadByIds(
+            chapterIds = setOf(300L, 301L, 302L),
+            chapters = chapters,
+            downloadedTranslatedChapterIds = setOf(301L),
+            hasTranslationCache = { chapter -> chapter.id != 302L },
+        ).map { it.id }.shouldContainExactly(300)
+    }
+
     private fun chapter(
         id: Long,
         unread: Boolean,
