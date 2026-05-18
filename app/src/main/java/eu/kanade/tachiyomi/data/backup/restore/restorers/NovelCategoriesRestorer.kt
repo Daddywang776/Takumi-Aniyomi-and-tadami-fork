@@ -26,8 +26,14 @@ class NovelCategoriesRestorer(
                     if (dbCategory != null) return@map dbCategory
                     val order = nextOrder++
                     novelHandler.awaitOneExecutable { db ->
-                        db.categoriesQueries.insert(it.name, order, it.flags)
-                        db.categoriesQueries.selectLastInsertedRowId()
+                        db.novel_categoriesQueries.insert(
+                            name = it.name,
+                            order = order,
+                            flags = it.flags,
+                            hidden = 0L,
+                            hidden_from_home_hub = if (it.hiddenFromHomeHub) 1L else 0L,
+                        )
+                        db.novel_categoriesQueries.selectLastInsertedRowId()
                     }
                         .let { id ->
                             tachiyomi.domain.category.novel.model.NovelCategory(
