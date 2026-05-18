@@ -14,6 +14,12 @@ interface NovelChapterRepository {
 
     suspend fun removeChaptersWithIds(chapterIds: List<Long>)
 
+    suspend fun syncChapters(
+        toAdd: List<NovelChapter>,
+        toUpdate: List<NovelChapterUpdate>,
+        toDelete: List<Long>,
+    ): List<NovelChapter>
+
     suspend fun getChapterByNovelId(novelId: Long, applyScanlatorFilter: Boolean = false): List<NovelChapter>
 
     suspend fun getScanlatorsByNovelId(novelId: Long): List<String>

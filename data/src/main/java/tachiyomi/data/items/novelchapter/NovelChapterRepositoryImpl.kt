@@ -82,6 +82,63 @@ class NovelChapterRepositoryImpl(
         }
     }
 
+    override suspend fun syncChapters(
+        toAdd: List<NovelChapter>,
+        toUpdate: List<NovelChapterUpdate>,
+        toDelete: List<Long>,
+    ): List<NovelChapter> {
+        return try {
+            handler.await(inTransaction = true) { db ->
+                if (toDelete.isNotEmpty()) {
+                    db.novel_chaptersQueries.removeChaptersWithIds(toDelete)
+                }
+
+                toUpdate.forEach { chapterUpdate ->
+                    db.novel_chaptersQueries.update(
+                        novelId = chapterUpdate.novelId,
+                        url = chapterUpdate.url,
+                        name = chapterUpdate.name,
+                        scanlator = chapterUpdate.scanlator,
+                        read = chapterUpdate.read,
+                        bookmark = chapterUpdate.bookmark,
+                        lastPageRead = chapterUpdate.lastPageRead,
+                        chapterNumber = chapterUpdate.chapterNumber,
+                        sourceOrder = chapterUpdate.sourceOrder,
+                        dateFetch = chapterUpdate.dateFetch,
+                        dateUpload = chapterUpdate.dateUpload,
+                        dateUploadRaw = chapterUpdate.dateUploadRaw,
+                        chapterId = chapterUpdate.id,
+                        version = chapterUpdate.version,
+                        isSyncing = 0,
+                    )
+                }
+
+                toAdd.map { chapter ->
+                    db.novel_chaptersQueries.insert(
+                        chapter.novelId,
+                        chapter.url,
+                        chapter.name,
+                        chapter.scanlator,
+                        chapter.read,
+                        chapter.bookmark,
+                        chapter.lastPageRead,
+                        chapter.chapterNumber,
+                        chapter.sourceOrder,
+                        chapter.dateFetch,
+                        chapter.dateUpload,
+                        chapter.dateUploadRaw,
+                        chapter.version,
+                    )
+                    val lastInsertId = db.novel_chaptersQueries.selectLastInsertedRowId().executeAsOne()
+                    chapter.copy(id = lastInsertId)
+                }
+            }
+        } catch (e: Exception) {
+            logcat(LogPriority.ERROR, e)
+            emptyList()
+        }
+    }
+
     override suspend fun getChapterByNovelId(novelId: Long, applyScanlatorFilter: Boolean): List<NovelChapter> {
         return handler.awaitList { db ->
             db.novel_chaptersQueries.getChaptersByNovelId(novelId, applyScanlatorFilter.toLong(), ::mapChapter)

@@ -46,13 +46,13 @@ object ChapterRecognition {
             // Remove unwanted white spaces.
             .replace(unwantedWhiteSpace, "")
 
-        val numberMatch = number.findAll(cleanChapterName)
+        val numberMatchList = number.findAll(cleanChapterName).toList()
 
         when {
-            numberMatch.none() -> {
+            numberMatchList.isEmpty() -> {
                 return chapterNumber ?: -1.0
             }
-            numberMatch.count() > 1 -> {
+            numberMatchList.size > 1 -> {
                 // Remove unwanted tags.
                 unwanted.replace(cleanChapterName, "").let { name ->
                     // Check base case ch.xx
@@ -65,7 +65,7 @@ object ChapterRecognition {
         }
 
         // return the first number encountered
-        return getChapterNumberFromMatch(numberMatch.first())
+        return getChapterNumberFromMatch(numberMatchList.first())
     }
 
     /**

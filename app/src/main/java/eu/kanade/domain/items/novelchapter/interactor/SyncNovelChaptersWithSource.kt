@@ -178,18 +178,18 @@ class SyncNovelChaptersWithSource(
             chapter
         }
 
-        if (removedChapters.isNotEmpty()) {
-            val toDeleteIds = removedChapters.map { it.id }
-            novelChapterRepository.removeChaptersWithIds(toDeleteIds)
-        }
+        val toDeleteIds = removedChapters.map { it.id }
+        val chapterUpdates = updatedChapters.map { it.toNovelChapterUpdate() }
 
-        if (updatedToAdd.isNotEmpty()) {
-            updatedToAdd = novelChapterRepository.addAllChapters(updatedToAdd)
-        }
-
-        if (updatedChapters.isNotEmpty()) {
-            val chapterUpdates = updatedChapters.map { it.toNovelChapterUpdate() }
-            novelChapterRepository.updateAllChapters(chapterUpdates)
+        if (toDeleteIds.isNotEmpty() || updatedToAdd.isNotEmpty() || chapterUpdates.isNotEmpty()) {
+            val syncResult = novelChapterRepository.syncChapters(
+                toAdd = updatedToAdd,
+                toUpdate = chapterUpdates,
+                toDelete = toDeleteIds,
+            )
+            if (updatedToAdd.isNotEmpty()) {
+                updatedToAdd = syncResult
+            }
         }
 
         // Set this novel as updated since chapters were changed

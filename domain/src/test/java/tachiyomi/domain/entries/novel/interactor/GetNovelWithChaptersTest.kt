@@ -68,6 +68,12 @@ class GetNovelWithChaptersTest {
     private class FakeNovelChapterRepository(
         private val chaptersFlow: MutableStateFlow<List<NovelChapter>>,
     ) : NovelChapterRepository {
+        override suspend fun syncChapters(
+            toAdd: List<NovelChapter>,
+            toUpdate: List<tachiyomi.domain.items.novelchapter.model.NovelChapterUpdate>,
+            toDelete: List<Long>,
+        ): List<NovelChapter> = emptyList()
+
         override suspend fun addAllChapters(chapters: List<NovelChapter>): List<NovelChapter> = chapters
         override suspend fun updateChapter(
             chapterUpdate: tachiyomi.domain.items.novelchapter.model.NovelChapterUpdate,

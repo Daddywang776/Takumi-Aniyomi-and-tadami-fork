@@ -25,6 +25,8 @@ class NovelTranslatedDownloadManager(
     private val storageManager: StorageManager? = runCatching { Injekt.get<StorageManager>() }.getOrNull(),
 ) {
 
+    private val downloadedIdsCache = mutableMapOf<Pair<Long, NovelTranslatedDownloadFormat>, Set<Long>>()
+
     private val rootDir: UniFile?
         get() = storageManager?.getDownloadsDirectory()?.createDirectory(ROOT_DIR_NAME)
 
@@ -50,19 +52,35 @@ class NovelTranslatedDownloadManager(
     ): Set<Long> {
         if (chapters.isEmpty()) return emptySet()
 
+        val cacheKey = Pair(novel.id, format)
+        synchronized(downloadedIdsCache) {
+            val cached = downloadedIdsCache[cacheKey]
+            if (cached != null) {
+                return cached
+            }
+        }
+
         val translatedFileNames = translatedNovelDirectories(novel)
             .asSequence()
             .flatMap { directory -> directory.listFiles()?.asSequence().orEmpty() }
             .filter { file -> file.isFile }
             .mapNotNull { file -> file.name }
             .toSet()
-        if (translatedFileNames.isEmpty()) return emptySet()
 
-        return chapters
-            .asSequence()
-            .filter { chapter -> buildTranslatedFileName(chapter, format) in translatedFileNames }
-            .map { chapter -> chapter.id }
-            .toSet()
+        val result = if (translatedFileNames.isEmpty()) {
+            emptySet()
+        } else {
+            chapters
+                .asSequence()
+                .filter { chapter -> buildTranslatedFileName(chapter, format) in translatedFileNames }
+                .map { chapter -> chapter.id }
+                .toSet()
+        }
+
+        synchronized(downloadedIdsCache) {
+            downloadedIdsCache[cacheKey] = result
+        }
+        return result
     }
 
     fun getTranslatedFile(
@@ -87,6 +105,10 @@ class NovelTranslatedDownloadManager(
             fileName = fileName,
         )?.delete()
         legacyTranslatedFile(novel, fileName)?.delete()
+
+        synchronized(downloadedIdsCache) {
+            downloadedIdsCache.remove(Pair(novel.id, format))
+        }
     }
 
     suspend fun exportTranslatedChapter(
@@ -108,7 +130,7 @@ class NovelTranslatedDownloadManager(
         val file = exportFile(novel, chapter, format)
             ?: return Result.failure(IllegalStateException("Unable to create destination file"))
 
-        return runCatching {
+        val result = runCatching {
             when (format) {
                 NovelTranslatedDownloadFormat.TXT -> {
                     val outputStream = file.openOutputStream()
@@ -125,6 +147,14 @@ class NovelTranslatedDownloadManager(
                 }
             }
         }
+
+        if (result.isSuccess) {
+            synchronized(downloadedIdsCache) {
+                downloadedIdsCache.remove(Pair(novel.id, format))
+            }
+        }
+
+        return result
     }
 
     private fun exportFile(

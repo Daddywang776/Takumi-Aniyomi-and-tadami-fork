@@ -134,4 +134,41 @@ class NovelChapterRepositoryImplTest {
 
         checkNotNull(stored).dateUploadRaw shouldBe "4 hours ago"
     }
+
+    @Test
+    fun `sync chapters in a single transaction`() = runTest {
+        val chapter1 = NovelChapter.create().copy(
+            novelId = novelId,
+            url = "/chapter-sync-1",
+            name = "Sync 1",
+            chapterNumber = 1.0,
+            dateUpload = 10,
+        )
+        val added = repository.addAllChapters(listOf(chapter1)).first()
+
+        val updatedChapter = NovelChapterUpdate(
+            id = added.id,
+            read = true,
+        )
+        val toAddChapter = NovelChapter.create().copy(
+            novelId = novelId,
+            url = "/chapter-sync-2",
+            name = "Sync 2",
+            chapterNumber = 2.0,
+            dateUpload = 20,
+        )
+
+        // Perform the sync
+        val syncAdded = repository.syncChapters(
+            toAdd = listOf(toAddChapter),
+            toUpdate = listOf(updatedChapter),
+            toDelete = emptyList(),
+        )
+
+        // Verifications
+        repository.getChapterById(added.id)?.read shouldBe true
+        syncAdded.size shouldBe 1
+        syncAdded.first().name shouldBe "Sync 2"
+        repository.getChapterById(syncAdded.first().id) shouldBe syncAdded.first()
+    }
 }

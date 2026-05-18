@@ -320,36 +320,22 @@ class NovelScreenModel(
         }
 
         screenModelScope.launchIO {
-            getNovelExcludedScanlators.subscribe(novelId)
+            combine(
+                getNovelExcludedScanlators.subscribe(novelId),
+                getAvailableNovelScanlators.subscribe(novelId),
+                getNovelScanlatorChapterCounts.subscribe(novelId),
+            ) { excluded, available, counts ->
+                Triple(excluded, available, counts)
+            }
                 .flowWithLifecycle(lifecycle)
                 .distinctUntilChanged()
-                .collectLatest { excludedScanlators ->
+                .collectLatest { (excludedScanlators, availableScanlators, scanlatorChapterCounts) ->
                     updateSuccessState {
-                        it.copy(excludedScanlators = excludedScanlators)
-                    }
-                    maybeNormalizeNovelBranchSelection()
-                }
-        }
-
-        screenModelScope.launchIO {
-            getAvailableNovelScanlators.subscribe(novelId)
-                .flowWithLifecycle(lifecycle)
-                .distinctUntilChanged()
-                .collectLatest { availableScanlators ->
-                    updateSuccessState {
-                        it.copy(availableScanlators = availableScanlators)
-                    }
-                    maybeNormalizeNovelBranchSelection()
-                }
-        }
-
-        screenModelScope.launchIO {
-            getNovelScanlatorChapterCounts.subscribe(novelId)
-                .flowWithLifecycle(lifecycle)
-                .distinctUntilChanged()
-                .collectLatest { scanlatorChapterCounts ->
-                    updateSuccessState {
-                        it.copy(scanlatorChapterCounts = scanlatorChapterCounts)
+                        it.copy(
+                            excludedScanlators = excludedScanlators,
+                            availableScanlators = availableScanlators,
+                            scanlatorChapterCounts = scanlatorChapterCounts,
+                        )
                     }
                     maybeNormalizeNovelBranchSelection()
                 }
@@ -813,7 +799,10 @@ class NovelScreenModel(
     ): State.Success {
         val readerSettings = novelReaderPreferences.resolveSettings(novel.source)
         readerSettingsCache = readerSettings
-        val translatedCacheChapterIds = NovelReaderTranslationDiskCacheStore.chapterIds(readerSettings.geminiTargetLang)
+        val translatedCacheChapterIds = NovelReaderTranslationDiskCacheStore.chapterIds(
+            chapters.map { it.id },
+            readerSettings.geminiTargetLang,
+        )
         val translatedDownloadFormat = novelReaderPreferences.translatedDownloadFormat(novel.id)
         val translatedQueueChapterIds = resolveTranslatedQueueChapterIds(
             queueState = queueState,
@@ -1803,6 +1792,7 @@ class NovelScreenModel(
 
         updateSuccessState { current ->
             val translatedCacheChapterIds = NovelReaderTranslationDiskCacheStore.chapterIds(
+                current.chapters.map { it.id },
                 resolveReaderSettings(current.novel.source).geminiTargetLang,
             )
             val updatedChapterActionStates = current.chapterActionStates.toMutableMap()

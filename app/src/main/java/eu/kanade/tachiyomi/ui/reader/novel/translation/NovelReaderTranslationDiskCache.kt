@@ -108,6 +108,16 @@ internal class NovelReaderTranslationDiskCache(
         }
     }
 
+    fun chapterIds(chapterIds: Collection<Long>, targetLang: String): Set<Long> {
+        synchronized(lock) {
+            if (!directory.exists() || chapterIds.isEmpty()) return emptySet()
+            return chapterIds.filter { chapterId ->
+                val file = fileFor(chapterId)
+                file.isFile && readEntryLocked(chapterId)?.targetLang == targetLang
+            }.toSet()
+        }
+    }
+
     fun chapterIds(requirements: NovelReaderTranslationCacheRequirements): Set<Long> {
         synchronized(lock) {
             if (!directory.exists()) return emptySet()
@@ -223,6 +233,11 @@ internal object NovelReaderTranslationDiskCacheStore {
     fun chapterIds(): Set<Long> = cache.chapterIds()
 
     fun chapterIds(targetLang: String): Set<Long> = cache.chapterIds(targetLang)
+
+    fun chapterIds(chapterIds: Collection<Long>, targetLang: String): Set<Long> = cache.chapterIds(
+        chapterIds,
+        targetLang,
+    )
 
     fun chapterIds(requirements: NovelReaderTranslationCacheRequirements): Set<Long> = cache.chapterIds(requirements)
 
