@@ -861,6 +861,10 @@
     <string name="pref_manga_library_update_categories_details">Манга в исключённых категориях не обновляется, даже если она также находится во включённых категориях.</string>
     <string name="pref_anime_library_update_categories_details">Аниме в исключённых категориях не обновляется, даже если она также находится во включённых категориях.</string>
     <string name="pref_novel_library_update_categories_details">Ранобэ в исключённых категориях не обновляется, даже если оно также находится во включённых категориях.</string>
+    <string name="pref_anime_library_update_interval_category">Частота обновления аниме</string>
+    <string name="pref_manga_library_update_interval_category">Частота обновления манги</string>
+    <string name="pref_novel_library_update_interval_category">Частота обновления ранобэ</string>
+    <string name="update_use_general">Использовать общее значение</string>
     <string name="unofficial_extension_message_aniyomi">Это расширение не входит в официальный список расширений Aniyomi.</string>
     <string name="unofficial_anime_extension_message">Это расширение не входит в официальный список расширений Aniyomi.</string>
     <string name="episode_download_progress">%1$d%%</string>

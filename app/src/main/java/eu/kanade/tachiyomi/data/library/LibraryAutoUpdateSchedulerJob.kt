@@ -68,30 +68,76 @@ class LibraryAutoUpdateSchedulerJob(
 
     override suspend fun doWork(): Result {
         val wm = context.workManager
-        wm.enqueueUniqueWork(
-            ANIME_AUTO_TRIGGER_WORK_NAME,
-            ExistingWorkPolicy.KEEP,
-            OneTimeWorkRequestBuilder<AnimeLibraryUpdateJob>()
-                .addTag(ANIME_TAG)
-                .addTag(ANIME_AUTO_TAG)
-                .build(),
-        )
-        wm.enqueueUniqueWork(
-            MANGA_AUTO_TRIGGER_WORK_NAME,
-            ExistingWorkPolicy.KEEP,
-            OneTimeWorkRequestBuilder<MangaLibraryUpdateJob>()
-                .addTag(MANGA_TAG)
-                .addTag(MANGA_AUTO_TAG)
-                .build(),
-        )
-        wm.enqueueUniqueWork(
-            NOVEL_AUTO_TRIGGER_WORK_NAME,
-            ExistingWorkPolicy.KEEP,
-            OneTimeWorkRequestBuilder<NovelLibraryUpdateJob>()
-                .addTag(NOVEL_TAG)
-                .addTag(NOVEL_AUTO_TAG)
-                .build(),
-        )
+        val preferences = Injekt.get<LibraryPreferences>()
+        val now = System.currentTimeMillis()
+        val bufferMs = 5 * 60 * 1000L // 5 minutes buffer
+
+        val generalInterval = preferences.autoUpdateInterval().get()
+        val animePref = preferences.animeUpdateInterval().get()
+        val mangaPref = preferences.mangaUpdateInterval().get()
+        val novelPref = preferences.novelUpdateInterval().get()
+
+        val animeInterval = if (animePref == -2) generalInterval else animePref
+        val mangaInterval = if (mangaPref == -2) generalInterval else mangaPref
+        val novelInterval = if (novelPref == -2) generalInterval else novelPref
+
+        var scheduledAny = false
+
+        if (animeInterval > 0) {
+            val lastUpdate = preferences.lastAnimeUpdateTimestamp().get()
+            val intervalMs = animeInterval * 3600000L
+            if (lastUpdate == 0L || (now - lastUpdate) >= intervalMs - bufferMs) {
+                wm.enqueueUniqueWork(
+                    ANIME_AUTO_TRIGGER_WORK_NAME,
+                    ExistingWorkPolicy.KEEP,
+                    OneTimeWorkRequestBuilder<AnimeLibraryUpdateJob>()
+                        .addTag(ANIME_TAG)
+                        .addTag(ANIME_AUTO_TAG)
+                        .build(),
+                )
+                preferences.lastAnimeUpdateTimestamp().set(now)
+                scheduledAny = true
+            }
+        }
+
+        if (mangaInterval > 0) {
+            val lastUpdate = preferences.lastMangaUpdateTimestamp().get()
+            val intervalMs = mangaInterval * 3600000L
+            if (lastUpdate == 0L || (now - lastUpdate) >= intervalMs - bufferMs) {
+                wm.enqueueUniqueWork(
+                    MANGA_AUTO_TRIGGER_WORK_NAME,
+                    ExistingWorkPolicy.KEEP,
+                    OneTimeWorkRequestBuilder<MangaLibraryUpdateJob>()
+                        .addTag(MANGA_TAG)
+                        .addTag(MANGA_AUTO_TAG)
+                        .build(),
+                )
+                preferences.lastMangaUpdateTimestamp().set(now)
+                scheduledAny = true
+            }
+        }
+
+        if (novelInterval > 0) {
+            val lastUpdate = preferences.lastNovelUpdateTimestamp().get()
+            val intervalMs = novelInterval * 3600000L
+            if (lastUpdate == 0L || (now - lastUpdate) >= intervalMs - bufferMs) {
+                wm.enqueueUniqueWork(
+                    NOVEL_AUTO_TRIGGER_WORK_NAME,
+                    ExistingWorkPolicy.KEEP,
+                    OneTimeWorkRequestBuilder<NovelLibraryUpdateJob>()
+                        .addTag(NOVEL_TAG)
+                        .addTag(NOVEL_AUTO_TAG)
+                        .build(),
+                )
+                preferences.lastNovelUpdateTimestamp().set(now)
+                scheduledAny = true
+            }
+        }
+
+        if (scheduledAny) {
+            preferences.lastUpdatedTimestamp().set(now)
+        }
+
         return Result.success()
     }
 
@@ -121,16 +167,27 @@ class LibraryAutoUpdateSchedulerJob(
             prefInterval: Int? = null,
         ) {
             val preferences = Injekt.get<LibraryPreferences>()
-            val interval = prefInterval ?: preferences.autoUpdateInterval().get()
+            val generalInterval = prefInterval ?: preferences.autoUpdateInterval().get()
+
+            val animePref = preferences.animeUpdateInterval().get()
+            val mangaPref = preferences.mangaUpdateInterval().get()
+            val novelPref = preferences.novelUpdateInterval().get()
+
+            val animeInterval = if (animePref == -2) generalInterval else animePref
+            val mangaInterval = if (mangaPref == -2) generalInterval else mangaPref
+            val novelInterval = if (novelPref == -2) generalInterval else novelPref
+
+            val activeIntervals = listOf(animeInterval, mangaInterval, novelInterval).filter { it > 0 }
 
             cancelLegacyPeriodicWorks(context)
 
-            if (interval > 0) {
+            if (activeIntervals.isNotEmpty()) {
+                val minInterval = activeIntervals.minOrNull() ?: generalInterval
                 val restrictions = preferences.autoUpdateDeviceRestrictions().get()
                 val forceWifiAndCharging = preferences.autoUpdateWifiAndChargingOnly().get()
                 val constraints = buildConstraints(restrictions, forceWifiAndCharging)
                 val request = PeriodicWorkRequestBuilder<LibraryAutoUpdateSchedulerJob>(
-                    interval.toLong(),
+                    minInterval.toLong(),
                     TimeUnit.HOURS,
                     15,
                     TimeUnit.MINUTES,

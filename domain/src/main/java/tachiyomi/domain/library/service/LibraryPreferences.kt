@@ -106,7 +106,24 @@ class LibraryPreferences(
     )
 
     fun lastUpdatedTimestamp() = preferenceStore.getLong(Preference.appStateKey("library_update_last_timestamp"), 0L)
+    fun lastAnimeUpdateTimestamp() = preferenceStore.getLong(
+        Preference.appStateKey("library_anime_update_last_timestamp"),
+        0L,
+    )
+    fun lastMangaUpdateTimestamp() = preferenceStore.getLong(
+        Preference.appStateKey("library_manga_update_last_timestamp"),
+        0L,
+    )
+    fun lastNovelUpdateTimestamp() = preferenceStore.getLong(
+        Preference.appStateKey("library_novel_update_last_timestamp"),
+        0L,
+    )
+
     fun autoUpdateInterval() = preferenceStore.getInt("pref_library_update_interval_key", 0)
+    fun animeUpdateInterval() = preferenceStore.getInt("pref_anime_library_update_interval_key", -2)
+    fun mangaUpdateInterval() = preferenceStore.getInt("pref_manga_library_update_interval_key", -2)
+    fun novelUpdateInterval() = preferenceStore.getInt("pref_novel_library_update_interval_key", -2)
+
     fun autoUpdateWifiAndChargingOnly() = preferenceStore.getBoolean("library_update_wifi_charging_only", false)
 
     fun autoUpdateDeviceRestrictions() = preferenceStore.getStringSet(

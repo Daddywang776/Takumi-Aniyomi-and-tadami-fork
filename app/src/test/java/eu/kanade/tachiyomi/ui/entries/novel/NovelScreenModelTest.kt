@@ -66,6 +66,7 @@ import tachiyomi.domain.history.novel.repository.NovelHistoryRepository
 import tachiyomi.domain.items.novelchapter.interactor.SetNovelDefaultChapterFlags
 import tachiyomi.domain.items.novelchapter.interactor.ShouldUpdateDbNovelChapter
 import tachiyomi.domain.items.novelchapter.model.NovelChapter
+import tachiyomi.domain.items.novelchapter.model.NovelChapterUpdate
 import tachiyomi.domain.items.novelchapter.repository.NovelChapterRepository
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.source.novel.service.NovelSourceManager
@@ -196,6 +197,11 @@ class NovelScreenModelTest {
                         applyScanlatorFilter: Boolean,
                     ): Flow<List<NovelChapter>> = MutableStateFlow(emptyList())
                     override suspend fun getChapterByUrlAndNovelId(url: String, novelId: Long): NovelChapter? = null
+                    override suspend fun syncChapters(
+                        toAdd: List<NovelChapter>,
+                        toUpdate: List<NovelChapterUpdate>,
+                        toDelete: List<Long>,
+                    ): List<NovelChapter> = emptyList()
                 },
             )
             val updateNovel = UpdateNovel(novelRepository)
@@ -242,6 +248,11 @@ class NovelScreenModelTest {
                     applyScanlatorFilter: Boolean,
                 ): Flow<List<NovelChapter>> = MutableStateFlow(emptyList())
                 override suspend fun getChapterByUrlAndNovelId(url: String, novelId: Long): NovelChapter? = null
+                override suspend fun syncChapters(
+                    toAdd: List<NovelChapter>,
+                    toUpdate: List<NovelChapterUpdate>,
+                    toDelete: List<Long>,
+                ): List<NovelChapter> = emptyList()
             }
             val sync = SyncNovelChaptersWithSource(
                 novelChapterRepository = object :
@@ -270,6 +281,11 @@ class NovelScreenModelTest {
                         applyScanlatorFilter: Boolean,
                     ): Flow<List<NovelChapter>> = MutableStateFlow(emptyList())
                     override suspend fun getChapterByUrlAndNovelId(url: String, novelId: Long): NovelChapter? = null
+                    override suspend fun syncChapters(
+                        toAdd: List<NovelChapter>,
+                        toUpdate: List<NovelChapterUpdate>,
+                        toDelete: List<Long>,
+                    ): List<NovelChapter> = emptyList()
                 },
                 shouldUpdateDbNovelChapter =
                 tachiyomi.domain.items.novelchapter.interactor.ShouldUpdateDbNovelChapter(),
@@ -1632,6 +1648,11 @@ class NovelScreenModelTest {
         ): Flow<List<NovelChapter>> = chapterFlow
         override suspend fun getChapterByUrlAndNovelId(url: String, novelId: Long): NovelChapter? =
             chapterFlow.value.firstOrNull { it.url == url }
+        override suspend fun syncChapters(
+            toAdd: List<NovelChapter>,
+            toUpdate: List<NovelChapterUpdate>,
+            toDelete: List<Long>,
+        ): List<NovelChapter> = emptyList()
     }
 
     private class FakePreferenceStore : PreferenceStore {

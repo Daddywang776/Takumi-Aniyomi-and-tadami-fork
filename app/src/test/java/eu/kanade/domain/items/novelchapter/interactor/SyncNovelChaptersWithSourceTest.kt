@@ -278,5 +278,11 @@ class SyncNovelChaptersWithSourceTest {
         ) = throw UnsupportedOperationException()
 
         override suspend fun getChapterByUrlAndNovelId(url: String, novelId: Long): NovelChapter? = null
+
+        override suspend fun syncChapters(
+            toAdd: List<NovelChapter>,
+            toUpdate: List<NovelChapterUpdate>,
+            toDelete: List<Long>,
+        ): List<NovelChapter> = emptyList()
     }
 }

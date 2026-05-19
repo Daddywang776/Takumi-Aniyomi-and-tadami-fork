@@ -1106,6 +1106,10 @@
     <string name="pref_manga_library_update_categories_details">Manga in excluded categories will not be updated even if they are also in included categories.</string>
     <string name="pref_anime_library_update_categories_details">Anime in excluded categories will not be updated even if they are also in included categories.</string>
     <string name="pref_novel_library_update_categories_details">Novels in excluded categories will not be updated even if they are also in included categories.</string>
+    <string name="pref_anime_library_update_interval_category">Anime update frequency</string>
+    <string name="pref_manga_library_update_interval_category">Manga update frequency</string>
+    <string name="pref_novel_library_update_interval_category">Novel update frequency</string>
+    <string name="update_use_general">Use general setting</string>
     <string name="unofficial_extension_message_aniyomi">This extension is not from the official list.</string>
     <string name="unofficial_anime_extension_message">This extension is not from the official list.</string>
     <string name="episode_download_progress">%1$d%%</string>

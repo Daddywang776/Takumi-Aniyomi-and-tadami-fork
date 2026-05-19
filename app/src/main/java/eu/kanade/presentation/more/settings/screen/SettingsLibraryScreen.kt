@@ -286,6 +286,16 @@ object SettingsLibraryScreen : SearchableSettings {
             )
         }
 
+        val categoryIntervalEntries = persistentMapOf(
+            -2 to stringResource(AYMR.strings.update_use_general),
+            0 to stringResource(MR.strings.update_never),
+            12 to stringResource(MR.strings.update_12hour),
+            24 to stringResource(MR.strings.update_24hour),
+            48 to stringResource(MR.strings.update_48hour),
+            72 to stringResource(MR.strings.update_72hour),
+            168 to stringResource(MR.strings.update_weekly),
+        )
+
         return Preference.PreferenceGroup(
             title = stringResource(MR.strings.pref_category_library_update),
             preferenceItems = persistentListOf(
@@ -305,6 +315,39 @@ object SettingsLibraryScreen : SearchableSettings {
                         MangaLibraryUpdateJob.setupTask(context, it)
                         AnimeLibraryUpdateJob.setupTask(context, it)
                         NovelLibraryUpdateJob.setupTask(context, it)
+                        true
+                    },
+                ),
+                Preference.PreferenceItem.ListPreference(
+                    preference = libraryPreferences.animeUpdateInterval(),
+                    entries = categoryIntervalEntries,
+                    title = stringResource(AYMR.strings.pref_anime_library_update_interval_category),
+                    onValueChanged = {
+                        ContextCompat.getMainExecutor(context).execute {
+                            MangaLibraryUpdateJob.setupTask(context)
+                        }
+                        true
+                    },
+                ),
+                Preference.PreferenceItem.ListPreference(
+                    preference = libraryPreferences.mangaUpdateInterval(),
+                    entries = categoryIntervalEntries,
+                    title = stringResource(AYMR.strings.pref_manga_library_update_interval_category),
+                    onValueChanged = {
+                        ContextCompat.getMainExecutor(context).execute {
+                            MangaLibraryUpdateJob.setupTask(context)
+                        }
+                        true
+                    },
+                ),
+                Preference.PreferenceItem.ListPreference(
+                    preference = libraryPreferences.novelUpdateInterval(),
+                    entries = categoryIntervalEntries,
+                    title = stringResource(AYMR.strings.pref_novel_library_update_interval_category),
+                    onValueChanged = {
+                        ContextCompat.getMainExecutor(context).execute {
+                            MangaLibraryUpdateJob.setupTask(context)
+                        }
                         true
                     },
                 ),
