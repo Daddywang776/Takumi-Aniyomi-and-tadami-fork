@@ -29,9 +29,9 @@ import eu.kanade.presentation.theme.colorscheme.MidnightDuskColorScheme
 import eu.kanade.presentation.theme.colorscheme.MochaColorScheme
 import eu.kanade.presentation.theme.colorscheme.MonetColorScheme
 import eu.kanade.presentation.theme.colorscheme.MonochromeColorScheme
+import eu.kanade.presentation.theme.colorscheme.NebulaTideColorScheme
 import eu.kanade.presentation.theme.colorscheme.NordColorScheme
 import eu.kanade.presentation.theme.colorscheme.OnyxGoldColorScheme
-import eu.kanade.presentation.theme.colorscheme.NebulaTideColorScheme
 import eu.kanade.presentation.theme.colorscheme.SakuraNoirColorScheme
 import eu.kanade.presentation.theme.colorscheme.SapphireColorScheme
 import eu.kanade.presentation.theme.colorscheme.StrawberryColorScheme

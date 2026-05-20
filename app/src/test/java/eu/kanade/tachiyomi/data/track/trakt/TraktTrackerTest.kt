@@ -48,6 +48,6 @@ class TraktTrackerTest {
 
     @Test
     fun `Trakt redirect uri matches our manifest oauth host`() {
-        Trakt.REDIRECT_URI shouldBe "aniyomi://trakt-auth"
+        Trakt.REDIRECT_URI shouldBe "tadami://trakt-auth"
     }
 }

@@ -48,8 +48,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.platform.LocalDensity
@@ -863,10 +863,10 @@ private fun AvatarFrameDecorations(
                                 ),
                             ),
                     )
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer { rotationZ = spin * -0.3f },
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .graphicsLayer { rotationZ = spin * -0.3f },
                     ) {
                         Box(
                             modifier = Modifier

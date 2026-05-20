@@ -9,10 +9,10 @@ class AuroraPosterScrimTokensTest {
     fun `light aurora poster scrim uses neutral airy overlay`() {
         resolveAuroraPosterScrimAlphaStops(isDark = false) shouldBe listOf(
             0.0f to 0.00f,
-            0.3f to 0.00f,
-            0.5f to 0.08f,
-            0.7f to 0.18f,
-            1.0f to 0.30f,
+            0.3f to 0.08f,
+            0.5f to 0.22f,
+            0.7f to 0.42f,
+            1.0f to 0.65f,
         )
     }
 }

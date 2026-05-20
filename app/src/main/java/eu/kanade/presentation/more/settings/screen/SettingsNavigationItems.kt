@@ -11,8 +11,8 @@ import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.Explore
 import androidx.compose.material.icons.outlined.Gesture
 import androidx.compose.material.icons.outlined.GetApp
-import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Memory
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.PlayCircleOutline

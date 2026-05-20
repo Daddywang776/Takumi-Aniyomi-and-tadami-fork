@@ -158,7 +158,8 @@ class UnlockableManager(
         if (bypass) return true
 
         val canonicalThemeId = normalizedThemeId.uppercase()
-        return isUnlockableUnlocked("theme_$canonicalThemeId") || isUnlockableUnlocked("theme_${canonicalThemeId.lowercase()}")
+        return isUnlockableUnlocked("theme_$canonicalThemeId") ||
+            isUnlockableUnlocked("theme_${canonicalThemeId.lowercase()}")
     }
 
     /**
@@ -234,12 +235,13 @@ class UnlockableManager(
             "special_background_petal_storm" -> "Фон «Лепестковый шторм»"
             "special_background_neon_orbit" -> "Фон «Неоновая орбита»"
 
-            else -> unlockableId
-                .removePrefix("theme_")
-                .removePrefix("aura_")
-                .removePrefix("special_")
-                .replace("_", " ")
-                .capitalize()
+            else ->
+                unlockableId
+                    .removePrefix("theme_")
+                    .removePrefix("aura_")
+                    .removePrefix("special_")
+                    .replace("_", " ")
+                    .capitalize()
         }
     }
 

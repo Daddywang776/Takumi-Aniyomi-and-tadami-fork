@@ -283,6 +283,11 @@ class SyncNovelChaptersWithSourceTest {
             toAdd: List<NovelChapter>,
             toUpdate: List<NovelChapterUpdate>,
             toDelete: List<Long>,
-        ): List<NovelChapter> = emptyList()
+        ): List<NovelChapter> {
+            addedChapters.addAll(toAdd)
+            updatedChapters.addAll(toUpdate)
+            removedIds.addAll(toDelete)
+            return toAdd
+        }
     }
 }

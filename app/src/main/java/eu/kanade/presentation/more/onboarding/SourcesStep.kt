@@ -1,7 +1,6 @@
 package eu.kanade.presentation.more.onboarding
 
 import android.content.Context
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -15,13 +14,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -34,7 +29,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,7 +43,6 @@ import eu.kanade.presentation.theme.resolveAuroraBorderColor
 import eu.kanade.presentation.theme.resolveAuroraSelectionBorderColor
 import eu.kanade.presentation.theme.resolveAuroraSelectionContainerColor
 import eu.kanade.presentation.theme.resolveAuroraSurfaceColor
-import kotlinx.coroutines.launch
 import mihon.domain.extensionrepo.anime.interactor.CreateAnimeExtensionRepo
 import mihon.domain.extensionrepo.manga.interactor.CreateMangaExtensionRepo
 import mihon.domain.extensionrepo.novel.interactor.CreateNovelExtensionRepo
