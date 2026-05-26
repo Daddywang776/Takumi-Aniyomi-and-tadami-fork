@@ -180,7 +180,7 @@ class NovelCoverFetcher(
             .await()
         if (!response.isSuccessful && response.code != HTTP_NOT_MODIFIED) {
             response.close()
-            throw IOException(response.message)
+            throw IOException("HTTP ${response.code}: ${response.message.ifBlank { "No response message" }}")
         }
         return response
     }
