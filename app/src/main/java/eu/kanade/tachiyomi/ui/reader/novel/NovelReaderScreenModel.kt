@@ -97,14 +97,11 @@ import eu.kanade.tachiyomi.ui.reader.novel.tts.SharedNovelTtsSessionStore
 import eu.kanade.tachiyomi.ui.reader.novel.tts.resolveNovelTtsVoiceSelection
 import eu.kanade.tachiyomi.util.system.isNightMode
 import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -364,7 +361,7 @@ class NovelReaderScreenModel(
     )
     private var settingsJob: Job? = null
     private var ttsWordProgressJob: Job? = null
-    private var rawHtml: String? = null
+    private var contentModel: NovelReaderContentModel? = null
     private var currentNovel: Novel? = null
     private var currentChapter: NovelChapter? = null
     private var chapterOrderList: MutableList<NovelChapter> = mutableListOf()
@@ -372,8 +369,6 @@ class NovelReaderScreenModel(
     private var customJs: String? = null
     private var pluginSite: String? = null
     private var chapterWebUrl: String? = null
-    private var parsedContentBlocks: List<ContentBlock>? = null
-    private var parsedRichContentResult: NovelRichContentParseResult? = null
     private var lastSavedProgress: Long? = null
     private var lastSavedRead: Boolean? = null
     private var initialProgressIndex: Int = 0
@@ -508,7 +503,7 @@ class NovelReaderScreenModel(
         currentNovel = novel
         currentChapter = chapter
         chapterOrderList = snapshot.chapterOrderList.toMutableList()
-        rawHtml = withContext(Dispatchers.Default) {
+        val normalizedChapterHtml = withContext(Dispatchers.Default) {
             val normalizedChapterHtml = prependChapterHeadingIfMissing(
                 rawHtml = snapshot.rawHtml.normalizeStructuredChapterPayload(),
                 chapterName = chapter.name,
@@ -527,15 +522,15 @@ class NovelReaderScreenModel(
         customJs = snapshot.customJs
         pluginSite = snapshot.pluginSite
         chapterWebUrl = snapshot.chapterWebUrl
-        val initialSettings = novelReaderPreferences.resolveSettings(novel.source)
-        mutableState.value = State.Loading(initialSettings)
-        if (rawHtml == null) return setError("Chapter content is empty")
-        parseAndCacheContentBlocks(
-            rawHtml = rawHtml.orEmpty(),
+        contentModel = NovelReaderContentModel(
+            canonicalHtml = normalizedChapterHtml,
             chapterWebUrl = chapterWebUrl,
             novelUrl = novel.url,
             pluginSite = pluginSite,
         )
+        val initialSettings = novelReaderPreferences.resolveSettings(novel.source)
+        mutableState.value = State.Loading(initialSettings)
+        if (contentModel == null) return setError("Chapter content is empty")
         chapterReadStartTimeMs = System.currentTimeMillis()
         restoreGeminiTranslationFromCache(
             chapterId = chapter.id,
@@ -803,7 +798,8 @@ class NovelReaderScreenModel(
         if (!settings.selectedTextTranslationEnabled) {
             clearSelectedTextTranslationSelection(refreshUi = false)
         }
-        val html = rawHtml ?: return
+        val model = contentModel ?: return
+        val html = model.canonicalHtml
         val novel = currentNovel ?: return
         val chapter = currentChapter ?: return
         if (!settings.geminiEnabled && isGeminiTranslating) {
@@ -852,8 +848,7 @@ class NovelReaderScreenModel(
         )
         val pluginCss = customCss
         val pluginJs = customJs
-        val baseContent = normalizeHtml(
-            rawHtml = html,
+        val baseContent = model.getNormalizedHtml(
             settings = settings,
             customCss = pluginCss,
             customJs = pluginJs,
@@ -862,7 +857,7 @@ class NovelReaderScreenModel(
         val baseTextBlocks = baseContentBlocks
             .filterIsInstance<ContentBlock.Text>()
             .map { it.text }
-        val richContentResult = parsedRichContentResult
+        val richContentResult = model.parsedRichContentResult
             ?: parseNovelRichContent(baseContent)
                 .let { parsed ->
                     parsed.copy(
@@ -874,7 +869,7 @@ class NovelReaderScreenModel(
                         ),
                     )
                 }
-                .also { parsedRichContentResult = it }
+                .also { model.parsedRichContentResult = it }
         val displayContentBlocks = when {
             geminiVisibleInUi -> applyGeminiTranslationToContentBlocks(baseContentBlocks)
             googleVisibleInUi -> applyGoogleTranslationToContentBlocks(baseContentBlocks)
@@ -882,7 +877,10 @@ class NovelReaderScreenModel(
         }
         if (googleVisibleInUi) {
             addGoogleLog(
-                "Apply UI: baseBlocks=${baseContentBlocks.size}, textBlocks=${baseTextBlocks.size}, translatedSegments=${translationHolder.map("google").size}, visible=$googleVisibleInUi",
+                "Apply UI: baseBlocks=${baseContentBlocks.size}, " +
+                    "textBlocks=${baseTextBlocks.size}, " +
+                    "translatedSegments=${translationHolder.map("google").size}, " +
+                    "visible=$googleVisibleInUi",
             )
         }
         val displayRichBlocks = if (geminiVisibleInUi) {
@@ -1307,26 +1305,7 @@ class NovelReaderScreenModel(
             mutableState.value = state.copy(ttsUiState = ttsUiState)
         }
     }
-    private suspend fun parseAndCacheContentBlocks(
-        rawHtml: String,
-        chapterWebUrl: String?,
-        novelUrl: String,
-        pluginSite: String?,
-    ) {
-        val blocks = withContext(Dispatchers.Default) {
-            val extractedBlocks = extractContentBlocks(
-                rawHtml = rawHtml,
-                chapterWebUrl = chapterWebUrl,
-                novelUrl = novelUrl,
-                pluginSite = pluginSite,
-            ).ifEmpty {
-                extractTextBlocks(rawHtml).map(ContentBlock::Text)
-            }
-            extractedBlocks
-        }
-        parsedContentBlocks = blocks
-        parsedRichContentResult = null
-    }
+
     private suspend fun resolveChapterWebUrl(
         source: eu.kanade.tachiyomi.novelsource.NovelSource,
         chapterUrl: String,
@@ -1936,13 +1915,11 @@ class NovelReaderScreenModel(
         currentNovel = null
         currentChapter = null
         chapterOrderList = mutableListOf()
-        rawHtml = null
+        contentModel = null
         customCss = null
         customJs = null
         pluginSite = null
         chapterWebUrl = null
-        parsedContentBlocks = null
-        parsedRichContentResult = null
         lastSavedProgress = null
         lastSavedRead = null
         initialProgressIndex = 0
@@ -3438,29 +3415,11 @@ class NovelReaderScreenModel(
     }
 
     private fun currentParsedTextBlocks(): List<String> {
-        parsedContentBlocks?.let { blocks ->
-            return blocks
-                .asSequence()
-                .filterIsInstance<ContentBlock.Text>()
-                .map { it.text }
-                .toList()
-        }
-        val html = rawHtml ?: return emptyList()
-        return extractTextBlocks(html)
+        return contentModel?.textBlocks ?: emptyList()
     }
 
     private fun currentParsedContentBlocks(): List<ContentBlock> {
-        parsedContentBlocks?.let { return it }
-        val html = rawHtml ?: return emptyList()
-        val novel = currentNovel ?: return emptyList()
-        return extractContentBlocks(
-            rawHtml = html,
-            chapterWebUrl = chapterWebUrl,
-            novelUrl = novel.url,
-            pluginSite = pluginSite,
-        ).ifEmpty {
-            extractTextBlocks(html).map(ContentBlock::Text)
-        }
+        return contentModel?.contentBlocks ?: emptyList()
     }
     private fun NovelReaderSettings.translationPromptFamily(): NovelTranslationPromptFamily {
         return when (translationProvider) {
@@ -3786,740 +3745,6 @@ class NovelReaderScreenModel(
     private fun NovelReaderSettings.isPrivateBridgeUnlocked(): Boolean {
         if (!requiresPrivateBridgeUnlock()) return true
         return geminiPrivateUnlocked || GeminiPrivateBridge.isUnlocked()
-    }
-    private fun extractTextBlocks(rawHtml: String): List<String> {
-        val document = Jsoup.parse(rawHtml)
-        val paragraphLikeNodes = document.select("p, li, blockquote, h1, h2, h3, h4, h5, h6, pre")
-            .filterNot { node ->
-                node.tagName().equals("p", ignoreCase = true) &&
-                    node.parent()?.tagName()?.equals("li", ignoreCase = true) == true
-            }
-            .map { element -> element.text().sanitizeTextBlock() }
-            .filter { it.isNotBlank() }
-        if (paragraphLikeNodes.isNotEmpty()) {
-            return paragraphLikeNodes
-        }
-        val text = document.body().wholeText()
-            .sanitizeTextBlock()
-        if (text.isBlank()) return emptyList()
-        return text.split(Regex("\n{2,}"))
-            .flatMap { block -> block.split('\n') }
-            .map { it.sanitizeTextBlock() }
-            .filter { it.isNotBlank() }
-    }
-    private fun extractContentBlocks(
-        rawHtml: String,
-        chapterWebUrl: String?,
-        novelUrl: String,
-        pluginSite: String?,
-    ): List<ContentBlock> {
-        val document = Jsoup.parse(rawHtml)
-        val blocks = mutableListOf<ContentBlock>()
-        collectContentBlocks(
-            node = document.body(),
-            blocks = blocks,
-            chapterWebUrl = chapterWebUrl,
-            novelUrl = novelUrl,
-            pluginSite = pluginSite,
-        )
-        return blocks
-    }
-    private fun collectContentBlocks(
-        node: Node,
-        blocks: MutableList<ContentBlock>,
-        chapterWebUrl: String?,
-        novelUrl: String,
-        pluginSite: String?,
-    ) {
-        when (node) {
-            is TextNode -> {
-                val text = node.text().sanitizeTextBlock()
-                if (text.isNotBlank()) {
-                    blocks += ContentBlock.Text(text)
-                }
-            }
-            is Element -> {
-                val tag = node.tagName().lowercase()
-                when {
-                    tag == "script" ||
-                        tag == "style" ||
-                        tag == "head" ||
-                        tag == "meta" ||
-                        tag == "link" ||
-                        tag == "noscript" -> Unit
-                    tag == "img" -> {
-                        val rawUrl = node.attr("src")
-                            .ifBlank { node.attr("data-src") }
-                            .ifBlank { node.attr("data-original") }
-                            .trim()
-                        if (rawUrl.isBlank()) return
-                        val resolvedUrl = resolveContentResourceUrl(
-                            rawUrl = rawUrl,
-                            chapterWebUrl = chapterWebUrl,
-                            novelUrl = novelUrl,
-                            pluginSite = pluginSite,
-                        ) ?: return
-                        blocks += ContentBlock.Image(
-                            url = resolvedUrl,
-                            alt = node.attr("alt").sanitizeTextBlock().ifBlank { null },
-                        )
-                    }
-                    tag == "p" ||
-                        tag == "li" ||
-                        tag == "blockquote" ||
-                        tag == "h1" ||
-                        tag == "h2" ||
-                        tag == "h3" ||
-                        tag == "h4" ||
-                        tag == "h5" ||
-                        tag == "h6" ||
-                        tag == "pre" -> {
-                        val text = node.text().sanitizeTextBlock()
-                        if (text.isBlank()) return
-                        val structuredBlocks = parseStructuredFragmentToBlocks(
-                            rawPayload = text,
-                            chapterWebUrl = chapterWebUrl,
-                            novelUrl = novelUrl,
-                            pluginSite = pluginSite,
-                        )
-                        if (structuredBlocks.isNotEmpty()) {
-                            blocks += structuredBlocks
-                            return
-                        }
-                        val normalizedText = if (tag == "li") {
-                            "• $text"
-                        } else {
-                            text
-                        }
-                        blocks += ContentBlock.Text(normalizedText)
-                    }
-                    node.selectFirst("p, li, blockquote, h1, h2, h3, h4, h5, h6, pre, img") == null -> {
-                        val text = node.wholeText().sanitizeTextBlock()
-                        if (text.isNotBlank()) {
-                            blocks += ContentBlock.Text(text)
-                        }
-                    }
-                    else -> {
-                        node.childNodes().forEach { child ->
-                            collectContentBlocks(
-                                node = child,
-                                blocks = blocks,
-                                chapterWebUrl = chapterWebUrl,
-                                novelUrl = novelUrl,
-                                pluginSite = pluginSite,
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-    private fun parseStructuredFragmentToBlocks(
-        rawPayload: String,
-        chapterWebUrl: String?,
-        novelUrl: String,
-        pluginSite: String?,
-    ): List<ContentBlock> {
-        if (!looksLikeStructuredPayload(rawPayload)) return emptyList()
-        val parsedRoot = parseStructuredRoot(rawPayload)
-        val renderedHtml = if (parsedRoot != null) {
-            val attachmentUrls = extractStructuredAttachmentUrls(parsedRoot)
-            val structuredNode = findStructuredNode(parsedRoot) ?: return emptyList()
-            renderStructuredElementAsHtml(structuredNode, attachmentUrls)
-        } else {
-            renderStructuredPayloadFallback(rawPayload).orEmpty()
-        }.trim()
-        if (renderedHtml.isBlank()) return emptyList()
-        val renderedDoc = Jsoup.parse("<div>$renderedHtml</div>")
-        val renderedCandidates = renderedDoc.select("p, li, blockquote, h1, h2, h3, h4, h5, h6, pre, img")
-            .filterNot { node ->
-                node.tagName().equals("p", ignoreCase = true) &&
-                    node.parent()?.tagName()?.equals("li", ignoreCase = true) == true
-            }
-        return renderedCandidates.mapNotNull { candidate ->
-            if (candidate.tagName().equals("img", ignoreCase = true)) {
-                val rawUrl = candidate.attr("src")
-                    .ifBlank { candidate.attr("data-src") }
-                    .ifBlank { candidate.attr("data-original") }
-                    .trim()
-                val resolvedUrl = resolveContentResourceUrl(
-                    rawUrl = rawUrl,
-                    chapterWebUrl = chapterWebUrl,
-                    novelUrl = novelUrl,
-                    pluginSite = pluginSite,
-                ) ?: return@mapNotNull null
-                ContentBlock.Image(
-                    url = resolvedUrl,
-                    alt = candidate.attr("alt").sanitizeTextBlock().ifBlank { null },
-                )
-            } else {
-                val candidateText = candidate.text().sanitizeTextBlock()
-                if (candidateText.isBlank()) {
-                    null
-                } else {
-                    val normalized = if (candidate.tagName().equals("li", ignoreCase = true)) {
-                        "• $candidateText"
-                    } else {
-                        candidateText
-                    }
-                    ContentBlock.Text(normalized)
-                }
-            }
-        }
-    }
-    private fun resolveContentResourceUrl(
-        rawUrl: String,
-        chapterWebUrl: String?,
-        novelUrl: String,
-        pluginSite: String?,
-    ): String? {
-        val trimmed = rawUrl.trim()
-        if (trimmed.isBlank()) return null
-        if (trimmed.startsWith("data:image/", ignoreCase = true)) {
-            return trimmed
-        }
-        if (NovelPluginImage.isSupported(trimmed)) {
-            return trimmed
-        }
-        if (trimmed.startsWith("blob:", ignoreCase = true)) {
-            return null
-        }
-        trimmed.toHttpUrlOrNull()?.let { return it.toString() }
-        chapterWebUrl
-            ?.let { resolveUrl(trimmed, it).trim().toHttpUrlOrNull() }
-            ?.let { return it.toString() }
-        return resolveNovelChapterWebUrl(
-            chapterUrl = trimmed,
-            pluginSite = pluginSite,
-            novelUrl = novelUrl,
-        )
-    }
-    private fun resolveRichContentBlocks(
-        blocks: List<NovelRichContentBlock>,
-        chapterWebUrl: String?,
-        novelUrl: String,
-        pluginSite: String?,
-    ): List<NovelRichContentBlock> {
-        return blocks.map { block ->
-            when (block) {
-                is NovelRichContentBlock.Image -> {
-                    val resolvedUrl = resolveContentResourceUrl(
-                        rawUrl = block.url,
-                        chapterWebUrl = chapterWebUrl,
-                        novelUrl = novelUrl,
-                        pluginSite = pluginSite,
-                    ) ?: block.url
-                    block.copy(url = resolvedUrl)
-                }
-                else -> block
-            }
-        }
-    }
-    private fun normalizeHtml(
-        rawHtml: String,
-        settings: NovelReaderSettings,
-        customCss: String?,
-        customJs: String?,
-    ): String {
-        val css = customCss?.takeIf { it.isNotBlank() }
-        val js = customJs?.takeIf { it.isNotBlank() }
-        val isDarkTheme = when (settings.theme) {
-            NovelReaderTheme.SYSTEM -> isSystemDark()
-            NovelReaderTheme.DARK -> true
-            NovelReaderTheme.LIGHT -> false
-        }
-        val background = if (isDarkTheme) "#121212" else "#FFFFFF"
-        val textColor = if (isDarkTheme) "#EDEDED" else "#1A1A1A"
-        val linkColor = if (isDarkTheme) "#80B4FF" else "#1E3A8A"
-        val baseStyle = """
-            body {
-              padding: ${settings.margin}px;
-              line-height: ${settings.lineHeight};
-              font-size: ${settings.fontSize}px;
-              background: $background;
-              color: $textColor;
-              word-break: break-word;
-            }
-            img { max-width: 100%; height: auto; }
-            a { color: $linkColor; }
-        """.trimIndent()
-        val injection = buildString {
-            append("<style>")
-            append('\n')
-            append(baseStyle)
-            if (css != null) {
-                append('\n')
-                append(css)
-            }
-            append('\n')
-            append("</style>")
-            if (js != null) {
-                append('\n')
-                append("<script>")
-                append('\n')
-                append(js)
-                append('\n')
-                append("</script>")
-            }
-        }
-        if (rawHtml.contains("<html", ignoreCase = true)) {
-            return if (injection.isNotBlank()) injectIntoHtml(rawHtml, injection) else rawHtml
-        }
-        val style = buildString {
-            append(baseStyle)
-            if (css != null) {
-                append('\n')
-                append(css)
-            }
-        }
-        return """
-            <!doctype html>
-            <html>
-              <head>
-                <meta charset="utf-8" />
-                <meta name="viewport" content="width=device-width, initial-scale=1" />
-                <style>$style</style>
-                ${js?.let { "<script>\n$it\n</script>" } ?: ""}
-              </head>
-              <body>
-                $rawHtml
-              </body>
-            </html>
-        """.trimIndent()
-    }
-    private fun injectIntoHtml(rawHtml: String, injection: String): String {
-        val headClose = Regex("</head>", RegexOption.IGNORE_CASE)
-        if (headClose.containsMatchIn(rawHtml)) {
-            return rawHtml.replaceFirst(headClose, "$injection</head>")
-        }
-        val headOpen = Regex("<head[^>]*>", RegexOption.IGNORE_CASE)
-        val headMatch = headOpen.find(rawHtml)
-        if (headMatch != null) {
-            return rawHtml.replaceRange(headMatch.range, headMatch.value + injection)
-        }
-        val bodyClose = Regex("</body>", RegexOption.IGNORE_CASE)
-        if (bodyClose.containsMatchIn(rawHtml)) {
-            return rawHtml.replaceFirst(bodyClose, "$injection</body>")
-        }
-        return injection + rawHtml
-    }
-    private fun String.sanitizeTextBlock(): String {
-        return this
-            .replace('\u00A0', ' ')
-            .replace("\r", "")
-            .trim()
-    }
-    private fun String.normalizeStructuredChapterPayload(): String {
-        val trimmedPayload = trim()
-        if (looksLikeHtmlPayload(trimmedPayload)) {
-            return this
-        }
-        val parsedRoot = parseStructuredRoot(this)
-        if (parsedRoot != null) {
-            val attachmentUrls = extractStructuredAttachmentUrls(parsedRoot)
-            val structuredNode = findStructuredNode(parsedRoot) ?: return this
-            val rendered = renderStructuredElementAsHtml(
-                element = structuredNode,
-                attachmentUrls = attachmentUrls,
-            ).trim()
-            if (rendered.isNotBlank()) {
-                return "<div>$rendered</div>"
-            }
-        }
-        val fallbackRendered = renderStructuredPayloadFallback(this).orEmpty().trim()
-        return if (fallbackRendered.isBlank()) this else "<div>$fallbackRendered</div>"
-    }
-    private fun parseStructuredRoot(rawPayload: String): JsonElement? {
-        val trimmed = rawPayload
-            .trim()
-            .removePrefix("\uFEFF")
-            .trim()
-        if (!looksLikeStructuredPayload(trimmed)) return null
-        val parseCandidates = linkedSetOf(trimmed)
-        extractJsonCandidate(trimmed)?.let { parseCandidates += it }
-        normalizeJsonLikePayload(trimmed)?.let { parseCandidates += it }
-        parseCandidates.forEach { candidate ->
-            val parsed = parseStructuredCandidate(candidate, decodeDepth = 0) ?: return@forEach
-            if (parsed is JsonObject || parsed is JsonArray) {
-                return parsed
-            }
-        }
-        return null
-    }
-    private fun parseStructuredCandidate(
-        candidate: String,
-        decodeDepth: Int,
-    ): JsonElement? {
-        if (decodeDepth > 4) return null
-        val trimmed = candidate.trim().trimEnd(';').trim()
-        if (trimmed.isBlank()) return null
-        val directParsed = runCatching { structuredJson.parseToJsonElement(trimmed) }.getOrNull()
-        if (directParsed != null) {
-            if (directParsed is JsonObject || directParsed is JsonArray) {
-                return directParsed
-            }
-            val primitiveContent = (directParsed as? JsonPrimitive)
-                ?.contentOrNull
-                ?.trim()
-                .orEmpty()
-            if (looksLikeStructuredPayload(primitiveContent)) {
-                return parseStructuredCandidate(primitiveContent, decodeDepth + 1)
-            }
-        }
-        if (trimmed.startsWith("\"") && trimmed.endsWith("\"")) {
-            val decoded = runCatching { structuredJson.decodeFromString<String>(trimmed) }.getOrNull()
-            if (!decoded.isNullOrBlank()) {
-                return parseStructuredCandidate(decoded, decodeDepth + 1)
-            }
-        }
-        val normalizedCandidate = normalizeJsonLikePayload(trimmed)
-            ?.takeIf { it != trimmed }
-            ?: return null
-        return parseStructuredCandidate(normalizedCandidate, decodeDepth + 1)
-    }
-    private fun looksLikeStructuredPayload(rawValue: String): Boolean {
-        if (rawValue.isBlank()) return false
-        val trimmed = rawValue.trim()
-        return trimmed.startsWith("{") ||
-            trimmed.startsWith("[") ||
-            trimmed.startsWith("\"{") ||
-            trimmed.startsWith("\"[") ||
-            trimmed.startsWith("'{") ||
-            trimmed.startsWith("'[") ||
-            trimmed.startsWith("{\\\"") ||
-            trimmed.startsWith("[\\\"") ||
-            (trimmed.contains("\"type\"") && trimmed.contains("content")) ||
-            (trimmed.contains("'type'") && trimmed.contains("content"))
-    }
-    private fun extractJsonCandidate(rawPayload: String): String? {
-        val trimmed = rawPayload.trim()
-        if (trimmed.startsWith("<")) {
-            val htmlTextCandidate = Jsoup.parse(trimmed).body().wholeText().trim()
-            if (looksLikeStructuredPayload(htmlTextCandidate)) {
-                return htmlTextCandidate
-            }
-        }
-        val objectStart =
-            trimmed.indexOf('{').takeIf { it >= 0 } ?: trimmed.indexOf('[').takeIf { it >= 0 } ?: return null
-        val objectEnd = trimmed.lastIndexOf('}').takeIf { it > objectStart }
-            ?: trimmed.lastIndexOf(']').takeIf { it > objectStart }
-            ?: return null
-        return trimmed.substring(objectStart, objectEnd + 1).trim()
-    }
-    private fun normalizeJsonLikePayload(rawPayload: String): String? {
-        var candidate = rawPayload
-            .trim()
-            .removePrefix("\uFEFF")
-            .trim()
-        if (candidate.startsWith("return ")) {
-            candidate = candidate.removePrefix("return ").trim()
-        }
-        candidate = candidate.trimEnd(';').trim()
-        if (!looksLikeStructuredPayload(candidate)) return null
-        if (candidate.startsWith("'") && candidate.endsWith("'")) {
-            val inner = candidate.substring(1, candidate.lastIndex).replace("\"", "\\\"")
-            candidate = "\"$inner\""
-        }
-        if (candidate.contains("\\\"")) {
-            candidate = candidate.replace("\\\"", "\"")
-        }
-        if (candidate.contains("\\n")) {
-            candidate = candidate.replace("\\n", "\n")
-        }
-        if (candidate.contains("\\t")) {
-            candidate = candidate.replace("\\t", "\t")
-        }
-        candidate = Regex("([\\{,]\\s*)([A-Za-z_][A-Za-z0-9_\\-]*)(\\s*:)").replace(candidate, "$1\"$2\"$3")
-        candidate = Regex("\"([A-Za-z_][A-Za-z0-9_\\-]*)\\s*:\\s*\"").replace(candidate, "\"$1\":\"")
-        candidate = Regex("'([^'\\\\]*(?:\\\\.[^'\\\\]*)*)'").replace(candidate) { match ->
-            "\"${match.groupValues[1].replace("\"", "\\\"")}\""
-        }
-        candidate = Regex(",\\s*([}\\]])").replace(candidate, "$1")
-        return candidate
-    }
-    private fun findStructuredNode(element: JsonElement): JsonElement? {
-        return when (element) {
-            is JsonObject -> {
-                if (isStructuredNode(element)) {
-                    element
-                } else {
-                    listOf("content", "data", "body", "result", "payload", "value", "chapter")
-                        .firstNotNullOfOrNull { key ->
-                            val nested = element[key] ?: return@firstNotNullOfOrNull null
-                            findStructuredNode(nested)
-                                ?: parseStructuredRoot(nested.asStringOrNull().orEmpty())?.let(::findStructuredNode)
-                        }
-                }
-            }
-            is JsonArray -> {
-                val hasStructuredObjects = element.any {
-                    (it as? JsonObject)?.let(::isStructuredNode) == true
-                }
-                if (hasStructuredObjects) element else null
-            }
-            else -> null
-        }
-    }
-    private fun isStructuredNode(element: JsonObject): Boolean {
-        val normalizedType = normalizeStructuredType(element["type"].asStringOrNull())
-        if (normalizedType != null && normalizedType in STRUCTURED_NODE_TYPES) {
-            return true
-        }
-        return (element["content"] is JsonArray) ||
-            (element["content"] is JsonObject) ||
-            (element["text"].asStringOrNull() != null) ||
-            (element["attrs"] is JsonObject)
-    }
-    private fun extractStructuredAttachmentUrls(root: JsonElement): Map<String, String> {
-        val rootObject = root as? JsonObject ?: return emptyMap()
-        val mapping = mutableMapOf<String, String>()
-        fun appendAttachmentMapping(attachment: JsonObject) {
-            val url = attachment["url"].asStringOrNull()?.trim().orEmpty()
-            if (url.isBlank()) return
-            attachment["id"].asStringOrNull()?.trim()?.takeIf { it.isNotBlank() }?.let { key ->
-                mapping[key] = url
-            }
-            attachment["name"].asStringOrNull()?.trim()?.takeIf { it.isNotBlank() }?.let { key ->
-                mapping[key] = url
-            }
-        }
-        when (val attachments = rootObject["attachments"]) {
-            is JsonArray -> attachments.forEach { entry ->
-                val attachment = entry as? JsonObject ?: return@forEach
-                appendAttachmentMapping(attachment)
-            }
-            is JsonObject -> attachments.forEach { (key, value) ->
-                val valueObject = value as? JsonObject
-                val url = valueObject?.get("url").asStringOrNull()?.trim().orEmpty()
-                    .ifBlank { value.asStringOrNull().orEmpty().trim() }
-                if (url.isNotBlank()) {
-                    mapping[key.trim()] = url
-                }
-            }
-            else -> Unit
-        }
-        return mapping
-    }
-    private fun renderStructuredElementAsHtml(
-        element: JsonElement,
-        attachmentUrls: Map<String, String>,
-    ): String {
-        return when (element) {
-            is JsonObject -> renderStructuredNodeAsHtml(element, attachmentUrls)
-            is JsonArray -> buildString {
-                element.forEach { node ->
-                    append(renderStructuredElementAsHtml(node, attachmentUrls))
-                }
-            }
-            else -> ""
-        }
-    }
-    private fun renderStructuredNodeAsHtml(
-        node: JsonObject,
-        attachmentUrls: Map<String, String>,
-    ): String {
-        val type = normalizeStructuredType(node["type"].asStringOrNull()).orEmpty()
-        val attrs = node["attrs"] as? JsonObject
-        val children = node["content"] as? JsonArray
-        fun renderChildren(): String {
-            if (children == null) return ""
-            return buildString {
-                children.forEach { child ->
-                    append(renderStructuredElementAsHtml(child, attachmentUrls))
-                }
-            }
-        }
-        return when (type) {
-            "doc" -> renderChildren()
-            "paragraph" -> "<p>${renderChildren()}</p>"
-            "heading" -> {
-                val level = attrs?.get("level").asIntOrNull()?.coerceIn(1, 6) ?: 1
-                "<h$level>${renderChildren()}</h$level>"
-            }
-            "bulletlist" -> "<ul>${renderChildren()}</ul>"
-            "orderedlist" -> "<ol>${renderChildren()}</ol>"
-            "listitem" -> "<li>${renderChildren()}</li>"
-            "blockquote" -> "<blockquote>${renderChildren()}</blockquote>"
-            "hardbreak" -> "<br/>"
-            "horizontalrule" -> "<hr/>"
-            "image" -> renderStructuredImageNode(attrs, attachmentUrls)
-            "text" -> {
-                val escaped = node["text"].asStringOrNull().orEmpty().escapeHtml()
-                applyStructuredMarks(escaped, node["marks"] as? JsonArray)
-            }
-            else -> {
-                val inlineText = node["text"]
-                    .asStringOrNull()
-                    ?.takeIf { it.isNotBlank() }
-                    ?.escapeHtml()
-                if (inlineText != null) {
-                    applyStructuredMarks(inlineText, node["marks"] as? JsonArray)
-                } else {
-                    renderChildren()
-                }
-            }
-        }
-    }
-    private fun renderStructuredImageNode(
-        attrs: JsonObject?,
-        attachmentUrls: Map<String, String>,
-    ): String {
-        if (attrs == null) return ""
-        val directUrl = attrs["src"].asStringOrNull()?.trim().orEmpty()
-        val altText = attrs["alt"].asStringOrNull().orEmpty().escapeHtml()
-        if (directUrl.isNotBlank()) {
-            return "<img src=\"${directUrl.escapeHtmlAttribute()}\" alt=\"$altText\" />"
-        }
-        val imageReferences = mutableListOf<String>()
-        attrs["image"].asStringOrNull()?.trim()?.takeIf { it.isNotBlank() }?.let { imageReferences += it }
-        when (val imagesNode = attrs["images"]) {
-            is JsonArray -> imagesNode.forEach { entry ->
-                when (entry) {
-                    is JsonObject -> {
-                        entry["image"].asStringOrNull()?.trim()?.takeIf {
-                            it.isNotBlank()
-                        }?.let { imageReferences += it }
-                    }
-                    is JsonPrimitive -> entry.contentOrNull?.trim()?.takeIf { it.isNotBlank() }?.let {
-                        imageReferences +=
-                            it
-                    }
-                    else -> Unit
-                }
-            }
-            is JsonObject -> {
-                imagesNode["image"].asStringOrNull()?.trim()?.takeIf { it.isNotBlank() }?.let { imageReferences += it }
-            }
-            else -> Unit
-        }
-        val resolvedUrls = imageReferences.mapNotNull { reference ->
-            attachmentUrls[reference]
-        }
-        if (resolvedUrls.isEmpty()) return ""
-        return resolvedUrls.joinToString(separator = "") { url ->
-            "<img src=\"${url.escapeHtmlAttribute()}\" alt=\"$altText\" />"
-        }
-    }
-    private fun applyStructuredMarks(
-        text: String,
-        marks: JsonArray?,
-    ): String {
-        if (marks == null || marks.isEmpty()) return text
-        var rendered = text
-        marks.forEach { markElement ->
-            val mark = markElement as? JsonObject ?: return@forEach
-            rendered = when (normalizeStructuredType(mark["type"].asStringOrNull())) {
-                "bold", "strong" -> "<strong>$rendered</strong>"
-                "italic", "em" -> "<em>$rendered</em>"
-                "underline" -> "<u>$rendered</u>"
-                "strike", "s" -> "<s>$rendered</s>"
-                "code" -> "<code>$rendered</code>"
-                "link" -> {
-                    val href = (mark["attrs"] as? JsonObject)
-                        ?.get("href")
-                        .asStringOrNull()
-                        .orEmpty()
-                    if (href.isBlank()) rendered else "<a href=\"${href.escapeHtmlAttribute()}\">$rendered</a>"
-                }
-                else -> rendered
-            }
-        }
-        return rendered
-    }
-    private fun JsonElement?.asStringOrNull(): String? {
-        return (this as? JsonPrimitive)?.contentOrNull
-    }
-    private fun JsonElement?.asIntOrNull(): Int? {
-        return (this as? JsonPrimitive)?.intOrNull
-    }
-    private fun String.escapeHtml(): String {
-        return replace("&", "&amp;")
-            .replace("<", "&lt;")
-            .replace(">", "&gt;")
-            .replace("\"", "&quot;")
-            .replace("'", "&#39;")
-    }
-    private fun String.escapeHtmlAttribute(): String {
-        return escapeHtml()
-    }
-    private fun renderStructuredPayloadFallback(rawPayload: String): String? {
-        val candidate = extractJsonCandidate(rawPayload) ?: rawPayload.trim()
-        if (!looksLikeStructuredPayload(candidate)) return null
-        val normalized = normalizeJsonLikePayload(candidate) ?: candidate
-        val textSegments = extractStructuredTextFallbackSegments(normalized)
-        val imageSegments = extractStructuredImageFallbackUrls(normalized)
-        if (textSegments.isEmpty() && imageSegments.isEmpty()) return null
-        val html = buildString {
-            textSegments.forEach { segment ->
-                append("<p>${segment.escapeHtml()}</p>")
-            }
-            imageSegments.forEach { url ->
-                append("<img src=\"${url.escapeHtmlAttribute()}\" alt=\"\" />")
-            }
-        }.trim()
-        return html.takeIf { it.isNotBlank() }
-    }
-    private fun looksLikeHtmlPayload(rawPayload: String): Boolean {
-        val trimmed = rawPayload.trim()
-        if (!trimmed.contains('<') || !trimmed.contains('>')) return false
-        return Regex("(?is)<\\s*(html|body|div|main|article|section|p|ul|ol|li|h1|h2|h3|h4|h5|h6|span)\\b")
-            .containsMatchIn(trimmed)
-    }
-    private fun extractStructuredTextFallbackSegments(payload: String): List<String> {
-        val results = mutableListOf<String>()
-        val textRegex = Regex("(?is)\"text\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"")
-        textRegex.findAll(payload).forEach { match ->
-            val rawText = match.groupValues.getOrNull(1).orEmpty()
-            val decodedText = rawText
-                .replace("\\\\", "\\")
-                .replace("\\n", "\n")
-                .replace("\\t", "\t")
-                .replace("\\r", "")
-                .replace("\\\"", "\"")
-                .replace("\\u00A0", " ")
-                .sanitizeTextBlock()
-            if (decodedText.isBlank()) return@forEach
-            val contextStart = (match.range.first - 220).coerceAtLeast(0)
-            val context = payload.substring(contextStart, match.range.first).lowercase()
-            val isListItemContext = context.contains("listitem") || context.contains("bulletlist")
-            val normalized = if (isListItemContext && !decodedText.startsWith("•")) {
-                "• $decodedText"
-            } else {
-                decodedText
-            }
-            results += normalized
-        }
-        return results
-    }
-    private fun extractStructuredImageFallbackUrls(payload: String): List<String> {
-        val urlRegex = Regex("(?is)\"url\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"")
-        val directHttpRegex = Regex("(?i)https?://[^\\s\"'<>]+\\.(?:png|jpe?g|gif|webp|bmp|svg)")
-        val urls = linkedSetOf<String>()
-        urlRegex.findAll(payload).forEach { match ->
-            val url = match.groupValues.getOrNull(1).orEmpty()
-                .replace("\\\\", "\\")
-                .replace("\\/", "/")
-                .replace("\\\"", "\"")
-                .trim()
-            if (url.startsWith("http://") || url.startsWith("https://")) {
-                urls += url
-            }
-        }
-        directHttpRegex.findAll(payload).forEach { match ->
-            val url = match.value.trim()
-            if (url.isNotBlank()) {
-                urls += url
-            }
-        }
-        return urls.toList()
-    }
-    private fun normalizeStructuredType(type: String?): String? {
-        return type
-            ?.trim()
-            ?.takeIf { it.isNotBlank() }
-            ?.lowercase()
-            ?.replace("_", "")
-            ?.replace("-", "")
     }
     private suspend fun saveHistorySnapshot(chapterId: Long, sessionReadDurationMs: Long) {
         if (basePreferences.incognitoMode().get()) return
@@ -4850,4 +4075,787 @@ internal object NovelReaderChapterPrefetchCache {
             cache.clear()
         }
     }
+}
+
+internal val structuredJson = Json {
+    ignoreUnknownKeys = true
+    isLenient = true
+}
+
+internal val STRUCTURED_NODE_TYPES = setOf(
+    "doc",
+    "paragraph",
+    "heading",
+    "bulletlist",
+    "orderedlist",
+    "listitem",
+    "blockquote",
+    "hardbreak",
+    "horizontalrule",
+    "image",
+    "text",
+)
+
+internal fun extractTextBlocks(rawHtml: String): List<String> {
+    val document = Jsoup.parse(rawHtml)
+    val paragraphLikeNodes = document.select("p, li, blockquote, h1, h2, h3, h4, h5, h6, pre")
+        .filterNot { node ->
+            node.tagName().equals("p", ignoreCase = true) &&
+                node.parent()?.tagName()?.equals("li", ignoreCase = true) == true
+        }
+        .map { element -> element.text().sanitizeTextBlock() }
+        .filter { it.isNotBlank() }
+    if (paragraphLikeNodes.isNotEmpty()) {
+        return paragraphLikeNodes
+    }
+    val text = document.body().wholeText()
+        .sanitizeTextBlock()
+    if (text.isBlank()) return emptyList()
+    return text.split(Regex("\n{2,}"))
+        .flatMap { block -> block.split('\n') }
+        .map { it.sanitizeTextBlock() }
+        .filter { it.isNotBlank() }
+}
+
+internal fun extractContentBlocks(
+    rawHtml: String,
+    chapterWebUrl: String?,
+    novelUrl: String,
+    pluginSite: String?,
+): List<NovelReaderScreenModel.ContentBlock> {
+    val document = Jsoup.parse(rawHtml)
+    val blocks = mutableListOf<NovelReaderScreenModel.ContentBlock>()
+    collectContentBlocks(
+        node = document.body(),
+        blocks = blocks,
+        chapterWebUrl = chapterWebUrl,
+        novelUrl = novelUrl,
+        pluginSite = pluginSite,
+    )
+    return blocks
+}
+
+internal fun collectContentBlocks(
+    node: Node,
+    blocks: MutableList<NovelReaderScreenModel.ContentBlock>,
+    chapterWebUrl: String?,
+    novelUrl: String,
+    pluginSite: String?,
+) {
+    when (node) {
+        is TextNode -> {
+            val text = node.text().sanitizeTextBlock()
+            if (text.isNotBlank()) {
+                blocks += NovelReaderScreenModel.ContentBlock.Text(text)
+            }
+        }
+        is Element -> {
+            val tag = node.tagName().lowercase()
+            when {
+                tag == "script" ||
+                    tag == "style" ||
+                    tag == "head" ||
+                    tag == "meta" ||
+                    tag == "link" ||
+                    tag == "noscript" -> Unit
+                tag == "img" -> {
+                    val rawUrl = node.attr("src")
+                        .ifBlank { node.attr("data-src") }
+                        .ifBlank { node.attr("data-original") }
+                        .trim()
+                    if (rawUrl.isBlank()) return
+                    val resolvedUrl = resolveContentResourceUrl(
+                        rawUrl = rawUrl,
+                        chapterWebUrl = chapterWebUrl,
+                        novelUrl = novelUrl,
+                        pluginSite = pluginSite,
+                    ) ?: return
+                    blocks += NovelReaderScreenModel.ContentBlock.Image(
+                        url = resolvedUrl,
+                        alt = node.attr("alt").sanitizeTextBlock().ifBlank { null },
+                    )
+                }
+                tag == "p" ||
+                    tag == "li" ||
+                    tag == "blockquote" ||
+                    tag == "h1" ||
+                    tag == "h2" ||
+                    tag == "h3" ||
+                    tag == "h4" ||
+                    tag == "h5" ||
+                    tag == "h6" ||
+                    tag == "pre" -> {
+                    val text = node.text().sanitizeTextBlock()
+                    if (text.isBlank()) return
+                    val structuredBlocks = parseStructuredFragmentToBlocks(
+                        rawPayload = text,
+                        chapterWebUrl = chapterWebUrl,
+                        novelUrl = novelUrl,
+                        pluginSite = pluginSite,
+                    )
+                    if (structuredBlocks.isNotEmpty()) {
+                        blocks += structuredBlocks
+                        return
+                    }
+                    val normalizedText = if (tag == "li") {
+                        "• $text"
+                    } else {
+                        text
+                    }
+                    blocks += NovelReaderScreenModel.ContentBlock.Text(normalizedText)
+                }
+                node.selectFirst("p, li, blockquote, h1, h2, h3, h4, h5, h6, pre, img") == null -> {
+                    val text = node.wholeText().sanitizeTextBlock()
+                    if (text.isNotBlank()) {
+                        blocks += NovelReaderScreenModel.ContentBlock.Text(text)
+                    }
+                }
+                else -> {
+                    node.childNodes().forEach { child ->
+                        collectContentBlocks(
+                            node = child,
+                            blocks = blocks,
+                            chapterWebUrl = chapterWebUrl,
+                            novelUrl = novelUrl,
+                            pluginSite = pluginSite,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+internal fun parseStructuredFragmentToBlocks(
+    rawPayload: String,
+    chapterWebUrl: String?,
+    novelUrl: String,
+    pluginSite: String?,
+): List<NovelReaderScreenModel.ContentBlock> {
+    if (!looksLikeStructuredPayload(rawPayload)) return emptyList()
+    val parsedRoot = parseStructuredRoot(rawPayload)
+    val renderedHtml = if (parsedRoot != null) {
+        val attachmentUrls = extractStructuredAttachmentUrls(parsedRoot)
+        val structuredNode = findStructuredNode(parsedRoot) ?: return emptyList()
+        renderStructuredElementAsHtml(structuredNode, attachmentUrls)
+    } else {
+        renderStructuredPayloadFallback(rawPayload).orEmpty()
+    }.trim()
+    if (renderedHtml.isBlank()) return emptyList()
+    val renderedDoc = Jsoup.parse("<div>$renderedHtml</div>")
+    val renderedCandidates = renderedDoc.select("p, li, blockquote, h1, h2, h3, h4, h5, h6, pre, img")
+        .filterNot { node ->
+            node.tagName().equals("p", ignoreCase = true) &&
+                node.parent()?.tagName()?.equals("li", ignoreCase = true) == true
+        }
+    return renderedCandidates.mapNotNull { candidate ->
+        if (candidate.tagName().equals("img", ignoreCase = true)) {
+            val rawUrl = candidate.attr("src")
+                .ifBlank { candidate.attr("data-src") }
+                .ifBlank { candidate.attr("data-original") }
+                .trim()
+            val resolvedUrl = resolveContentResourceUrl(
+                rawUrl = rawUrl,
+                chapterWebUrl = chapterWebUrl,
+                novelUrl = novelUrl,
+                pluginSite = pluginSite,
+            ) ?: return@mapNotNull null
+            NovelReaderScreenModel.ContentBlock.Image(
+                url = resolvedUrl,
+                alt = candidate.attr("alt").sanitizeTextBlock().ifBlank { null },
+            )
+        } else {
+            val candidateText = candidate.text().sanitizeTextBlock()
+            if (candidateText.isBlank()) return@mapNotNull null
+            val normalizedText = if (candidate.tagName().equals("li", ignoreCase = true)) {
+                "• $candidateText"
+            } else {
+                candidateText
+            }
+            NovelReaderScreenModel.ContentBlock.Text(normalizedText)
+        }
+    }
+}
+
+internal fun looksLikeStructuredPayload(rawValue: String): Boolean {
+    if (rawValue.isBlank()) return false
+    val trimmed = rawValue.trim()
+    return trimmed.startsWith("{") ||
+        trimmed.startsWith("[") ||
+        trimmed.startsWith("\"{") ||
+        trimmed.startsWith("\"[") ||
+        trimmed.startsWith("'{") ||
+        trimmed.startsWith("'[") ||
+        trimmed.startsWith("{\\\"") ||
+        trimmed.startsWith("[\\\"") ||
+        (trimmed.contains("\"type\"") && trimmed.contains("content")) ||
+        (trimmed.contains("'type'") && trimmed.contains("content"))
+}
+
+internal fun extractJsonCandidate(rawPayload: String): String? {
+    val trimmed = rawPayload.trim()
+    if (trimmed.startsWith("<")) {
+        val htmlTextCandidate = Jsoup.parse(trimmed).body().wholeText().trim()
+        if (looksLikeStructuredPayload(htmlTextCandidate)) {
+            return htmlTextCandidate
+        }
+    }
+    val objectStart =
+        trimmed.indexOf('{').takeIf { it >= 0 } ?: trimmed.indexOf('[').takeIf { it >= 0 } ?: return null
+    val objectEnd = trimmed.lastIndexOf('}').takeIf { it > objectStart }
+        ?: trimmed.lastIndexOf(']').takeIf { it > objectStart }
+        ?: return null
+    return trimmed.substring(objectStart, objectEnd + 1).trim()
+}
+
+internal fun normalizeJsonLikePayload(rawPayload: String): String? {
+    var candidate = rawPayload
+        .trim()
+        .removePrefix("\uFEFF")
+        .trim()
+    if (candidate.startsWith("return ")) {
+        candidate = candidate.removePrefix("return ").trim()
+    }
+    candidate = candidate.trimEnd(';').trim()
+    if (!looksLikeStructuredPayload(candidate)) return null
+    if (candidate.startsWith("'") && candidate.endsWith("'")) {
+        val inner = candidate.substring(1, candidate.lastIndex).replace("\"", "\\\"")
+        candidate = "\"$inner\""
+    }
+    if (candidate.contains("\\\"")) {
+        candidate = candidate.replace("\\\"", "\"")
+    }
+    if (candidate.contains("\\n")) {
+        candidate = candidate.replace("\\n", "\n")
+    }
+    if (candidate.contains("\\t")) {
+        candidate = candidate.replace("\\t", "\t")
+    }
+    candidate = Regex("([\\{,]\\s*)([A-Za-z_][A-Za-z0-9_\\-]*)(\\s*:)").replace(candidate, "$1\"$2\"$3")
+    candidate = Regex("\"([A-Za-z_][A-Za-z0-9_\\-]*)\\s*:\\s*\"").replace(candidate, "\"$1\":\"")
+    candidate = Regex("'([^'\\\\]*(?:\\\\.[^'\\\\]*)*)'").replace(candidate) { match ->
+        "\"${match.groupValues[1].replace("\"", "\\\"")}\""
+    }
+    candidate = Regex(",\\s*([}\\]])").replace(candidate, "$1")
+    return candidate
+}
+
+internal fun findStructuredNode(element: JsonElement): JsonElement? {
+    return when (element) {
+        is JsonObject -> {
+            if (isStructuredNode(element)) {
+                element
+            } else {
+                listOf("content", "data", "body", "result", "payload", "value", "chapter")
+                    .firstNotNullOfOrNull { key ->
+                        val nested = element[key] ?: return@firstNotNullOfOrNull null
+                        findStructuredNode(nested)
+                            ?: parseStructuredRoot(nested.asStringOrNull().orEmpty())?.let(::findStructuredNode)
+                    }
+            }
+        }
+        is JsonArray -> {
+            val hasStructuredObjects = element.any {
+                (it as? JsonObject)?.let(::isStructuredNode) == true
+            }
+            if (hasStructuredObjects) element else null
+        }
+        else -> null
+    }
+}
+
+internal fun isStructuredNode(element: JsonObject): Boolean {
+    val normalizedType = normalizeStructuredType(element["type"].asStringOrNull())
+    if (normalizedType != null && normalizedType in STRUCTURED_NODE_TYPES) {
+        return true
+    }
+    return (element["content"] is JsonArray) ||
+        (element["content"] is JsonObject) ||
+        (element["text"].asStringOrNull() != null) ||
+        (element["attrs"] is JsonObject)
+}
+
+internal fun extractStructuredAttachmentUrls(root: JsonElement): Map<String, String> {
+    val rootObject = root as? JsonObject ?: return emptyMap()
+    val mapping = mutableMapOf<String, String>()
+    fun appendAttachmentMapping(attachment: JsonObject) {
+        val url = attachment["url"].asStringOrNull()?.trim().orEmpty()
+        if (url.isBlank()) return
+        attachment["id"].asStringOrNull()?.trim()?.takeIf { it.isNotBlank() }?.let { key ->
+            mapping[key] = url
+        }
+        attachment["name"].asStringOrNull()?.trim()?.takeIf { it.isNotBlank() }?.let { key ->
+            mapping[key] = url
+        }
+    }
+    when (val attachments = rootObject["attachments"]) {
+        is JsonArray -> attachments.forEach { entry ->
+            val attachment = entry as? JsonObject ?: return@forEach
+            appendAttachmentMapping(attachment)
+        }
+        is JsonObject -> attachments.forEach { (key, value) ->
+            val valueObject = value as? JsonObject
+            val url = valueObject?.get("url").asStringOrNull()?.trim().orEmpty()
+                .ifBlank { value.asStringOrNull().orEmpty().trim() }
+            if (url.isNotBlank()) {
+                mapping[key.trim()] = url
+            }
+        }
+        else -> Unit
+    }
+    return mapping
+}
+
+internal fun renderStructuredElementAsHtml(
+    element: JsonElement,
+    attachmentUrls: Map<String, String>,
+): String {
+    return when (element) {
+        is JsonObject -> renderStructuredNodeAsHtml(element, attachmentUrls)
+        is JsonArray -> buildString {
+            element.forEach { node ->
+                append(renderStructuredElementAsHtml(node, attachmentUrls))
+            }
+        }
+        else -> ""
+    }
+}
+
+internal fun renderStructuredNodeAsHtml(
+    node: JsonObject,
+    attachmentUrls: Map<String, String>,
+): String {
+    val type = normalizeStructuredType(node["type"].asStringOrNull()).orEmpty()
+    val attrs = node["attrs"] as? JsonObject
+    val children = node["content"] as? JsonArray
+    fun renderChildren(): String {
+        if (children == null) return ""
+        return buildString {
+            children.forEach { child ->
+                append(renderStructuredElementAsHtml(child, attachmentUrls))
+            }
+        }
+    }
+    return when (type) {
+        "doc" -> renderChildren()
+        "paragraph" -> "<p>${renderChildren()}</p>"
+        "heading" -> {
+            val level = attrs?.get("level").asIntOrNull()?.coerceIn(1, 6) ?: 1
+            "<h$level>${renderChildren()}</h$level>"
+        }
+        "bulletlist" -> "<ul>${renderChildren()}</ul>"
+        "orderedlist" -> "<ol>${renderChildren()}</ol>"
+        "listitem" -> "<li>${renderChildren()}</li>"
+        "blockquote" -> "<blockquote>${renderChildren()}</blockquote>"
+        "hardbreak" -> "<br/>"
+        "horizontalrule" -> "<hr/>"
+        "image" -> renderStructuredImageNode(attrs, attachmentUrls)
+        "text" -> {
+            val escaped = node["text"].asStringOrNull().orEmpty().escapeHtml()
+            applyStructuredMarks(escaped, node["marks"] as? JsonArray)
+        }
+        else -> {
+            val inlineText = node["text"]
+                .asStringOrNull()
+                ?.takeIf { it.isNotBlank() }
+                ?.escapeHtml()
+            if (inlineText != null) {
+                applyStructuredMarks(inlineText, node["marks"] as? JsonArray)
+            } else {
+                renderChildren()
+            }
+        }
+    }
+}
+
+internal fun renderStructuredImageNode(
+    attrs: JsonObject?,
+    attachmentUrls: Map<String, String>,
+): String {
+    if (attrs == null) return ""
+    val directUrl = attrs["src"].asStringOrNull()?.trim().orEmpty()
+    val altText = attrs["alt"].asStringOrNull().orEmpty().escapeHtml()
+    if (directUrl.isNotBlank()) {
+        return "<img src=\"${directUrl.escapeHtmlAttribute()}\" alt=\"$altText\" />"
+    }
+    val imageReferences = mutableListOf<String>()
+    attrs["image"].asStringOrNull()?.trim()?.takeIf { it.isNotBlank() }?.let { imageReferences += it }
+    when (val imagesNode = attrs["images"]) {
+        is JsonArray -> imagesNode.forEach { entry ->
+            when (entry) {
+                is JsonObject -> {
+                    entry["image"].asStringOrNull()?.trim()?.takeIf {
+                        it.isNotBlank()
+                    }?.let { imageReferences += it }
+                }
+                is JsonPrimitive -> entry.contentOrNull?.trim()?.takeIf { it.isNotBlank() }?.let {
+                    imageReferences +=
+                        it
+                }
+                else -> Unit
+            }
+        }
+        is JsonObject -> {
+            imagesNode["image"].asStringOrNull()?.trim()?.takeIf { it.isNotBlank() }?.let { imageReferences += it }
+        }
+        else -> Unit
+    }
+    val resolvedUrls = imageReferences.mapNotNull { reference ->
+        attachmentUrls[reference]
+    }
+    if (resolvedUrls.isEmpty()) return ""
+    return resolvedUrls.joinToString(separator = "") { url ->
+        "<img src=\"${url.escapeHtmlAttribute()}\" alt=\"$altText\" />"
+    }
+}
+
+internal fun applyStructuredMarks(
+    text: String,
+    marks: JsonArray?,
+): String {
+    if (marks == null || marks.isEmpty()) return text
+    var rendered = text
+    marks.forEach { markElement ->
+        val mark = markElement as? JsonObject ?: return@forEach
+        rendered = when (normalizeStructuredType(mark["type"].asStringOrNull())) {
+            "bold", "strong" -> "<strong>$rendered</strong>"
+            "italic", "em" -> "<em>$rendered</em>"
+            "underline" -> "<u>$rendered</u>"
+            "strike", "s" -> "<s>$rendered</s>"
+            "code" -> "<code>$rendered</code>"
+            "link" -> {
+                val href = (mark["attrs"] as? JsonObject)
+                    ?.get("href")
+                    .asStringOrNull()
+                    .orEmpty()
+                if (href.isBlank()) rendered else "<a href=\"${href.escapeHtmlAttribute()}\">$rendered</a>"
+            }
+            else -> rendered
+        }
+    }
+    return rendered
+}
+
+internal fun JsonElement?.asStringOrNull(): String? {
+    return (this as? JsonPrimitive)?.contentOrNull
+}
+
+internal fun JsonElement?.asIntOrNull(): Int? {
+    return (this as? JsonPrimitive)?.intOrNull
+}
+
+internal fun String.escapeHtml(): String {
+    return replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;")
+        .replace("'", "&#39;")
+}
+
+internal fun String.escapeHtmlAttribute(): String {
+    return escapeHtml()
+}
+
+internal fun renderStructuredPayloadFallback(rawPayload: String): String? {
+    val candidate = extractJsonCandidate(rawPayload) ?: rawPayload.trim()
+    if (!looksLikeStructuredPayload(candidate)) return null
+    val normalized = normalizeJsonLikePayload(candidate) ?: candidate
+    val textSegments = extractStructuredTextFallbackSegments(normalized)
+    val imageSegments = extractStructuredImageFallbackUrls(normalized)
+    if (textSegments.isEmpty() && imageSegments.isEmpty()) return null
+    val html = buildString {
+        textSegments.forEach { segment ->
+            append("<p>${segment.escapeHtml()}</p>")
+        }
+        imageSegments.forEach { url ->
+            append("<img src=\"${url.escapeHtmlAttribute()}\" alt=\"\" />")
+        }
+    }.trim()
+    return html.takeIf { it.isNotBlank() }
+}
+
+internal fun looksLikeHtmlPayload(rawPayload: String): Boolean {
+    val trimmed = rawPayload.trim()
+    if (!trimmed.contains('<') || !trimmed.contains('>')) return false
+    return Regex("(?is)<\\s*(html|body|div|main|article|section|p|ul|ol|li|h1|h2|h3|h4|h5|h6|span)\\b")
+        .containsMatchIn(trimmed)
+}
+
+internal fun extractStructuredTextFallbackSegments(payload: String): List<String> {
+    val results = mutableListOf<String>()
+    val textRegex = Regex("(?is)\"text\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"")
+    textRegex.findAll(payload).forEach { match ->
+        val rawText = match.groupValues.getOrNull(1).orEmpty()
+        val decodedText = rawText
+            .replace("\\\\", "\\")
+            .replace("\\n", "\n")
+            .replace("\\t", "\t")
+            .replace("\\r", "")
+            .replace("\\\"", "\"")
+            .replace("\\u00A0", " ")
+            .sanitizeTextBlock()
+        if (decodedText.isBlank()) return@forEach
+        val contextStart = (match.range.first - 220).coerceAtLeast(0)
+        val context = payload.substring(contextStart, match.range.first).lowercase()
+        val isListItemContext = context.contains("listitem") || context.contains("bulletlist")
+        val normalized = if (isListItemContext && !decodedText.startsWith("•")) {
+            "• $decodedText"
+        } else {
+            decodedText
+        }
+        results += normalized
+    }
+    return results
+}
+
+internal fun extractStructuredImageFallbackUrls(payload: String): List<String> {
+    val urlRegex = Regex("(?is)\"url\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"")
+    val directHttpRegex = Regex("(?i)https?://[^\\s\"'<>]+\\.(?:png|jpe?g|gif|webp|bmp|svg)")
+    val urls = linkedSetOf<String>()
+    urlRegex.findAll(payload).forEach { match ->
+        val url = match.groupValues.getOrNull(1).orEmpty()
+            .replace("\\\\", "\\")
+            .replace("\\/", "/")
+            .replace("\\\"", "\"")
+            .trim()
+        if (url.startsWith("http://") || url.startsWith("https://")) {
+            urls += url
+        }
+    }
+    directHttpRegex.findAll(payload).forEach { match ->
+        val url = match.value.trim()
+        if (url.isNotBlank()) {
+            urls += url
+        }
+    }
+    return urls.toList()
+}
+
+internal fun normalizeStructuredType(type: String?): String? {
+    return type
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
+        ?.lowercase()
+        ?.replace("_", "")
+        ?.replace("-", "")
+}
+
+internal fun String.sanitizeTextBlock(): String {
+    return this
+        .replace('\u00A0', ' ')
+        .replace("\r", "")
+        .trim()
+}
+
+internal fun String.normalizeStructuredChapterPayload(): String {
+    val trimmedPayload = trim()
+    if (looksLikeHtmlPayload(trimmedPayload)) {
+        return this
+    }
+    val parsedRoot = parseStructuredRoot(this)
+    if (parsedRoot != null) {
+        val attachmentUrls = extractStructuredAttachmentUrls(parsedRoot)
+        val structuredNode = findStructuredNode(parsedRoot) ?: return this
+        val rendered = renderStructuredElementAsHtml(
+            element = structuredNode,
+            attachmentUrls = attachmentUrls,
+        ).trim()
+        if (rendered.isNotBlank()) {
+            return "<div>$rendered</div>"
+        }
+    }
+    val fallbackRendered = renderStructuredPayloadFallback(this).orEmpty().trim()
+    return if (fallbackRendered.isBlank()) this else "<div>$fallbackRendered</div>"
+}
+
+internal fun parseStructuredCandidate(
+    candidate: String,
+    decodeDepth: Int,
+): JsonElement? {
+    if (decodeDepth > 4) return null
+    val trimmed = candidate.trim().trimEnd(';').trim()
+    if (trimmed.isBlank()) return null
+    val directParsed = runCatching { structuredJson.parseToJsonElement(trimmed) }.getOrNull()
+    if (directParsed != null) {
+        if (directParsed is JsonObject || directParsed is JsonArray) {
+            return directParsed
+        }
+        val primitiveContent = (directParsed as? JsonPrimitive)
+            ?.contentOrNull
+            ?.trim()
+            .orEmpty()
+        if (looksLikeStructuredPayload(primitiveContent)) {
+            return parseStructuredCandidate(primitiveContent, decodeDepth + 1)
+        }
+    }
+    if (trimmed.startsWith("\"") && trimmed.endsWith("\"")) {
+        val decoded = runCatching { structuredJson.decodeFromString<String>(trimmed) }.getOrNull()
+        if (!decoded.isNullOrBlank()) {
+            return parseStructuredCandidate(decoded, decodeDepth + 1)
+        }
+    }
+    val normalizedCandidate = normalizeJsonLikePayload(trimmed)
+        ?.takeIf { it != trimmed }
+        ?: return null
+    return parseStructuredCandidate(normalizedCandidate, decodeDepth + 1)
+}
+
+internal fun parseStructuredRoot(rawPayload: String): JsonElement? {
+    val trimmed = rawPayload
+        .trim()
+        .removePrefix("\uFEFF")
+        .trim()
+    if (!looksLikeStructuredPayload(trimmed)) return null
+    val parseCandidates = linkedSetOf(trimmed)
+    extractJsonCandidate(trimmed)?.let { parseCandidates += it }
+    normalizeJsonLikePayload(trimmed)?.let { parseCandidates += it }
+    parseCandidates.forEach { candidate ->
+        val parsed = parseStructuredCandidate(candidate, decodeDepth = 0) ?: return@forEach
+        if (parsed is JsonObject || parsed is JsonArray) {
+            return parsed
+        }
+    }
+    return null
+}
+
+internal fun resolveContentResourceUrl(
+    rawUrl: String,
+    chapterWebUrl: String?,
+    novelUrl: String,
+    pluginSite: String?,
+): String? {
+    val trimmed = rawUrl.trim()
+    if (trimmed.isBlank()) return null
+    if (trimmed.startsWith("data:image/", ignoreCase = true)) {
+        return trimmed
+    }
+    if (NovelPluginImage.isSupported(trimmed)) {
+        return trimmed
+    }
+    if (trimmed.startsWith("blob:", ignoreCase = true)) {
+        return null
+    }
+    trimmed.toHttpUrlOrNull()?.let { return it.toString() }
+    chapterWebUrl
+        ?.let { resolveUrl(trimmed, it).trim().toHttpUrlOrNull() }
+        ?.let { return it.toString() }
+    return resolveNovelChapterWebUrl(
+        chapterUrl = trimmed,
+        pluginSite = pluginSite,
+        novelUrl = novelUrl,
+    )
+}
+
+internal fun resolveRichContentBlocks(
+    blocks: List<NovelRichContentBlock>,
+    chapterWebUrl: String?,
+    novelUrl: String,
+    pluginSite: String?,
+): List<NovelRichContentBlock> {
+    return blocks.map { block ->
+        when (block) {
+            is NovelRichContentBlock.Image -> {
+                val resolvedUrl = resolveContentResourceUrl(
+                    rawUrl = block.url,
+                    chapterWebUrl = chapterWebUrl,
+                    novelUrl = novelUrl,
+                    pluginSite = pluginSite,
+                ) ?: block.url
+                block.copy(url = resolvedUrl)
+            }
+            else -> block
+        }
+    }
+}
+
+internal fun normalizeHtml(
+    rawHtml: String,
+    settings: NovelReaderSettings,
+    customCss: String?,
+    customJs: String?,
+): String {
+    val css = customCss?.takeIf { it.isNotBlank() }
+    val js = customJs?.takeIf { it.isNotBlank() }
+    val isDarkTheme = when (settings.theme) {
+        NovelReaderTheme.SYSTEM -> uy.kohesive.injekt.Injekt.get<android.app.Application>().isNightMode()
+        NovelReaderTheme.DARK -> true
+        NovelReaderTheme.LIGHT -> false
+    }
+    val background = if (isDarkTheme) "#121212" else "#FFFFFF"
+    val textColor = if (isDarkTheme) "#EDEDED" else "#1A1A1A"
+    val linkColor = if (isDarkTheme) "#80B4FF" else "#1E3A8A"
+    val baseStyle = """
+        body {
+          padding: ${settings.margin}px;
+          line-height: ${settings.lineHeight};
+          font-size: ${settings.fontSize}px;
+          background: $background;
+          color: $textColor;
+          word-break: break-word;
+        }
+        img { max-width: 100%; height: auto; }
+        a { color: $linkColor; }
+    """.trimIndent()
+    val injection = buildString {
+        append("<style>")
+        append('\n')
+        append(baseStyle)
+        if (css != null) {
+            append('\n')
+            append(css)
+        }
+        append('\n')
+        append("</style>")
+        if (js != null) {
+            append('\n')
+            append("<script>")
+            append('\n')
+            append(js)
+            append('\n')
+            append("</script>")
+        }
+    }
+    if (rawHtml.contains("<html", ignoreCase = true)) {
+        return if (injection.isNotBlank()) injectIntoHtml(rawHtml, injection) else rawHtml
+    }
+    val style = buildString {
+        append(baseStyle)
+        if (css != null) {
+            append('\n')
+            append(css)
+        }
+    }
+    return """
+        <!doctype html>
+        <html>
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <style>
+              $style
+            </style>
+            ${if (js != null) "<script>$js</script>" else ""}
+          </head>
+          <body>
+            $rawHtml
+          </body>
+        </html>
+    """.trimIndent()
+}
+
+internal fun injectIntoHtml(rawHtml: String, injection: String): String {
+    val headClose = Regex("</head>", RegexOption.IGNORE_CASE)
+    if (headClose.containsMatchIn(rawHtml)) {
+        return rawHtml.replaceFirst(headClose, "$injection</head>")
+    }
+    val headOpen = Regex("<head[^>]*>", RegexOption.IGNORE_CASE)
+    val headMatch = headOpen.find(rawHtml)
+    if (headMatch != null) {
+        return rawHtml.replaceRange(headMatch.range, headMatch.value + injection)
+    }
+    val bodyClose = Regex("</body>", RegexOption.IGNORE_CASE)
+    if (bodyClose.containsMatchIn(rawHtml)) {
+        return rawHtml.replaceFirst(bodyClose, "$injection</body>")
+    }
+    return injection + rawHtml
 }

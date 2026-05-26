@@ -58,10 +58,13 @@ class NovelReaderCacheCoordinator(
 interface NovelReaderCacheReporter {
     /** Stable identifier for this cache (e.g. "chapter-disk", "translation-disk"). */
     fun cacheId(): String
+
     /** Current bytes used by this cache (disk or memory). */
     fun currentBytes(): Long
+
     /** Trim this cache to at most [targetBytes]. */
     fun trimToTargetBytes(targetBytes: Long)
+
     /** Release all resources. Default no-op. */
     fun dispose() {}
 }

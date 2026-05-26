@@ -39,6 +39,7 @@ internal class NovelReaderTranslationDiskCache(
 
     @Volatile
     private var indexBuilt = false
+
     @Volatile
     private var indexBuilding = false
 

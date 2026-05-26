@@ -228,16 +228,17 @@ class NovelReaderScreenModelTest {
 
             val successState = screenModel.state.value.shouldBeInstanceOf<NovelReaderScreenModel.State.Success>()
             val sentinelTime = 123L
-            setPrivateField(screenModel, "rawHtml", "<p>stale</p>")
-            setPrivateField(screenModel, "parsedContentBlocks", successState.contentBlocks)
-            setPrivateField(
-                screenModel,
-                "parsedRichContentResult",
-                NovelRichContentParseResult(
-                    blocks = emptyList(),
-                    unsupportedFeaturesDetected = false,
-                ),
+            val model = NovelReaderContentModel(
+                canonicalHtml = "<p>stale</p>",
+                chapterWebUrl = "https://example.org/ch1",
+                novelUrl = "https://example.org/novel",
+                pluginSite = "site",
             )
+            model.parsedRichContentResult = NovelRichContentParseResult(
+                blocks = emptyList(),
+                unsupportedFeaturesDetected = false,
+            )
+            setPrivateField(screenModel, "contentModel", model)
             val holder = NovelReaderTranslationHolder { emptyList() }
             holder.put("gemini", mapOf(0 to "g"))
             holder.put("google", mapOf(0 to "g"))
@@ -260,11 +261,11 @@ class NovelReaderScreenModelTest {
 
             invokePrivateClearChapterTransientState(screenModel)
 
-            getPrivateFieldOrNull<String>(screenModel, "rawHtml") shouldBe null
-            getPrivateFieldOrNull<List<Any?>>(screenModel, "parsedContentBlocks") shouldBe null
-            getPrivateFieldOrNull<NovelRichContentParseResult>(screenModel, "parsedRichContentResult") shouldBe null
-            getPrivateField<NovelReaderTranslationHolder>(screenModel, "translationHolder").isEmpty("gemini") shouldBe true
-            getPrivateField<NovelReaderTranslationHolder>(screenModel, "translationHolder").isEmpty("google") shouldBe true
+            getPrivateFieldOrNull<NovelReaderContentModel>(screenModel, "contentModel") shouldBe null
+            getPrivateField<NovelReaderTranslationHolder>(screenModel, "translationHolder").isEmpty("gemini") shouldBe
+                true
+            getPrivateField<NovelReaderTranslationHolder>(screenModel, "translationHolder").isEmpty("google") shouldBe
+                true
             getPrivateField<List<Any?>>(screenModel, "geminiLogs") shouldBe emptyList<Any?>()
             getPrivateField<List<Any?>>(screenModel, "googleLogs") shouldBe emptyList<Any?>()
             getPrivateField<Boolean>(screenModel, "isGeminiTranslating") shouldBe false
