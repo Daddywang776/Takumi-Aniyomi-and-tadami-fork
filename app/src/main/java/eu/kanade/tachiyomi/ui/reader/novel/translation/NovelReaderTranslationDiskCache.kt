@@ -20,6 +20,7 @@ internal class NovelReaderTranslationDiskCache(
     private val directory: File,
     private val json: Json,
 ) {
+    internal val cacheDir: File = directory
     private val lock = Any()
 
     // In-memory metadata index: chapterId -> lightweight metadata
@@ -354,6 +355,36 @@ internal object NovelReaderTranslationDiskCacheStore {
         NovelReaderTranslationDiskCache(
             directory = File(cacheRoot, "novel_reader_translation_cache"),
             json = json,
+        )
+    }
+
+    init {
+        registerWithGlobalCoordinator()
+    }
+
+    private fun registerWithGlobalCoordinator() {
+        eu.kanade.tachiyomi.ui.reader.novel.GlobalCacheCoordinator.instance.register(
+            object : eu.kanade.tachiyomi.ui.reader.novel.cache.NovelReaderCacheReporter {
+                override fun cacheId(): String = "novel-reader-translation-disk"
+                override fun currentBytes(): Long {
+                    return cache.cacheDir.listFiles()
+                        ?.filter { it.isFile }
+                        ?.sumOf { it.length() }
+                        ?: 0L
+                }
+                override fun trimToTargetBytes(targetBytes: Long) {
+                    val files = cache.cacheDir.listFiles()
+                        ?.filter { it.isFile }
+                        ?.sortedBy { it.lastModified() }
+                        .orEmpty()
+                    var total = files.sumOf { it.length() }
+                    for (file in files) {
+                        if (total <= targetBytes) break
+                        total -= file.length()
+                        file.delete()
+                    }
+                }
+            },
         )
     }
 

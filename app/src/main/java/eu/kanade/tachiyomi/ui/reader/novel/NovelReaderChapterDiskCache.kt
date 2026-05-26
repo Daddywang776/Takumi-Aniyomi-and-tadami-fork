@@ -1,6 +1,8 @@
 package eu.kanade.tachiyomi.ui.reader.novel
 
 import android.app.Application
+import eu.kanade.tachiyomi.ui.reader.novel.cache.NovelReaderCacheCoordinator
+import eu.kanade.tachiyomi.ui.reader.novel.cache.NovelReaderCacheReporter
 import eu.kanade.tachiyomi.ui.reader.novel.setting.NovelReaderPreferences
 import eu.kanade.tachiyomi.util.safeCacheDir
 import logcat.LogPriority
@@ -204,6 +206,20 @@ internal object NovelReaderChapterDiskCacheStore {
         )
     }
 
+    init {
+        registerWithGlobalCoordinator()
+    }
+
+    private fun registerWithGlobalCoordinator() {
+        GlobalCacheCoordinator.instance.register(object : NovelReaderCacheReporter {
+            override fun cacheId(): String = "novel-reader-chapter-disk"
+            override fun currentBytes(): Long = cache.stats().totalBytes
+            override fun trimToTargetBytes(targetBytes: Long) {
+                cache.trimToLimits(config())
+            }
+        })
+    }
+
     fun get(chapterId: Long): String? = cache.get(chapterId)
 
     fun put(chapterId: Long, html: String) = cache.put(chapterId, html)
@@ -215,4 +231,11 @@ internal object NovelReaderChapterDiskCacheStore {
     fun trimToCurrentLimits(unlimitedOverride: Boolean? = null) = cache.trimToLimits(config(unlimitedOverride))
 
     fun clear() = cache.clear()
+}
+
+/** Singleton coordinator for all novel reader disk caches. */
+internal object GlobalCacheCoordinator {
+    val instance: NovelReaderCacheCoordinator by lazy {
+        NovelReaderCacheCoordinator(maxTotalBytes = 512L * 1024 * 1024) // 512 MB
+    }
 }
