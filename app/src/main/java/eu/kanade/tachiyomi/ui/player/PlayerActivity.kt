@@ -74,6 +74,7 @@ import eu.kanade.tachiyomi.ui.base.activity.BaseActivity
 import eu.kanade.tachiyomi.ui.player.controls.PlayerControls
 import eu.kanade.tachiyomi.ui.player.settings.AdvancedPlayerPreferences
 import eu.kanade.tachiyomi.ui.player.settings.AudioPreferences
+import eu.kanade.tachiyomi.ui.player.settings.DecoderPreferences
 import eu.kanade.tachiyomi.ui.player.settings.GesturePreferences
 import eu.kanade.tachiyomi.ui.player.settings.PlayerPreferences
 import eu.kanade.tachiyomi.ui.player.utils.ChapterUtils
@@ -133,6 +134,7 @@ class PlayerActivity : BaseActivity() {
     }
     private val audioPreferences: AudioPreferences = Injekt.get()
     private val advancedPlayerPreferences: AdvancedPlayerPreferences = Injekt.get()
+    private val decoderPreferences: DecoderPreferences = Injekt.get()
     private val networkPreferences: NetworkPreferences = Injekt.get()
     private val storageManager: StorageManager = Injekt.get()
     private val uiPreferences: UiPreferences = Injekt.get()
@@ -451,6 +453,16 @@ class PlayerActivity : BaseActivity() {
         advancedPlayerPreferences.mpvInput().get().let { mpvInputFile.writeText(it) }
 
         copyUserFiles(mpvDir)
+        val anime4kPreset = decoderPreferences.anime4kShaderPreset().get()
+        if (copyAnime4kShaders(mpvDir, anime4kPreset)) {
+            anime4kPreset.mpvShaderOption()?.let {
+                MPVLib.setOptionString("glsl-shaders", it)
+            }
+        } else if (anime4kPreset != Anime4KShaderPreset.Off) {
+            logcat(LogPriority.WARN) {
+                "Anime4K preset $anime4kPreset could not be staged and was disabled"
+            }
+        }
         copyAssets(mpvDir)
         copyFontsDirectory(mpvDir)
 
@@ -504,6 +516,47 @@ class PlayerActivity : BaseActivity() {
         luaFile?.openOutputStream()?.bufferedWriter()?.use { scriptLua ->
             luaBridge.bufferedReader().use { scriptLua.write(it.readText()) }
         }
+    }
+
+    private fun copyAnime4kShaders(mpvDir: UniFile, preset: Anime4KShaderPreset): Boolean {
+        if (preset == Anime4KShaderPreset.Off) return true
+
+        val targetRoot = mpvDir.createDirectory(MPV_SHADERS_DIR)?.createDirectory("anime4k")
+            ?: return false
+
+        for (shaderPath in preset.shaderPaths()) {
+            val targetFile = createAnime4kShaderTarget(targetRoot, shaderPath) ?: run {
+                logcat(LogPriority.WARN) { "Failed to prepare Anime4K shader target: $shaderPath" }
+                return false
+            }
+
+            try {
+                assets.open("shaders/anime4k/$shaderPath").use { input ->
+                    targetFile.openOutputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+            } catch (e: IOException) {
+                logcat(LogPriority.WARN) { "Failed to copy Anime4K shader: $shaderPath" }
+                return false
+            }
+        }
+
+        return true
+    }
+
+    private fun createAnime4kShaderTarget(root: UniFile, shaderPath: String): UniFile? {
+        val parentPath = shaderPath.substringBeforeLast('/', "")
+        var current = root
+
+        if (parentPath.isNotEmpty()) {
+            for (segment in parentPath.split('/')) {
+                if (segment.isEmpty()) continue
+                current = current.createDirectory(segment) ?: return null
+            }
+        }
+
+        return current.createFile(shaderPath.substringAfterLast('/'))
     }
 
     private fun copyAssets(mpvDir: UniFile) {

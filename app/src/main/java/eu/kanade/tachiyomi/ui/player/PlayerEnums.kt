@@ -96,10 +96,10 @@ fun getDecoderFromValue(value: String): Decoder {
     return Decoder.entries.first { it.value == value }
 }
 
-enum class Debanding {
-    None,
-    CPU,
-    GPU,
+enum class Debanding(val titleRes: StringResource) {
+    None(AYMR.strings.pref_debanding_none),
+    CPU(AYMR.strings.pref_debanding_cpu),
+    GPU(AYMR.strings.pref_debanding_gpu),
 }
 
 enum class Sheets {

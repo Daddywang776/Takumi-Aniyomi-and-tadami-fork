@@ -141,6 +141,16 @@
     <string name="pref_debanding_cpu">ЦП</string>
     <string name="pref_debanding_gpu">ГП</string>
     <string name="pref_debanding_yuv420p">YUV420P</string>
+    <string name="pref_anime4k_title">Пресет шейдера Anime4K</string>
+    <string name="pref_anime4k_subtitle">Шейдеры реального времени для масштабирования аниме. Требуется поддержка устройства и gpu-next.</string>
+    <string name="pref_anime4k_off">Выкл.</string>
+    <string name="pref_anime4k_balanced">Баланс</string>
+    <string name="pref_anime4k_quality">Качество</string>
+    <string name="pref_motion_interpolation_title">Интерполяция движения</string>
+    <string name="pref_motion_interpolation_subtitle">Сглаживает рваное воспроизведение. Доступно только при gpu-next и поддерживаемом устройстве.</string>
+    <string name="pref_motion_interpolation_off">Выкл.</string>
+    <string name="pref_motion_interpolation_auto">Авто</string>
+    <string name="pref_motion_interpolation_always">Всегда</string>
     <string name="pref_use_yuv420p_title">Использовать формат пикселей YUV420P</string>
     <string name="pref_use_yuv420p_subtitle">Может исправить чёрный экран на некоторых кодеках видео, а также улучшить производительность за счёт качества</string>
     <string name="pref_player_subtitle">Субтитры</string>
