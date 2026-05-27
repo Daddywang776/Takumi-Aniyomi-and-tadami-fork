@@ -210,6 +210,12 @@
     <!-- Player Settings - Decoder -->
     <string name="pref_player_decoder">Decoder</string>
     <string name="pref_player_decoder_summary">Hardware decoding, pixel format, debanding</string>
+    <string name="pref_decoder_preset_title">Decoder preset</string>
+    <string name="pref_decoder_preset_subtitle">Apply one profile to all decoder options at once</string>
+    <string name="pref_decoder_preset_device">Device</string>
+    <string name="pref_decoder_preset_low">Low</string>
+    <string name="pref_decoder_preset_mid">Mid</string>
+    <string name="pref_decoder_preset_high">High</string>
     <string name="pref_try_hw">Try hardware decoding</string>
     <string name="pref_gpu_next_title">Enable gpu-next</string>
     <string name="pref_gpu_next_subtitle">A new video rendering backend</string>

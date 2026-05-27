@@ -7,6 +7,7 @@ import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.presentation.more.settings.screen.SearchableSettings
 import eu.kanade.tachiyomi.ui.player.Anime4KShaderPreset
 import eu.kanade.tachiyomi.ui.player.Debanding
+import eu.kanade.tachiyomi.ui.player.DecoderPreset
 import eu.kanade.tachiyomi.ui.player.MotionInterpolationMode
 import eu.kanade.tachiyomi.ui.player.settings.DecoderPreferences
 import kotlinx.collections.immutable.toImmutableMap
@@ -25,6 +26,7 @@ object PlayerSettingsDecoderScreen : SearchableSettings {
     override fun getPreferences(): List<Preference> {
         val decoderPreferences = remember { Injekt.get<DecoderPreferences>() }
 
+        val decoderPreset = decoderPreferences.decoderPreset()
         val tryHw = decoderPreferences.tryHWDecoding()
         val useGpuNext = decoderPreferences.gpuNext()
         val debanding = decoderPreferences.videoDebanding()
@@ -33,6 +35,17 @@ object PlayerSettingsDecoderScreen : SearchableSettings {
         val yuv420p = decoderPreferences.useYUV420P()
 
         return listOf(
+            Preference.PreferenceItem.ListPreference(
+                preference = decoderPreset,
+                entries = DecoderPreset.entries.associateWith { stringResource(it.titleRes) }
+                    .toImmutableMap(),
+                title = stringResource(AYMR.strings.pref_decoder_preset_title),
+                subtitle = stringResource(AYMR.strings.pref_decoder_preset_subtitle),
+                onValueChanged = { preset ->
+                    preset.applyTo(decoderPreferences)
+                    true
+                },
+            ),
             Preference.PreferenceItem.SwitchPreference(
                 preference = tryHw,
                 title = stringResource(AYMR.strings.pref_try_hw),

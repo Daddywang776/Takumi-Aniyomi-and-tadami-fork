@@ -67,12 +67,14 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import eu.kanade.presentation.player.components.PlayerSheet
 import eu.kanade.tachiyomi.ui.player.Decoder
+import eu.kanade.tachiyomi.ui.player.DecoderPreset
 import eu.kanade.tachiyomi.ui.player.LongPressGesture
 import eu.kanade.tachiyomi.ui.player.execute
 import eu.kanade.tachiyomi.ui.player.executeLongPress
 import eu.kanade.tachiyomi.ui.player.settings.AdvancedPlayerPreferences
 import eu.kanade.tachiyomi.ui.player.settings.AudioChannels
 import eu.kanade.tachiyomi.ui.player.settings.AudioPreferences
+import eu.kanade.tachiyomi.ui.player.settings.DecoderPreferences
 import eu.kanade.tachiyomi.ui.player.settings.GesturePreferences
 import `is`.xyz.mpv.MPVLib
 import kotlinx.collections.immutable.ImmutableList
@@ -98,7 +100,9 @@ fun MoreSheet(
 ) {
     val advancedPreferences = remember { Injekt.get<AdvancedPlayerPreferences>() }
     val audioPreferences = remember { Injekt.get<AudioPreferences>() }
+    val decoderPreferences = remember { Injekt.get<DecoderPreferences>() }
     val gesturePreferences = remember { Injekt.get<GesturePreferences>() }
+    val decoderPreset by decoderPreferences.decoderPreset().collectAsState()
     val statisticsPage by advancedPreferences.playerStatisticsPage().collectAsState()
     val longPressGesture by gesturePreferences.longPressGesture().collectAsState()
     val wrapFilterChips = shouldWrapMoreSheetFilterChips(LocalConfiguration.current.screenWidthDp)
@@ -162,6 +166,40 @@ fun MoreSheet(
                             Icon(imageVector = Icons.Default.Tune, contentDescription = null)
                             Text(text = stringResource(AYMR.strings.player_sheets_filters_title))
                         }
+                    }
+                }
+            }
+
+            Text(text = stringResource(AYMR.strings.pref_decoder_preset_title))
+            if (wrapFilterChips) {
+                FlowRow(
+                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
+                ) {
+                    DecoderPreset.entries.forEach { preset ->
+                        FilterChip(
+                            selected = decoderPreset == preset,
+                            onClick = {
+                                decoderPreferences.decoderPreset().set(preset)
+                                preset.applyTo(decoderPreferences)
+                            },
+                            label = { Text(text = stringResource(preset.titleRes)) },
+                        )
+                    }
+                }
+            } else {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
+                ) {
+                    items(DecoderPreset.entries) { preset ->
+                        FilterChip(
+                            selected = decoderPreset == preset,
+                            onClick = {
+                                decoderPreferences.decoderPreset().set(preset)
+                                preset.applyTo(decoderPreferences)
+                            },
+                            label = { Text(text = stringResource(preset.titleRes)) },
+                        )
                     }
                 }
             }

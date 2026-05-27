@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.ui.player.settings
 
+import eu.kanade.tachiyomi.ui.player.DecoderPreset
 import eu.kanade.tachiyomi.ui.player.Anime4KShaderPreset
 import eu.kanade.tachiyomi.ui.player.Debanding
 import eu.kanade.tachiyomi.ui.player.MotionInterpolationMode
@@ -10,6 +11,7 @@ class DecoderPreferences(
     private val preferenceStore: PreferenceStore,
 ) {
     fun tryHWDecoding() = preferenceStore.getBoolean("pref_try_hwdec", true)
+    fun decoderPreset() = preferenceStore.getEnum("pref_decoder_preset", DecoderPreset.Device)
     fun gpuNext() = preferenceStore.getBoolean("pref_gpu_next", false)
     fun videoDebanding() = preferenceStore.getEnum("pref_video_debanding", Debanding.None)
     fun anime4kShaderPreset() = preferenceStore.getEnum("pref_anime4k_shader_preset", Anime4KShaderPreset.Off)

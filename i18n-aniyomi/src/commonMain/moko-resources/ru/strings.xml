@@ -133,6 +133,12 @@
     <string name="pref_media_info">Если для элементов управления медиа установлено значение «Своё», его можно привязать через input.conf. Коды клавиш: 0x10004 для предыдущего, 0x10005 для воспроизведения/паузы и 0x10006 для следующего.</string>
     <string name="pref_player_decoder">Декодер</string>
     <string name="pref_player_decoder_summary">Аппаратное декодирование, формат пикселей, откладка</string>
+    <string name="pref_decoder_preset_title">Пресет декодера</string>
+    <string name="pref_decoder_preset_subtitle">Применить один профиль ко всем настройкам декодера</string>
+    <string name="pref_decoder_preset_device">Устройство</string>
+    <string name="pref_decoder_preset_low">Низкий</string>
+    <string name="pref_decoder_preset_mid">Средний</string>
+    <string name="pref_decoder_preset_high">Высокий</string>
     <string name="pref_try_hw">Попробовать аппаратное декодирование</string>
     <string name="pref_gpu_next_title">Включить gpu-next</string>
     <string name="pref_gpu_next_subtitle">Новый сервер для рендеринга видео</string>
