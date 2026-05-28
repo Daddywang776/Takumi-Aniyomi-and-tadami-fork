@@ -1,7 +1,9 @@
 package eu.kanade.presentation.entries.anime.components.aurora
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,9 +13,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.LabelOff
+import androidx.compose.material.icons.filled.Circle
 import androidx.compose.material.icons.outlined.BookmarkAdd
 import androidx.compose.material.icons.outlined.BookmarkRemove
 import androidx.compose.material.icons.outlined.Delete
@@ -28,7 +32,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -36,19 +43,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import coil3.compose.AsyncImage
-import coil3.request.crossfade
-import eu.kanade.presentation.components.buildAuroraCoverImageRequest
 import eu.kanade.presentation.components.relativeDateTimeText
-import eu.kanade.presentation.components.rememberAuroraCoverPlaceholderPainter
 import eu.kanade.presentation.entries.anime.components.EpisodeDownloadAction
 import eu.kanade.presentation.entries.anime.components.EpisodeDownloadIndicator
+import eu.kanade.presentation.entries.anime.components.isLikelyEpisodeDescription
+import eu.kanade.presentation.entries.components.ItemCover
 import eu.kanade.presentation.entries.components.aurora.AURORA_DIMMED_ITEM_ALPHA
 import eu.kanade.presentation.entries.components.aurora.AURORA_NEW_ITEM_HIGHLIGHT_ALPHA
 import eu.kanade.presentation.entries.manga.components.aurora.GlassmorphismCard
@@ -57,7 +61,7 @@ import eu.kanade.tachiyomi.data.download.anime.model.AnimeDownload
 import eu.kanade.tachiyomi.ui.entries.anime.EpisodeList
 import me.saket.swipe.SwipeableActionsBox
 import tachiyomi.domain.entries.anime.model.Anime
-import tachiyomi.domain.entries.anime.model.asAnimeCover
+import tachiyomi.domain.entries.anime.model.AnimeCover
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.i18n.stringResource
@@ -79,11 +83,11 @@ fun AnimeEpisodeCardCompact(
     onEpisodeSwipe: (LibraryPreferences.EpisodeSwipeAction) -> Unit,
     onDownloadEpisode: ((List<EpisodeList.Item>, EpisodeDownloadAction) -> Unit)?,
     modifier: Modifier = Modifier,
+    showPreviews: Boolean = true,
+    showSummaries: Boolean = true,
 ) {
     val colors = AuroraTheme.colors
-    val context = LocalContext.current
     val episode = item.episode
-    val placeholderPainter = rememberAuroraCoverPlaceholderPainter()
     val cardAlpha = if (episode.seen) AURORA_DIMMED_ITEM_ALPHA else 1f
     val cardTint = if (isNew && !episode.seen) {
         colors.accent.copy(alpha = AURORA_NEW_ITEM_HIGHLIGHT_ALPHA)
@@ -127,30 +131,32 @@ fun AnimeEpisodeCardCompact(
                         onLongClick = onLongClick,
                     )
                     .padding(horizontal = 4.dp, vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                verticalAlignment = Alignment.Top,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                // 40x40 thumbnail
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.Black.copy(alpha = 0.3f)),
-                ) {
-                    val coverRequest = remember(anime.id, anime.thumbnailUrl, anime.coverLastModified) {
-                        buildAuroraCoverImageRequest(context, anime.asAnimeCover()) {
-                            crossfade(true)
-                            size(40)
-                        }
+                val showPreviewImage = showPreviews
+                if (showPreviewImage) {
+                    val targetWidth = (
+                        (LocalConfiguration.current.screenWidthDp * 0.28f).coerceAtMost(
+                            100f,
+                        ).coerceAtLeast(80f)
+                        )
+                    val imageData = if (!episode.previewUrl.isNullOrBlank()) {
+                        episode.previewUrl
+                    } else {
+                        AnimeCover(
+                            animeId = anime.id,
+                            sourceId = anime.source,
+                            isAnimeFavorite = anime.favorite,
+                            url = anime.thumbnailUrl,
+                            lastModified = anime.coverLastModified,
+                        )
                     }
-                    AsyncImage(
-                        model = coverRequest,
-                        error = placeholderPainter,
-                        fallback = placeholderPainter,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.size(40.dp),
-                        alpha = 1f,
+                    ItemCover.Thumb(
+                        data = imageData,
+                        modifier = Modifier
+                            .width(targetWidth.dp)
+                            .clip(RoundedCornerShape(8.dp)),
                     )
                 }
 
@@ -164,15 +170,51 @@ fun AnimeEpisodeCardCompact(
                         fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = colors.textPrimary,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
+
+                    val summaryText = episode.summary.takeIf { !it.isNullOrBlank() && showSummaries }
+                        ?: episode.scanlator.takeIf {
+                            !it.isNullOrBlank() &&
+                                showSummaries &&
+                                it.isLikelyEpisodeDescription()
+                        }
+                    if (summaryText != null) {
+                        var expandSummary by remember { mutableStateOf(false) }
+                        Text(
+                            text = summaryText,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = colors.textSecondary.copy(alpha = 0.8f),
+                            maxLines = if (expandSummary) Int.MAX_VALUE else 3,
+                            overflow = TextOverflow.Ellipsis,
+                            lineHeight = 14.sp,
+                            modifier = Modifier
+                                .padding(vertical = 2.dp)
+                                .clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    enabled = !isAnyEpisodeSelected,
+                                    onClick = { expandSummary = !expandSummary },
+                                ),
+                        )
+                    }
 
                     // Meta info row
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
+                        if (!episode.seen) {
+                            Icon(
+                                imageVector = Icons.Filled.Circle,
+                                contentDescription = null,
+                                tint = colors.accent,
+                                modifier = Modifier.size(6.dp),
+                            )
+                            Spacer(modifier = Modifier.width(2.dp))
+                        }
                         Icon(
                             Icons.Outlined.Schedule,
                             contentDescription = null,
@@ -217,8 +259,8 @@ fun AnimeEpisodeCardCompact(
                         }
                     }
 
-                    // Progress bar for seen episodes
-                    if (episode.seen) {
+                    // Progress bar for seen/in-progress episodes
+                    if (episode.seen || episode.lastSecondSeen > 0L) {
                         Spacer(modifier = Modifier.height(2.dp))
                         Box(
                             modifier = Modifier
@@ -227,9 +269,17 @@ fun AnimeEpisodeCardCompact(
                                 .clip(RoundedCornerShape(50))
                                 .background(colors.divider),
                         ) {
+                            val progress = if (episode.seen) {
+                                1f
+                            } else {
+                                (
+                                    episode.lastSecondSeen.toFloat() /
+                                        maxOf(1L, episode.totalSeconds).toFloat()
+                                    ).coerceIn(0f, 1f)
+                            }
                             Box(
                                 modifier = Modifier
-                                    .fillMaxWidth()
+                                    .fillMaxWidth(progress)
                                     .height(3.dp)
                                     .background(colors.accent),
                             )
@@ -241,6 +291,7 @@ fun AnimeEpisodeCardCompact(
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.align(Alignment.CenterVertically),
                 ) {
                     // Download indicator
                     if (onDownloadEpisode != null && !isAnyEpisodeSelected) {

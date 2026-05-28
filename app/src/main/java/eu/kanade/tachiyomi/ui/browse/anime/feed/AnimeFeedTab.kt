@@ -28,6 +28,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.core.screen.Screen
@@ -55,7 +56,8 @@ import java.util.TreeMap
 @Composable
 fun Screen.animeFeedTab(): TabContent {
     val navigator = LocalNavigator.currentOrThrow
-    val screenModel = rememberScreenModel { AnimeFeedScreenModel() }
+    val context = LocalContext.current.applicationContext
+    val screenModel = rememberScreenModel { AnimeFeedScreenModel(context) }
     val state by screenModel.state.collectAsState()
     val reorderRotation by animateFloatAsState(
         targetValue = if (state.isReordering) 90f else 0f,
@@ -129,7 +131,9 @@ fun Screen.animeFeedTab(): TabContent {
                             source = dialog.source,
                             savedSearches = dialog.savedSearches,
                             onDismiss = screenModel::dismissDialog,
-                            onAdd = { listingType, savedSearch -> screenModel.addFeed(dialog.source, listingType, savedSearch) },
+                            onAdd = { listingType, savedSearch ->
+                                screenModel.addFeed(dialog.source, listingType, savedSearch)
+                            },
                         )
                     }
                     is AnimeFeedScreenModel.Dialog.DeleteSource -> {

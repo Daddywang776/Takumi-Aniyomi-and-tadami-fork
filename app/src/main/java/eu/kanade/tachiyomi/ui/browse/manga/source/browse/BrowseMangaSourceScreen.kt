@@ -144,8 +144,8 @@ data class BrowseMangaSourceScreen(
                         .onSizeChanged { topBarHeight = it.height },
                 ) {
                     BrowseMangaSourceToolbar(
-                        searchQuery = screenModel.state.value.toolbarQuery,
-                        onSearchQueryChange = { screenModel.search(it) },
+                        searchQuery = state.toolbarQuery,
+                        onSearchQueryChange = screenModel::setToolbarQuery,
                         source = screenModel.source,
                         displayMode = screenModel.displayMode,
                         onDisplayModeChange = { screenModel.displayMode = it },

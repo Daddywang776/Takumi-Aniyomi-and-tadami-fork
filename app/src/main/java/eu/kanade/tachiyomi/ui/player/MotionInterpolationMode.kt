@@ -8,7 +8,8 @@ enum class MotionInterpolationMode(
 ) {
     Off(AYMR.strings.pref_motion_interpolation_off),
     Auto(AYMR.strings.pref_motion_interpolation_auto),
-    Always(AYMR.strings.pref_motion_interpolation_always);
+    Always(AYMR.strings.pref_motion_interpolation_always),
+    ;
 
     fun shouldApply(gpuNextEnabled: Boolean, deviceSupportsInterpolation: Boolean): Boolean {
         if (this == Off) return false

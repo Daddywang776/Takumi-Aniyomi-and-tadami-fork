@@ -71,10 +71,11 @@ import eu.kanade.presentation.entries.anime.components.AnimeEpisodeListItem
 import eu.kanade.presentation.entries.anime.components.AnimeInfoBox
 import eu.kanade.presentation.entries.anime.components.AnimeSeasonListItem
 import eu.kanade.presentation.entries.anime.components.AnimeSeasonSwitcher
-import eu.kanade.presentation.entries.anime.components.resolveAnimeSeasonSwitcherItems
 import eu.kanade.presentation.entries.anime.components.EpisodeDownloadAction
 import eu.kanade.presentation.entries.anime.components.ExpandableAnimeDescription
 import eu.kanade.presentation.entries.anime.components.NextEpisodeAiringListItem
+import eu.kanade.presentation.entries.anime.components.isLikelyEpisodeDescription
+import eu.kanade.presentation.entries.anime.components.resolveAnimeSeasonSwitcherItems
 import eu.kanade.presentation.entries.components.EntryBottomActionMenu
 import eu.kanade.presentation.entries.components.EntryToolbar
 import eu.kanade.presentation.entries.components.ItemHeader
@@ -510,12 +511,12 @@ private fun AnimeScreenSmallImpl(
     }
 
     val seasons = remember(state) { state.processedSeasons }
-                                            val seasonSwitcherItems = remember(seasons) {
-                                                resolveAnimeSeasonSwitcherItems(
-                                                    currentAnimeId = state.anime.id,
-                                                    seasons = seasons.map { it.seasonAnime },
-                                                )
-                                            }
+    val seasonSwitcherItems = remember(seasons) {
+        resolveAnimeSeasonSwitcherItems(
+            currentAnimeId = state.anime.id,
+            seasons = seasons.map { it.seasonAnime },
+        )
+    }
     val episodes = remember(state) { state.processedEpisodes }
     val listItem = remember(state) { state.episodeListItems }
     val hasFilters = remember(state) {
@@ -945,12 +946,12 @@ fun AnimeScreenLargeImpl(
     val density = LocalDensity.current
 
     val seasons = remember(state) { state.processedSeasons }
-                                            val seasonSwitcherItems = remember(seasons) {
-                                                resolveAnimeSeasonSwitcherItems(
-                                                    currentAnimeId = state.anime.id,
-                                                    seasons = seasons.map { it.seasonAnime },
-                                                )
-                                            }
+    val seasonSwitcherItems = remember(seasons) {
+        resolveAnimeSeasonSwitcherItems(
+            currentAnimeId = state.anime.id,
+            seasons = seasons.map { it.seasonAnime },
+        )
+    }
     val episodes = remember(state) { state.processedEpisodes }
     val listItem = remember(state) { state.episodeListItems }
 
@@ -1187,7 +1188,10 @@ fun AnimeScreenLargeImpl(
                                                 onSeasonClicked = onSeasonClicked,
                                                 modifier = Modifier
                                                     .ignorePadding(offsetGridPaddingPx)
-                                                    .padding(horizontal = MaterialTheme.padding.medium, vertical = 4.dp),
+                                                    .padding(
+                                                        horizontal = MaterialTheme.padding.medium,
+                                                        vertical = 4.dp,
+                                                    ),
                                             )
                                         }
                                     }
@@ -1391,8 +1395,11 @@ private fun LazyGridScope.sharedEpisodeItems(
                                 formatTime(episodeItem.episode.totalSeconds),
                             )
                         },
-                    scanlator = episodeItem.episode.scanlator.takeIf { !it.isNullOrBlank() },
-                    summary = episodeItem.episode.summary.takeIf { !it.isNullOrBlank() && showSummaries },
+                    scanlator = episodeItem.episode.scanlator
+                        .takeIf { !it.isNullOrBlank() && !it.isLikelyEpisodeDescription() },
+                    summary = episodeItem.episode.summary.takeIf { !it.isNullOrBlank() && showSummaries }
+                        ?: episodeItem.episode.scanlator
+                            .takeIf { !it.isNullOrBlank() && showSummaries && it.isLikelyEpisodeDescription() },
                     previewUrl = episodeItem.episode.previewUrl.takeIf { !it.isNullOrBlank() && showPreviews },
                     seen = episodeItem.episode.seen,
                     bookmark = episodeItem.episode.bookmark,

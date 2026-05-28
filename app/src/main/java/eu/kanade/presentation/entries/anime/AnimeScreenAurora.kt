@@ -7,7 +7,9 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +25,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -69,11 +72,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import aniyomi.domain.anime.SeasonAnime
 import eu.kanade.domain.metadata.model.MetadataLoadError
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.components.EntryDownloadDropdownMenu
 import eu.kanade.presentation.entries.DownloadAction
 import eu.kanade.presentation.entries.TitleFastScrollOverlayAccumulator
+import eu.kanade.presentation.entries.anime.components.AnimeSeasonListItem
+import eu.kanade.presentation.entries.anime.components.AnimeSeasonSwitcherAurora
 import eu.kanade.presentation.entries.anime.components.EpisodeDownloadAction
 import eu.kanade.presentation.entries.anime.components.aurora.AnimeActionCard
 import eu.kanade.presentation.entries.anime.components.aurora.AnimeEpisodeCardCompact
@@ -82,8 +88,8 @@ import eu.kanade.presentation.entries.anime.components.aurora.AnimeInfoCard
 import eu.kanade.presentation.entries.anime.components.aurora.AnimeStatsCard
 import eu.kanade.presentation.entries.anime.components.aurora.EpisodesHeader
 import eu.kanade.presentation.entries.anime.components.aurora.FullscreenPosterBackground
-import eu.kanade.presentation.entries.anime.components.aurora.filterAnimeDescription
 import eu.kanade.presentation.entries.anime.components.aurora.resolveAnimeDetailsSnapshot
+import eu.kanade.presentation.entries.anime.components.resolveAnimeSeasonSwitcherItems
 import eu.kanade.presentation.entries.components.AuroraEntryDropdownMenu
 import eu.kanade.presentation.entries.components.AuroraEntryDropdownMenuItem
 import eu.kanade.presentation.entries.components.AuroraEntryHoldToRefresh
@@ -100,18 +106,24 @@ import eu.kanade.presentation.entries.resolveTitleListFastScrollSpec
 import eu.kanade.presentation.entries.shouldShowTitleFastScrollFloatingActionButton
 import eu.kanade.presentation.entries.shouldShowTitleFastScrollOverlayChrome
 import eu.kanade.presentation.entries.translation.rememberAuroraEntryTranslation
+import eu.kanade.presentation.library.components.EntryComfortableGridItem
 import eu.kanade.presentation.theme.AuroraTheme
 import eu.kanade.presentation.theme.aurora.adaptive.AuroraDeviceClass
 import eu.kanade.presentation.theme.aurora.adaptive.auroraCenteredMaxWidth
 import eu.kanade.presentation.theme.aurora.adaptive.resolveAuroraAdaptiveSpec
+import eu.kanade.presentation.util.formatEpisodeNumber
+import eu.kanade.tachiyomi.animesource.model.FetchType
 import eu.kanade.tachiyomi.data.download.anime.model.AnimeDownload
 import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.ui.entries.anime.AnimeScreenModel
+import eu.kanade.tachiyomi.ui.entries.anime.AnimeSeasonItem
 import eu.kanade.tachiyomi.ui.entries.anime.EpisodeList
 import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.runningFold
+import tachiyomi.domain.entries.anime.model.Anime
+import tachiyomi.domain.entries.anime.model.AnimeCover
 import tachiyomi.domain.items.episode.model.Episode
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.domain.metadata.model.MetadataSource
@@ -185,6 +197,132 @@ fun AnimeScreenAuroraImpl(
         episodes.filterIsInstance<EpisodeList.Item>().filter { it.selected }
     }
     val isAnyEpisodeSelected = selectedEpisodes.isNotEmpty()
+    val seasons = remember(state) { state.processedSeasons }
+    val seasonSwitcherItems = remember(seasons) {
+        resolveAnimeSeasonSwitcherItems(
+            currentAnimeId = anime.id,
+            seasons = seasons.map { it.seasonAnime },
+        )
+    }
+
+    val distinctVirtualSeasons = remember(episodes) {
+        val items = episodes.filterIsInstance<EpisodeList.Item>()
+        if (items.isEmpty()) {
+            emptyList<String>()
+        } else {
+            val seasonRegex = Regex("""(?i)(?:^|\b|\s|\[|_)(?:s|season\s*)(\d+)(?:\s|e|x|\||-|\.|\b|\]|_|$)""")
+            val specialKeywordsRegex =
+                Regex(
+                    """(?i)\b(ova|oav|ona|movie|pv|trailer|bonus|recap|summary|prologue|extra|special|omake|teaser|clip|interview|preview)s?\b""",
+                )
+            val seasonsList = items.map { item ->
+                val name = item.episode.name
+                val num = item.episode.episodeNumber
+                val match = seasonRegex.find(name)
+                val explicitSeason = if (match != null) {
+                    val sn = match.groupValues[1].toIntOrNull()
+                    if (sn != null) "Season $sn" else null
+                } else {
+                    null
+                }
+
+                val isSpecial = num < 0 ||
+                    specialKeywordsRegex.containsMatchIn(name) ||
+                    !name.any { it.isDigit() } ||
+                    (num > 0 && num < 1.0)
+
+                if (explicitSeason != null) {
+                    explicitSeason
+                } else if (isSpecial) {
+                    if (specialKeywordsRegex.containsMatchIn(name)) "Specials" else "Extras"
+                } else {
+                    "Season 1"
+                }
+            }.distinct()
+
+            seasonsList.sortedWith(
+                Comparator { s1, s2 ->
+                    fun getPriority(s: String): Int {
+                        return when {
+                            s.startsWith("Season", ignoreCase = true) -> 0
+                            s.contains("Extra", ignoreCase = true) -> 1
+                            s.contains("Special", ignoreCase = true) -> 2
+                            else -> 3
+                        }
+                    }
+                    val p1 = getPriority(s1)
+                    val p2 = getPriority(s2)
+                    if (p1 != p2) {
+                        p1.compareTo(p2)
+                    } else {
+                        val n1 = s1.filter { it.isDigit() }.toIntOrNull() ?: 0
+                        val n2 = s2.filter { it.isDigit() }.toIntOrNull() ?: 0
+                        if (n1 != n2) {
+                            n1.compareTo(n2)
+                        } else {
+                            s1.compareTo(s2)
+                        }
+                    }
+                },
+            )
+        }
+    }
+
+    val episodeIdToVirtualSeason = remember(episodes) {
+        val items = episodes.filterIsInstance<EpisodeList.Item>()
+        if (items.isEmpty()) {
+            emptyMap<Long, String>()
+        } else {
+            val seasonRegex = Regex("""(?i)(?:^|\b|\s|\[|_)(?:s|season\s*)(\d+)(?:\s|e|x|\||-|\.|\b|\]|_|$)""")
+            val specialKeywordsRegex =
+                Regex(
+                    """(?i)\b(ova|oav|ona|movie|pv|trailer|bonus|recap|summary|prologue|extra|special|omake|teaser|clip|interview|preview)s?\b""",
+                )
+            items.associate { item ->
+                val name = item.episode.name
+                val num = item.episode.episodeNumber
+                val match = seasonRegex.find(name)
+                val explicitSeason = if (match != null) {
+                    val sn = match.groupValues[1].toIntOrNull()
+                    if (sn != null) "Season $sn" else null
+                } else {
+                    null
+                }
+
+                val isSpecial = num < 0 ||
+                    specialKeywordsRegex.containsMatchIn(name) ||
+                    !name.any { it.isDigit() } ||
+                    (num > 0 && num < 1.0)
+
+                val seasonName = if (explicitSeason != null) {
+                    explicitSeason
+                } else if (isSpecial) {
+                    if (specialKeywordsRegex.containsMatchIn(name)) "Specials" else "Extras"
+                } else {
+                    "Season 1"
+                }
+                item.episode.id to seasonName
+            }
+        }
+    }
+
+    var selectedVirtualSeason by remember(distinctVirtualSeasons) {
+        mutableStateOf(distinctVirtualSeasons.firstOrNull() ?: "")
+    }
+
+    val filteredEpisodes = remember(episodes, selectedVirtualSeason, episodeIdToVirtualSeason, distinctVirtualSeasons) {
+        if (distinctVirtualSeasons.size <= 1) {
+            episodes
+        } else {
+            episodes.filter { item ->
+                when (item) {
+                    is EpisodeList.Item -> episodeIdToVirtualSeason[item.episode.id] == selectedVirtualSeason
+                    else -> false
+                }
+            }
+        }
+    }
+
     val colors = AuroraTheme.colors
     val configuration = LocalConfiguration.current
     val screenHeight = configuration.screenHeightDp.dp
@@ -280,7 +418,7 @@ fun AnimeScreenAuroraImpl(
             .distinctUntilChanged()
             .collect { isReverseScrollingOverlay = it }
     }
-    val episodesToShow = if (episodesExpanded) episodes else episodes.take(5)
+    val episodesToShow = if (episodesExpanded) filteredEpisodes else filteredEpisodes.take(5)
     val haptic = LocalHapticFeedback.current
     val showAnimeOverlayChrome by remember {
         derivedStateOf {
@@ -330,11 +468,11 @@ fun AnimeScreenAuroraImpl(
         }
     })
 
-    LaunchedEffect(isAnyEpisodeSelected, episodesExpanded, episodes.size) {
+    LaunchedEffect(isAnyEpisodeSelected, episodesExpanded, filteredEpisodes.size) {
         if (isAnyEpisodeSelected &&
             shouldAutoExpandAuroraEpisodesList(
                 episodesExpanded = episodesExpanded,
-                totalEpisodes = episodes.size,
+                totalEpisodes = filteredEpisodes.size,
             )
         ) {
             episodesExpanded = true
@@ -393,7 +531,7 @@ fun AnimeScreenAuroraImpl(
         .collectAsState()
     val auroraEntryTranslation = rememberAuroraEntryTranslation(
         title = anime.displayTitle,
-        description = filterAnimeDescription(anime.displayDescription),
+        description = anime.displayDescription,
         sourceLanguage = state.source.lang,
         enabled = auroraEntryTranslationEnabled,
         allowedSourceFamilies = auroraEntryTranslationSourceLanguages,
@@ -537,86 +675,153 @@ fun AnimeScreenAuroraImpl(
                                     .padding(start = 6.dp, end = 12.dp),
                             ) {
                                 item {
-                                    EpisodesHeader(episodeCount = episodes.size)
-                                }
-
-                                if (episodes.isEmpty()) {
-                                    item {
-                                        Box(
+                                    if (seasons.size > 1) {
+                                        AnimeSeasonRailAurora(
+                                            anime = anime,
+                                            seasons = seasons,
+                                            onSeasonClicked = onSeasonClicked,
+                                            onContinueWatchingClicked = onContinueWatchingClicked,
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .padding(32.dp),
-                                            contentAlignment = Alignment.Center,
-                                        ) {
-                                            Text(
-                                                text = stringResource(MR.strings.no_chapters_error),
-                                                color = colors.textPrimary.copy(alpha = 0.7f),
-                                                fontSize = 14.sp,
+                                                .padding(horizontal = 16.dp, vertical = 6.dp),
+                                        )
+                                    }
+                                }
+
+                                item {
+                                    if (seasonSwitcherItems.size > 1) {
+                                        AnimeSeasonSwitcherAurora(
+                                            items = seasonSwitcherItems,
+                                            onSeasonClicked = { onSeasonClicked?.invoke(it) },
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 16.dp, vertical = 6.dp),
+                                        )
+                                    }
+                                }
+
+                                item {
+                                    if (distinctVirtualSeasons.size > 1) {
+                                        VirtualSeasonSwitcherAurora(
+                                            seasons = distinctVirtualSeasons,
+                                            selectedSeason = selectedVirtualSeason,
+                                            onSeasonClicked = { selectedVirtualSeason = it },
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 16.dp, vertical = 6.dp),
+                                        )
+                                    }
+                                }
+
+                                item {
+                                    EpisodesHeader(
+                                        itemCount = if (state.anime.fetchType == FetchType.Seasons) {
+                                            seasons.size
+                                        } else {
+                                            filteredEpisodes.size
+                                        },
+                                        fetchType = state.anime.fetchType,
+                                    )
+                                }
+
+                                if (state.anime.fetchType == FetchType.Seasons) {
+                                    items(
+                                        items = seasons,
+                                        key = { season -> season.seasonAnime.anime.id },
+                                        contentType = { "season" },
+                                    ) { item ->
+                                        AnimeSeasonListItem(
+                                            anime = anime,
+                                            item = item,
+                                            containerHeight = screenHeight.value.toInt(),
+                                            onSeasonClicked = { onSeasonClicked?.invoke(it) },
+                                            onClickContinueWatching = onContinueWatchingClicked,
+                                            listItemModifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = 16.dp, vertical = 4.dp),
+                                        )
+                                    }
+                                } else {
+                                    if (filteredEpisodes.isEmpty()) {
+                                        item {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(32.dp),
+                                                contentAlignment = Alignment.Center,
+                                            ) {
+                                                Text(
+                                                    text = stringResource(MR.strings.no_chapters_error),
+                                                    color = colors.textPrimary.copy(alpha = 0.7f),
+                                                    fontSize = 14.sp,
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    items(
+                                        items = episodesToShow,
+                                        key = { (it as? EpisodeList.Item)?.episode?.id ?: it.hashCode() },
+                                        contentType = { "episode" },
+                                    ) { item ->
+                                        if (item is EpisodeList.Item) {
+                                            AnimeEpisodeCardCompact(
+                                                anime = anime,
+                                                item = item,
+                                                selected = item.selected,
+                                                isNew = item.episode.id in state.newEpisodeIds,
+                                                isAnyEpisodeSelected = isAnyEpisodeSelected,
+                                                episodeSwipeStartAction = episodeSwipeStartAction,
+                                                episodeSwipeEndAction = episodeSwipeEndAction,
+                                                showPreviews = state.showPreviews,
+                                                showSummaries = state.showSummaries,
+                                                onClick = {
+                                                    when (
+                                                        resolveAuroraEpisodeClickAction(
+                                                            isEpisodeSelected = item.selected,
+                                                            isAnyEpisodeSelected = isAnyEpisodeSelected,
+                                                        )
+                                                    ) {
+                                                        AuroraEpisodeClickAction.OpenEpisode -> {
+                                                            onEpisodeClicked(item.episode, false)
+                                                        }
+                                                        AuroraEpisodeClickAction.SelectEpisode -> {
+                                                            onEpisodeSelected(item, true, true, false)
+                                                            if (shouldAutoExpandAuroraEpisodesList(
+                                                                    episodesExpanded,
+                                                                    episodes.size,
+                                                                )
+                                                            ) {
+                                                                episodesExpanded = true
+                                                            }
+                                                        }
+                                                        AuroraEpisodeClickAction.UnselectEpisode -> {
+                                                            onEpisodeSelected(item, false, true, false)
+                                                        }
+                                                    }
+                                                },
+                                                onLongClick = {
+                                                    onEpisodeSelected(item, !item.selected, true, true)
+                                                    val shouldExpand = shouldAutoExpandAuroraEpisodesList(
+                                                        episodesExpanded,
+                                                        episodes.size,
+                                                    )
+                                                    if (!item.selected && shouldExpand) {
+                                                        episodesExpanded = true
+                                                    }
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                },
+                                                onEpisodeSwipe = { action -> onEpisodeSwipe(item, action) },
+                                                onDownloadEpisode = onDownloadEpisode,
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 16.dp, vertical = 4.dp),
                                             )
                                         }
                                     }
                                 }
 
-                                items(
-                                    items = episodesToShow,
-                                    key = { (it as? EpisodeList.Item)?.episode?.id ?: it.hashCode() },
-                                    contentType = { "episode" },
-                                ) { item ->
-                                    if (item is EpisodeList.Item) {
-                                        AnimeEpisodeCardCompact(
-                                            anime = anime,
-                                            item = item,
-                                            selected = item.selected,
-                                            isNew = item.episode.id in state.newEpisodeIds,
-                                            isAnyEpisodeSelected = isAnyEpisodeSelected,
-                                            episodeSwipeStartAction = episodeSwipeStartAction,
-                                            episodeSwipeEndAction = episodeSwipeEndAction,
-                                            onClick = {
-                                                when (
-                                                    resolveAuroraEpisodeClickAction(
-                                                        isEpisodeSelected = item.selected,
-                                                        isAnyEpisodeSelected = isAnyEpisodeSelected,
-                                                    )
-                                                ) {
-                                                    AuroraEpisodeClickAction.OpenEpisode -> {
-                                                        onEpisodeClicked(item.episode, false)
-                                                    }
-                                                    AuroraEpisodeClickAction.SelectEpisode -> {
-                                                        onEpisodeSelected(item, true, true, false)
-                                                        if (shouldAutoExpandAuroraEpisodesList(
-                                                                episodesExpanded,
-                                                                episodes.size,
-                                                            )
-                                                        ) {
-                                                            episodesExpanded = true
-                                                        }
-                                                    }
-                                                    AuroraEpisodeClickAction.UnselectEpisode -> {
-                                                        onEpisodeSelected(item, false, true, false)
-                                                    }
-                                                }
-                                            },
-                                            onLongClick = {
-                                                onEpisodeSelected(item, !item.selected, true, true)
-                                                val shouldExpand = shouldAutoExpandAuroraEpisodesList(
-                                                    episodesExpanded,
-                                                    episodes.size,
-                                                )
-                                                if (!item.selected && shouldExpand) {
-                                                    episodesExpanded = true
-                                                }
-                                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            },
-                                            onEpisodeSwipe = { action -> onEpisodeSwipe(item, action) },
-                                            onDownloadEpisode = onDownloadEpisode,
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(horizontal = 16.dp, vertical = 4.dp),
-                                        )
-                                    }
-                                }
-
-                                if (episodes.size > 5) {
+                                if (filteredEpisodes.size > 5) {
                                     item {
                                         Box(
                                             modifier = Modifier
@@ -644,7 +849,7 @@ fun AnimeScreenAuroraImpl(
                                                     } else {
                                                         stringResource(
                                                             AYMR.strings.action_show_all_episodes,
-                                                            episodes.size,
+                                                            filteredEpisodes.size,
                                                         )
                                                     },
                                                     color = colors.accent,
@@ -753,98 +958,175 @@ fun AnimeScreenAuroraImpl(
                             }
                         }
 
-                        // Episodes header
+                        item(
+                            key = "anime-aurora-season-rail",
+                            contentType = "anime-aurora-season-rail",
+                        ) {
+                            if (seasons.size > 1) {
+                                AnimeSeasonRailAurora(
+                                    anime = anime,
+                                    seasons = seasons,
+                                    onSeasonClicked = onSeasonClicked,
+                                    onContinueWatchingClicked = onContinueWatchingClicked,
+                                    modifier = Modifier
+                                        .auroraCenteredMaxWidth(contentMaxWidthDp)
+                                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                                )
+                            }
+                        }
+
+                        item(
+                            key = "anime-aurora-seasons-switcher",
+                            contentType = "anime-aurora-seasons-switcher",
+                        ) {
+                            if (seasonSwitcherItems.size > 1) {
+                                AnimeSeasonSwitcherAurora(
+                                    items = seasonSwitcherItems,
+                                    onSeasonClicked = { onSeasonClicked?.invoke(it) },
+                                    modifier = Modifier
+                                        .auroraCenteredMaxWidth(contentMaxWidthDp)
+                                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                                )
+                            }
+                        }
+
+                        item(
+                            key = "anime-aurora-virtual-seasons-switcher",
+                            contentType = "anime-aurora-virtual-seasons-switcher",
+                        ) {
+                            if (distinctVirtualSeasons.size > 1) {
+                                VirtualSeasonSwitcherAurora(
+                                    seasons = distinctVirtualSeasons,
+                                    selectedSeason = selectedVirtualSeason,
+                                    onSeasonClicked = { selectedVirtualSeason = it },
+                                    modifier = Modifier
+                                        .auroraCenteredMaxWidth(contentMaxWidthDp)
+                                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                                )
+                            }
+                        }
+
                         item(
                             key = ANIME_AURORA_EPISODES_HEADER_KEY,
                             contentType = ANIME_AURORA_EPISODES_HEADER_KEY,
                         ) {
                             Spacer(modifier = Modifier.height(20.dp))
                             EpisodesHeader(
-                                episodeCount = episodes.size,
+                                itemCount = if (state.anime.fetchType == FetchType.Seasons) {
+                                    seasons.size
+                                } else {
+                                    filteredEpisodes.size
+                                },
+                                fetchType = state.anime.fetchType,
                                 modifier = Modifier.auroraCenteredMaxWidth(contentMaxWidthDp),
                             )
                         }
 
-                        // Empty state for episodes
-                        if (episodes.isEmpty()) {
-                            item {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .auroraCenteredMaxWidth(contentMaxWidthDp)
-                                        .padding(32.dp),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Text(
-                                        text = stringResource(MR.strings.no_chapters_error),
-                                        color = Color.White.copy(alpha = 0.7f),
-                                        fontSize = 14.sp,
-                                    )
-                                }
-                            }
-                        }
-
-                        // Episode list
-                        items(
-                            items = episodesToShow,
-                            key = { (it as? EpisodeList.Item)?.episode?.id ?: it.hashCode() },
-                            contentType = { "episode" },
-                        ) { item ->
-                            if (item is EpisodeList.Item) {
-                                AnimeEpisodeCardCompact(
+                        if (state.anime.fetchType == FetchType.Seasons) {
+                            items(
+                                items = seasons,
+                                key = { season -> season.seasonAnime.anime.id },
+                                contentType = { "season" },
+                            ) { item ->
+                                AnimeSeasonListItem(
                                     anime = anime,
                                     item = item,
-                                    selected = item.selected,
-                                    isNew = item.episode.id in state.newEpisodeIds,
-                                    isAnyEpisodeSelected = isAnyEpisodeSelected,
-                                    episodeSwipeStartAction = episodeSwipeStartAction,
-                                    episodeSwipeEndAction = episodeSwipeEndAction,
-                                    onClick = {
-                                        when (
-                                            resolveAuroraEpisodeClickAction(
-                                                isEpisodeSelected = item.selected,
-                                                isAnyEpisodeSelected = isAnyEpisodeSelected,
-                                            )
-                                        ) {
-                                            AuroraEpisodeClickAction.OpenEpisode -> {
-                                                onEpisodeClicked(item.episode, false)
-                                            }
-                                            AuroraEpisodeClickAction.SelectEpisode -> {
-                                                onEpisodeSelected(item, true, true, false)
-                                                val shouldExpand = shouldAutoExpandAuroraEpisodesList(
-                                                    episodesExpanded,
-                                                    episodes.size,
-                                                )
-                                                if (shouldExpand) {
-                                                    episodesExpanded = true
-                                                }
-                                            }
-                                            AuroraEpisodeClickAction.UnselectEpisode -> {
-                                                onEpisodeSelected(item, false, true, false)
-                                            }
-                                        }
-                                    },
-                                    onLongClick = {
-                                        onEpisodeSelected(item, !item.selected, true, true)
-                                        if (!item.selected &&
-                                            shouldAutoExpandAuroraEpisodesList(episodesExpanded, episodes.size)
-                                        ) {
-                                            episodesExpanded = true
-                                        }
-                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    },
-                                    onEpisodeSwipe = { action -> onEpisodeSwipe(item, action) },
-                                    onDownloadEpisode = onDownloadEpisode,
-                                    modifier = Modifier
+                                    containerHeight = screenHeight.value.toInt(),
+                                    onSeasonClicked = { onSeasonClicked?.invoke(it) },
+                                    onClickContinueWatching = onContinueWatchingClicked,
+                                    listItemModifier = Modifier
                                         .fillMaxWidth()
                                         .auroraCenteredMaxWidth(contentMaxWidthDp)
                                         .padding(horizontal = 16.dp, vertical = 4.dp),
                                 )
                             }
+                        } else {
+                            // Empty state for episodes
+                            if (filteredEpisodes.isEmpty()) {
+                                item {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .auroraCenteredMaxWidth(contentMaxWidthDp)
+                                            .padding(32.dp),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Text(
+                                            text = stringResource(MR.strings.no_chapters_error),
+                                            color = Color.White.copy(alpha = 0.7f),
+                                            fontSize = 14.sp,
+                                        )
+                                    }
+                                }
+                            }
+
+                            // Episode list
+                            items(
+                                items = episodesToShow,
+                                key = { (it as? EpisodeList.Item)?.episode?.id ?: it.hashCode() },
+                                contentType = { "episode" },
+                            ) { item ->
+                                if (item is EpisodeList.Item) {
+                                    AnimeEpisodeCardCompact(
+                                        anime = anime,
+                                        item = item,
+                                        selected = item.selected,
+                                        isNew = item.episode.id in state.newEpisodeIds,
+                                        isAnyEpisodeSelected = isAnyEpisodeSelected,
+                                        episodeSwipeStartAction = episodeSwipeStartAction,
+                                        episodeSwipeEndAction = episodeSwipeEndAction,
+                                        showPreviews = state.showPreviews,
+                                        showSummaries = state.showSummaries,
+                                        onClick = {
+                                            when (
+                                                resolveAuroraEpisodeClickAction(
+                                                    isEpisodeSelected = item.selected,
+                                                    isAnyEpisodeSelected = isAnyEpisodeSelected,
+                                                )
+                                            ) {
+                                                AuroraEpisodeClickAction.OpenEpisode -> {
+                                                    onEpisodeClicked(item.episode, false)
+                                                }
+                                                AuroraEpisodeClickAction.SelectEpisode -> {
+                                                    onEpisodeSelected(item, true, true, false)
+                                                    val shouldExpand = shouldAutoExpandAuroraEpisodesList(
+                                                        episodesExpanded,
+                                                        filteredEpisodes.size,
+                                                    )
+                                                    if (shouldExpand) {
+                                                        episodesExpanded = true
+                                                    }
+                                                }
+                                                AuroraEpisodeClickAction.UnselectEpisode -> {
+                                                    onEpisodeSelected(item, false, true, false)
+                                                }
+                                            }
+                                        },
+                                        onLongClick = {
+                                            onEpisodeSelected(item, !item.selected, true, true)
+                                            if (!item.selected &&
+                                                shouldAutoExpandAuroraEpisodesList(
+                                                    episodesExpanded,
+                                                    filteredEpisodes.size,
+                                                )
+                                            ) {
+                                                episodesExpanded = true
+                                            }
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        },
+                                        onEpisodeSwipe = { action -> onEpisodeSwipe(item, action) },
+                                        onDownloadEpisode = onDownloadEpisode,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .auroraCenteredMaxWidth(contentMaxWidthDp)
+                                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                                    )
+                                }
+                            }
                         }
 
                         // Show More button if there are more than 5 episodes
-                        if (episodes.size > 5) {
+                        if (filteredEpisodes.size > 5) {
                             item {
                                 Box(
                                     modifier = Modifier
@@ -871,7 +1153,10 @@ fun AnimeScreenAuroraImpl(
                                             text = if (episodesExpanded) {
                                                 stringResource(AYMR.strings.action_show_less)
                                             } else {
-                                                stringResource(AYMR.strings.action_show_all_episodes, episodes.size)
+                                                stringResource(
+                                                    AYMR.strings.action_show_all_episodes,
+                                                    filteredEpisodes.size,
+                                                )
                                             },
                                             color = colors.accent,
                                             fontSize = 14.sp,
@@ -1261,6 +1546,62 @@ private fun AuroraEpisodeSelectionBottomStack(
     }
 }
 
+@Composable
+private fun AnimeSeasonRailAurora(
+    anime: Anime,
+    seasons: List<AnimeSeasonItem>,
+    onSeasonClicked: ((SeasonAnime) -> Unit)?,
+    onContinueWatchingClicked: ((SeasonAnime) -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
+    if (seasons.size <= 1) return
+
+    val currentAnimeId = anime.id
+    val scrollState = rememberScrollState()
+
+    Row(
+        modifier = modifier.horizontalScroll(scrollState),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        seasons
+            .sortedBy { it.seasonAnime.anime.seasonNumber }
+            .forEach { item ->
+                val onOpenSeason: () -> Unit = {
+                    if (onSeasonClicked != null) {
+                        onSeasonClicked(item.seasonAnime)
+                    }
+                }
+                Box(
+                    modifier = Modifier.width(132.dp),
+                ) {
+                    EntryComfortableGridItem(
+                        isSelected = item.seasonAnime.anime.id == currentAnimeId,
+                        title = item.seasonAnime.anime.title.ifBlank {
+                            stringResource(
+                                AYMR.strings.display_mode_season,
+                                formatEpisodeNumber(item.seasonAnime.anime.seasonNumber),
+                            )
+                        },
+                        onClick = onOpenSeason,
+                        onLongClick = onOpenSeason,
+                        coverData = AnimeCover(
+                            animeId = item.seasonAnime.anime.id,
+                            sourceId = item.seasonAnime.anime.source,
+                            isAnimeFavorite = item.seasonAnime.anime.favorite,
+                            url = item.seasonAnime.anime.thumbnailUrl,
+                            lastModified = item.seasonAnime.anime.coverLastModified,
+                        ),
+                        onClickContinueViewing = if (onContinueWatchingClicked != null && item.showContinueOverlay) {
+                            { onContinueWatchingClicked(item.seasonAnime) }
+                        } else {
+                            null
+                        },
+                    )
+                }
+            }
+    }
+}
+
 internal fun shouldUseAnimeAuroraTwoPane(deviceClass: AuroraDeviceClass): Boolean {
     return deviceClass == AuroraDeviceClass.TabletExpanded
 }
@@ -1395,5 +1736,76 @@ private fun AuroraActionButton(
             tint = colors.accent.copy(alpha = 0.95f),
             modifier = Modifier.size(22.dp),
         )
+    }
+}
+
+@Composable
+fun VirtualSeasonSwitcherAurora(
+    seasons: List<String>,
+    selectedSeason: String,
+    onSeasonClicked: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = AuroraTheme.colors
+    val scrollState = rememberScrollState()
+
+    Row(
+        modifier = modifier.horizontalScroll(scrollState),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        seasons.forEach { season ->
+            val isSelected = season == selectedSeason
+            val activeBgColors = listOf(
+                colors.accent.copy(alpha = 0.24f),
+                colors.accent.copy(alpha = 0.12f),
+            )
+            val inactiveBgColors = listOf(
+                colors.surface.copy(alpha = 0.4f),
+                colors.surface.copy(alpha = 0.15f),
+            )
+            val currentBgColors = if (isSelected) activeBgColors else inactiveBgColors
+
+            val activeBorderColor = colors.accent.copy(alpha = 0.6f)
+            val inactiveBorderColor = colors.divider.copy(alpha = 0.25f)
+            val currentBorderColor = if (isSelected) activeBorderColor else inactiveBorderColor
+
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(brush = Brush.linearGradient(colors = currentBgColors))
+                    .border(
+                        width = 1.dp,
+                        color = currentBorderColor,
+                        shape = RoundedCornerShape(16.dp),
+                    )
+                    .clickable { onSeasonClicked(season) }
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            ) {
+                Text(
+                    text = getLocalizedSeasonLabel(season),
+                    color = if (isSelected) colors.textPrimary else colors.textSecondary,
+                    fontSize = 14.sp,
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun getLocalizedSeasonLabel(season: String): String {
+    val isRussian = LocalContext.current.resources.configuration.locales[0].language == "ru"
+    return when {
+        season.startsWith("Season ", ignoreCase = true) -> {
+            val num = season.substringAfter("Season ").trim()
+            stringResource(AYMR.strings.display_mode_season, num)
+        }
+        season.equals("Specials", ignoreCase = true) -> {
+            if (isRussian) "Спешлы" else "Specials"
+        }
+        season.equals("Extras", ignoreCase = true) -> {
+            if (isRussian) "Экстры" else "Extras"
+        }
+        else -> season
     }
 }

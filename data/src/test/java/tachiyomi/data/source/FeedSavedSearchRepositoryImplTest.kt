@@ -1,8 +1,8 @@
 package tachiyomi.data.source
 
+import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import `data`.History
 import `data`.Mangas
-import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.runTest
@@ -11,7 +11,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.parallel.Execution
 import org.junit.jupiter.api.parallel.ExecutionMode
-import tachiyomi.data.Database as MangaDb
 import tachiyomi.data.DateColumnAdapter
 import tachiyomi.data.MangaUpdateStrategyColumnAdapter
 import tachiyomi.data.StringListColumnAdapter
@@ -19,6 +18,7 @@ import tachiyomi.data.handlers.manga.AndroidMangaDatabaseHandler
 import tachiyomi.domain.source.model.FeedListingType
 import tachiyomi.domain.source.model.FeedSavedSearch
 import tachiyomi.domain.source.model.SourceType
+import tachiyomi.data.Database as MangaDb
 
 @Execution(ExecutionMode.CONCURRENT)
 class FeedSavedSearchRepositoryImplTest {

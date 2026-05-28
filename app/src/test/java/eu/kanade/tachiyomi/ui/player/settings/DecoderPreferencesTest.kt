@@ -1,8 +1,8 @@
 package eu.kanade.tachiyomi.ui.player.settings
 
 import eu.kanade.tachiyomi.ui.player.Anime4KShaderPreset
-import eu.kanade.tachiyomi.ui.player.DecoderPreset
 import eu.kanade.tachiyomi.ui.player.Debanding
+import eu.kanade.tachiyomi.ui.player.DecoderPreset
 import eu.kanade.tachiyomi.ui.player.MotionInterpolationMode
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.CoroutineScope

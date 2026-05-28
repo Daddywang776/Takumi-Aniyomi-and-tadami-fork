@@ -11,7 +11,8 @@ enum class DecoderPreset(
     Device(AYMR.strings.pref_decoder_preset_device),
     Low(AYMR.strings.pref_decoder_preset_low),
     Mid(AYMR.strings.pref_decoder_preset_mid),
-    High(AYMR.strings.pref_decoder_preset_high);
+    High(AYMR.strings.pref_decoder_preset_high),
+    ;
 
     fun applyTo(decoderPreferences: DecoderPreferences) {
         val supportsGpuNext = Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q

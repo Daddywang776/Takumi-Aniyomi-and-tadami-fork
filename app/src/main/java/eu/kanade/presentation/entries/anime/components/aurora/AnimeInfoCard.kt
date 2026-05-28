@@ -78,7 +78,8 @@ fun AnimeInfoCard(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             val filteredDescription = remember(anime.displayDescription, translation?.description) {
-                translation?.description ?: filterAnimeDescription(anime.displayDescription)
+                translation?.description?.takeUnless { it.isBlank() }
+                    ?: filterAnimeDescription(anime.displayDescription)
             }
 
             Text(

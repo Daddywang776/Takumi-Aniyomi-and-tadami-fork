@@ -1,8 +1,8 @@
 package eu.kanade.tachiyomi.data.backup.restore.restorers
 
+import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import `data`.History
 import `data`.Mangas
-import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import eu.kanade.tachiyomi.data.backup.models.BackupFeed
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.Dispatchers
@@ -10,13 +10,13 @@ import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import tachiyomi.data.Database as MangaDb
 import tachiyomi.data.DateColumnAdapter
 import tachiyomi.data.MangaUpdateStrategyColumnAdapter
 import tachiyomi.data.StringListColumnAdapter
 import tachiyomi.data.handlers.manga.AndroidMangaDatabaseHandler
-import tachiyomi.domain.source.model.FeedListingType
 import tachiyomi.data.source.FeedSavedSearchMapper
+import tachiyomi.domain.source.model.FeedListingType
+import tachiyomi.data.Database as MangaDb
 
 class FeedRestorerTest {
 
