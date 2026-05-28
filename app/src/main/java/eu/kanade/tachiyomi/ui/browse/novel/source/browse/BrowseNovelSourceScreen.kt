@@ -43,7 +43,6 @@ import eu.kanade.presentation.browse.novel.components.BrowseNovelSourceToolbar
 import eu.kanade.presentation.category.components.ChangeCategoryDialog
 import eu.kanade.presentation.entries.novel.DuplicateNovelDialog
 import eu.kanade.presentation.util.Screen
-import eu.kanade.tachiyomi.extension.novel.runtime.hasVisiblePluginSettingsByDiscovery
 import eu.kanade.tachiyomi.novelsource.NovelCatalogueSource
 import eu.kanade.tachiyomi.novelsource.NovelSource
 import eu.kanade.tachiyomi.novelsource.model.NovelFilter
@@ -120,7 +119,7 @@ data class BrowseNovelSourceScreen(
                         },
                         onSettingsClick = novelSourcePreferencesScreenOrNull(
                             sourceId = sourceId,
-                            source = screenModel.source,
+                            isSourceConfigurable = state.isSourceConfigurable,
                         )?.let { screen ->
                             { navigator.push(screen) }
                         },
@@ -405,8 +404,8 @@ internal fun resolveNovelSourceWebUrl(source: NovelSource?): String? {
 
 internal fun novelSourcePreferencesScreenOrNull(
     sourceId: Long,
-    source: NovelSource,
+    isSourceConfigurable: Boolean,
 ): NovelSourcePreferencesScreen? {
-    if (!source.hasVisiblePluginSettingsByDiscovery()) return null
+    if (!isSourceConfigurable) return null
     return NovelSourcePreferencesScreen(sourceId)
 }

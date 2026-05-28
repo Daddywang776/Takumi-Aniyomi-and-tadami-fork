@@ -15,6 +15,7 @@ import eu.kanade.domain.entries.novel.interactor.UpdateNovel
 import eu.kanade.domain.entries.novel.model.toDomainNovel
 import eu.kanade.domain.entries.novel.model.toSNovel
 import eu.kanade.presentation.util.ioCoroutineScope
+import eu.kanade.tachiyomi.extension.novel.runtime.hasVisiblePluginSettingsByDiscovery
 import eu.kanade.tachiyomi.novelsource.NovelCatalogueSource
 import eu.kanade.tachiyomi.novelsource.model.NovelFilterList
 import eu.kanade.tachiyomi.novelsource.model.SNovel
@@ -138,6 +139,13 @@ class BrowseNovelSourceScreenModel(
         sourcePreferences.lastUsedNovelSource().set(source.id)
 
         loadSavedSearches()
+
+        screenModelScope.launch {
+            val isConfigurable = withContext(ioCoroutineScope.coroutineContext) {
+                source.hasVisiblePluginSettingsByDiscovery()
+            }
+            mutableState.update { it.copy(isSourceConfigurable = isConfigurable) }
+        }
 
         if (savedSearchId != null && source is NovelCatalogueSource) {
             screenModelScope.launch {
@@ -597,6 +605,7 @@ class BrowseNovelSourceScreenModel(
         val dialog: Dialog? = null,
         val filterVersion: Int = 0,
         val savedSearches: ImmutableList<Pair<SavedSearch, Boolean>> = persistentListOf(),
+        val isSourceConfigurable: Boolean = false,
     ) {
         val isUserQuery get() = listing is Listing.Search && !listing.query.isNullOrEmpty()
         val filterable get() = savedSearches.isNotEmpty()
