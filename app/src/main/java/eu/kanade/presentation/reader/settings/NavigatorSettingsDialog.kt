@@ -235,6 +235,21 @@ fun NavigatorSettingsDialog(
                         }
                     }
 
+                    val bottomBarPositionPref = screenModel.preferences.bottomBarPosition()
+                    val bottomBarPosition by bottomBarPositionPref.collectAsState()
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    SettingsChipRow(MR.strings.pref_bottom_bar_position) {
+                        ReaderPreferences.BottomBarPosition.entries.map { positionOption ->
+                            FilterChip(
+                                selected = bottomBarPosition == positionOption,
+                                onClick = { bottomBarPositionPref.set(positionOption) },
+                                label = { Text(stringResource(positionOption.titleRes)) },
+                            )
+                        }
+                    }
+
                     Spacer(modifier = Modifier.height(8.dp))
 
                     SliderItem(

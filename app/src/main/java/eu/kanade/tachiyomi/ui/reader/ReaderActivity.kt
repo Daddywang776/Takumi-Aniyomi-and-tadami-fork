@@ -469,6 +469,7 @@ class ReaderActivity : BaseActivity() {
                     val pageActionButtonColor by pageActionButtonColorPref.collectAsState()
                     val pageActionLabelColorPref = remember { readerPreferences.pageActionLabelColor() }
                     val pageActionLabelColor by pageActionLabelColorPref.collectAsState()
+                    val bottomBarPosition by readerPreferences.bottomBarPosition().collectAsState()
 
                     // Auto-scroll effect - start/stop based on state
                     LaunchedEffect(state.autoScrollEnabled, state.autoScrollSpeed, state.viewer) {
@@ -549,6 +550,8 @@ class ReaderActivity : BaseActivity() {
                         },
                         isAutoScrollExpanded = state.isAutoScrollExpanded,
                         onToggleExpand = viewModel::toggleAutoScrollExpand,
+
+                        bottomBarPosition = bottomBarPosition,
 
                         // Bottom bar button visibility
                         visibleButtons = BottomBarButtonFlags(

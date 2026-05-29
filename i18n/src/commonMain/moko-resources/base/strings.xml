@@ -571,6 +571,10 @@
     <string name="navigator_height_large">Large</string>
     <string name="pref_use_theme_color">Use theme color</string>
     <string name="pref_navigator_show_tick_marks">Show page markers</string>
+    <string name="pref_bottom_bar_position">Navigation panel position</string>
+    <string name="bottom_bar_position_bottom">Bottom</string>
+    <string name="bottom_bar_position_left">Left</string>
+    <string name="bottom_bar_position_right">Right</string>
 
       <!-- Reader bottom bar section -->
     <string name="pref_bottom_bar">Reader toolbar</string>

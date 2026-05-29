@@ -304,6 +304,11 @@ class ReaderPreferences(
         true,
     )
 
+    fun bottomBarPosition() = preferenceStore.getEnum(
+        "reader_bottom_bar_position",
+        BottomBarPosition.BOTTOM,
+    )
+
     // endregion
 
     // endregion
@@ -340,6 +345,12 @@ class ReaderPreferences(
         COMPACT(MR.strings.navigator_height_compact, 40),
         NORMAL(MR.strings.navigator_height_normal, 48),
         LARGE(MR.strings.navigator_height_large, 56),
+    }
+
+    enum class BottomBarPosition(val titleRes: StringResource) {
+        BOTTOM(MR.strings.bottom_bar_position_bottom),
+        LEFT(MR.strings.bottom_bar_position_left),
+        RIGHT(MR.strings.bottom_bar_position_right),
     }
 
     companion object {

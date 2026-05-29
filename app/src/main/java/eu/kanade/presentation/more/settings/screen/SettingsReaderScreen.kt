@@ -375,6 +375,13 @@ object SettingsReaderScreen : SearchableSettings {
                     title = stringResource(MR.strings.pref_read_with_volume_keys_inverted),
                     enabled = readWithVolumeKeys,
                 ),
+                Preference.PreferenceItem.ListPreference(
+                    preference = readerPreferences.bottomBarPosition(),
+                    entries = ReaderPreferences.BottomBarPosition.entries
+                        .associateWith { stringResource(it.titleRes) }
+                        .toImmutableMap(),
+                    title = stringResource(MR.strings.pref_bottom_bar_position),
+                ),
             ),
         )
     }

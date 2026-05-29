@@ -954,6 +954,10 @@
     <string name="navigator_height_large">Большой</string>
     <string name="pref_use_theme_color">Использовать цвет темы</string>
     <string name="pref_navigator_show_tick_marks">Показывать маркеры страниц</string>
+    <string name="pref_bottom_bar_position">Размещение панели навигации</string>
+    <string name="bottom_bar_position_bottom">Снизу</string>
+    <string name="bottom_bar_position_left">Слева</string>
+    <string name="bottom_bar_position_right">Справа</string>
 
     <!-- Reader bottom bar section -->
     <string name="pref_bottom_bar">Панель инструментов</string>

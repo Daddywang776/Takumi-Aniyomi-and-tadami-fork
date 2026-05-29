@@ -8,6 +8,8 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
@@ -20,6 +22,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -113,6 +116,8 @@ fun ReaderAppBars(
     onClickChapterList: () -> Unit,
     onClickSettings: () -> Unit,
 
+    bottomBarPosition: ReaderPreferences.BottomBarPosition = ReaderPreferences.BottomBarPosition.BOTTOM,
+
     // Bottom bar button visibility
     visibleButtons: BottomBarButtonFlags = BottomBarButtonFlags(),
 
@@ -142,288 +147,346 @@ fun ReaderAppBars(
         .surfaceColorAtElevation(3.dp)
         .copy(alpha = if (isSystemInDarkTheme()) 0.9f else 0.95f)
 
-    Column(
-        modifier = Modifier.fillMaxHeight(),
-        verticalArrangement = Arrangement.SpaceBetween,
+    Box(
+        modifier = Modifier.fillMaxSize()
     ) {
-        AnimatedVisibility(
-            visible = visible,
-            enter = slideInVertically(
-                initialOffsetY = { -it },
-                animationSpec = panelSlideSpec,
-            ) + fadeIn(animationSpec = panelFadeSpec),
-            exit = slideOutVertically(
-                targetOffsetY = { -it },
-                animationSpec = panelSlideSpec,
-            ) + fadeOut(animationSpec = panelFadeSpec),
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            // Box с фоном, который рисуется под статус-баром
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        color = backgroundColor,
-                        shape = RoundedCornerShape(bottomStart = 18.dp, bottomEnd = 18.dp),
-                    )
-                    .clickable(onClick = {
-                        appHaptics.tap()
-                        onClickTopAppBar()
-                    }),
+            AnimatedVisibility(
+                visible = visible,
+                enter = slideInVertically(
+                    initialOffsetY = { -it },
+                    animationSpec = panelSlideSpec,
+                ) + fadeIn(animationSpec = panelFadeSpec),
+                exit = slideOutVertically(
+                    targetOffsetY = { -it },
+                    animationSpec = panelSlideSpec,
+                ) + fadeOut(animationSpec = panelFadeSpec),
             ) {
-                Column(
+                // Box с фоном, который рисуется под статус-баром
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .statusBarsPadding(),
-                ) {
-                    AppBar(
-                        modifier = Modifier.fillMaxWidth(),
-                        backgroundColor = androidx.compose.ui.graphics.Color.Transparent,
-                        title = mangaTitle,
-                        subtitle = chapterTitle,
-                        navigateUp = navigateUp,
-                        actions = {
-                            AppBarActions(
-                                actions = persistentListOf<AppBar.AppBarAction>().builder()
-                                    .apply {
-                                        add(
-                                            AppBar.Action(
-                                                title = stringResource(
-                                                    if (bookmarked) {
-                                                        MR.strings.action_remove_bookmark
-                                                    } else {
-                                                        MR.strings.action_bookmark
-                                                    },
-                                                ),
-                                                icon = if (bookmarked) {
-                                                    Icons.Outlined.Bookmark
-                                                } else {
-                                                    Icons.Outlined.BookmarkBorder
-                                                },
-                                                onClick = onToggleBookmarked,
-                                            ),
-                                        )
-                                        onOpenInWebView?.let {
-                                            add(
-                                                AppBar.OverflowAction(
-                                                    title = stringResource(MR.strings.action_open_in_web_view),
-                                                    onClick = it,
-                                                ),
-                                            )
-                                        }
-                                        onOpenInBrowser?.let {
-                                            add(
-                                                AppBar.OverflowAction(
-                                                    title = stringResource(MR.strings.action_open_in_browser),
-                                                    onClick = it,
-                                                ),
-                                            )
-                                        }
-                                        onShare?.let {
-                                            add(
-                                                AppBar.OverflowAction(
-                                                    title = stringResource(MR.strings.action_share),
-                                                    onClick = it,
-                                                ),
-                                            )
-                                        }
-                                    }
-                                    .build(),
-                            )
-                        },
-                    )
-
-                    // Separator + expandable auto-scroll controls
-                    if (isAutoScrollExpanded) {
-                        HorizontalDivider(
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                            thickness = 0.5.dp,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                        .background(
+                          color = backgroundColor,
+                          shape = RoundedCornerShape(bottomStart = 18.dp, bottomEnd = 18.dp),
                         )
-                    }
-                    AnimatedVisibility(
-                        visible = isAutoScrollExpanded,
-                        enter = expandVertically(
-                            animationSpec = expandAnimationSpec,
-                        ) + slideInVertically(
-                            initialOffsetY = { -it / 2 },
-                            animationSpec = animationSpec,
-                        ),
-                        exit = shrinkVertically(
-                            animationSpec = expandAnimationSpec,
-                        ) + slideOutVertically(
-                            targetOffsetY = { -it / 2 },
-                            animationSpec = animationSpec,
-                        ),
+                        .clickable(onClick = {
+                            appHaptics.tap()
+                            onClickTopAppBar()
+                        }),
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .statusBarsPadding(),
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp),
+                        AppBar(
+                            modifier = Modifier.fillMaxWidth(),
+                            backgroundColor = androidx.compose.ui.graphics.Color.Transparent,
+                            title = mangaTitle,
+                            subtitle = chapterTitle,
+                            navigateUp = navigateUp,
+                            actions = {
+                                AppBarActions(
+                                    actions = persistentListOf<AppBar.AppBarAction>().builder()
+                                        .apply {
+                                            add(
+                                                AppBar.Action(
+                                                    title = stringResource(
+                                                        if (bookmarked) {
+                                                            MR.strings.action_remove_bookmark
+                                                        } else {
+                                                            MR.strings.action_bookmark
+                                                        },
+                                                    ),
+                                                    icon = if (bookmarked) {
+                                                        Icons.Outlined.Bookmark
+                                                    } else {
+                                                        Icons.Outlined.BookmarkBorder
+                                                    },
+                                                    onClick = onToggleBookmarked,
+                                                ),
+                                            )
+                                            onOpenInWebView?.let {
+                                                add(
+                                                    AppBar.OverflowAction(
+                                                        title = stringResource(MR.strings.action_open_in_web_view),
+                                                        onClick = it,
+                                                    ),
+                                                )
+                                            }
+                                            onOpenInBrowser?.let {
+                                                add(
+                                                    AppBar.OverflowAction(
+                                                        title = stringResource(MR.strings.action_open_in_browser),
+                                                        onClick = it,
+                                                    ),
+                                                )
+                                            }
+                                            onShare?.let {
+                                                add(
+                                                    AppBar.OverflowAction(
+                                                        title = stringResource(MR.strings.action_share),
+                                                        onClick = it,
+                                                    ),
+                                                )
+                                            }
+                                        }
+                                        .build(),
+                                )
+                            },
+                        )
+
+                        // Separator + expandable auto-scroll controls
+                        if (isAutoScrollExpanded) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                thickness = 0.5.dp,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f),
+                            )
+                        }
+                        AnimatedVisibility(
+                            visible = isAutoScrollExpanded,
+                            enter = expandVertically(
+                                animationSpec = expandAnimationSpec,
+                            ) + slideInVertically(
+                                initialOffsetY = { -it / 2 },
+                                animationSpec = animationSpec,
+                            ),
+                            exit = shrinkVertically(
+                                animationSpec = expandAnimationSpec,
+                            ) + slideOutVertically(
+                                targetOffsetY = { -it / 2 },
+                                animationSpec = animationSpec,
+                            ),
                         ) {
-                            // Speed section
-                            Column {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                verticalArrangement = Arrangement.spacedBy(16.dp),
+                            ) {
+                                // Speed section
+                                Column {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Text(
+                                            text = stringResource(AYMR.strings.novel_reader_auto_scroll_speed),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.secondary,
+                                        )
+                                        Text(
+                                            text = "$autoScrollSpeed",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                    }
+                                    Slider(
+                                        value = autoScrollSpeed.toFloat(),
+                                        onValueChange = { onSpeedChange(it.toInt()) },
+                                        valueRange = 1f..100f,
+                                        steps = 99,
+                                        modifier = Modifier.padding(top = 4.dp),
+                                    )
+                                    if (viewer is PagerViewer) {
+                                        Text(
+                                            text = stringResource(
+                                                AYMR.strings.reader_auto_scroll_page_time,
+                                                autoScrollPageDelayMs(autoScrollSpeed) / 1000,
+                                            ),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.align(Alignment.CenterHorizontally),
+                                        )
+                                    }
+                                }
+
+                                // Play/Pause + FAB toggle
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically,
                                 ) {
-                                    Text(
-                                        text = stringResource(AYMR.strings.novel_reader_auto_scroll_speed),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.secondary,
-                                    )
-                                    Text(
-                                        text = "$autoScrollSpeed",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                    )
-                                }
-                                Slider(
-                                    value = autoScrollSpeed.toFloat(),
-                                    onValueChange = { onSpeedChange(it.toInt()) },
-                                    valueRange = 1f..100f,
-                                    steps = 99,
-                                    modifier = Modifier.padding(top = 4.dp),
-                                )
-                                if (viewer is PagerViewer) {
-                                    Text(
-                                        text = stringResource(
-                                            AYMR.strings.reader_auto_scroll_page_time,
-                                            autoScrollPageDelayMs(autoScrollSpeed) / 1000,
-                                        ),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.align(Alignment.CenterHorizontally),
-                                    )
-                                }
-                            }
-
-                            // Play/Pause + FAB toggle
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Surface(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .clickable {
-                                            appHaptics.tap()
-                                            onToggleAutoScroll()
-                                        },
-                                    color = if (autoScrollEnabled) {
-                                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
-                                    } else {
-                                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
-                                    },
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Icon(
-                                            imageVector = if (autoScrollEnabled) {
-                                                Icons.Outlined.Pause
-                                            } else {
-                                                Icons.Outlined.PlayArrow
+                                    Surface(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(16.dp))
+                                            .clickable {
+                                                appHaptics.tap()
+                                                onToggleAutoScroll()
                                             },
-                                            contentDescription = null,
-                                            tint = Color.White,
-                                            modifier = Modifier.size(20.dp),
-                                        )
-                                        Spacer(Modifier.width(8.dp))
-                                        Text(
-                                            text = stringResource(
-                                                if (autoScrollEnabled) {
-                                                    MR.strings.action_pause
+                                        color = if (autoScrollEnabled) {
+                                            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
+                                        } else {
+                                            MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.3f)
+                                        },
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            Icon(
+                                                imageVector = if (autoScrollEnabled) {
+                                                    Icons.Outlined.Pause
                                                 } else {
-                                                    MR.strings.action_start
+                                                    Icons.Outlined.PlayArrow
                                                 },
-                                            ),
-                                            style = MaterialTheme.typography.labelLarge,
-                                            color = Color.White,
+                                                contentDescription = null,
+                                                tint = Color.White,
+                                                modifier = Modifier.size(20.dp),
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(
+                                                text = stringResource(
+                                                    if (autoScrollEnabled) {
+                                                        MR.strings.action_pause
+                                                    } else {
+                                                        MR.strings.action_start
+                                                    },
+                                                ),
+                                                style = MaterialTheme.typography.labelLarge,
+                                                color = Color.White,
+                                            )
+                                        }
+                                    }
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier
+                                            .padding(start = 12.dp, end = 4.dp)
+                                            .clickable(
+                                                interactionSource = remember { MutableInteractionSource() },
+                                                indication = null,
+                                            ) {
+                                                onToggleAutoScrollFloatingButton(!showAutoScrollFloatingButton)
+                                            },
+                                    ) {
+                                        Text(
+                                            text = stringResource(AYMR.strings.reader_auto_scroll_floating_button),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.widthIn(max = 180.dp),
+                                        )
+                                        Switch(
+                                            checked = showAutoScrollFloatingButton,
+                                            onCheckedChange = {
+                                                appHaptics.tap()
+                                                onToggleAutoScrollFloatingButton(it)
+                                            },
+                                            modifier = Modifier.padding(start = 8.dp),
                                         )
                                     }
                                 }
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier
-                                        .padding(start = 12.dp, end = 4.dp)
-                                        .clickable(
-                                            interactionSource = remember { MutableInteractionSource() },
-                                            indication = null,
-                                        ) {
-                                            onToggleAutoScrollFloatingButton(!showAutoScrollFloatingButton)
-                                        },
-                                ) {
-                                    Text(
-                                        text = stringResource(AYMR.strings.reader_auto_scroll_floating_button),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.widthIn(max = 180.dp),
-                                    )
-                                    Switch(
-                                        checked = showAutoScrollFloatingButton,
-                                        onCheckedChange = {
-                                            appHaptics.tap()
-                                            onToggleAutoScrollFloatingButton(it)
-                                        },
-                                        modifier = Modifier.padding(start = 8.dp),
-                                    )
-                                }
                             }
                         }
-                    }
 
-                    // Expand/collapse arrow button
-                    Box(
-                        modifier = Modifier.fillMaxWidth(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        IconButton(
-                            onClick = {
-                                appHaptics.tap()
-                                onToggleExpand()
-                            },
+                        // Expand/collapse arrow button
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center,
                         ) {
-                            Icon(
-                                imageVector = if (isAutoScrollExpanded) {
-                                    Icons.Filled.KeyboardArrowUp
-                                } else {
-                                    Icons.Filled.KeyboardArrowDown
+                            IconButton(
+                                onClick = {
+                                    appHaptics.tap()
+                                    onToggleExpand()
                                 },
-                                contentDescription = if (isAutoScrollExpanded) {
-                                    "Collapse auto-scroll"
-                                } else {
-                                    "Expand auto-scroll"
-                                },
-                                tint = MaterialTheme.colorScheme.onSurface,
-                            )
+                            ) {
+                                Icon(
+                                    imageVector = if (isAutoScrollExpanded) {
+                                        Icons.Filled.KeyboardArrowUp
+                                    } else {
+                                        Icons.Filled.KeyboardArrowDown
+                                    },
+                                    contentDescription = if (isAutoScrollExpanded) {
+                                        "Collapse auto-scroll"
+                                    } else {
+                                        "Expand auto-scroll"
+                                    },
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                )
+                            }
                         }
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            AnimatedVisibility(
+                visible = visible,
+                enter = slideInVertically(
+                    initialOffsetY = { it },
+                    animationSpec = panelSlideSpec,
+                ) + fadeIn(animationSpec = panelFadeSpec),
+                exit = slideOutVertically(
+                    targetOffsetY = { it },
+                    animationSpec = panelSlideSpec,
+                ) + fadeOut(animationSpec = panelFadeSpec),
+            ) {
+                Column(
+                    modifier = Modifier.navigationBarsPadding(),
+                    verticalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
+                ) {
+                    if (showNavigator && bottomBarPosition == ReaderPreferences.BottomBarPosition.BOTTOM) {
+                        ChapterNavigator(
+                            isRtl = isRtl,
+                            onNextChapter = onNextChapter,
+                            enabledNext = enabledNext,
+                            onPreviousChapter = onPreviousChapter,
+                            enabledPrevious = enabledPrevious,
+                            currentPage = currentPage,
+                            totalPages = totalPages,
+                            onPageIndexChange = onPageIndexChange,
+                            showPageNumbers = navigatorShowPageNumbers,
+                            showChapterButtons = navigatorShowChapterButtons,
+                            sliderColor = navigatorSliderColor,
+                            backgroundAlpha = navigatorBackgroundAlpha,
+                            navigatorHeight = navigatorHeight,
+                            cornerRadius = navigatorCornerRadius,
+                            showTickMarks = navigatorShowTickMarks,
+                            isVertical = false,
+                        )
+                    }
+                    BottomReaderBar(
+                        backgroundColor = backgroundColor,
+                        readingMode = readingMode,
+                        onClickReadingMode = onClickReadingMode,
+                        orientation = orientation,
+                        onClickOrientation = onClickOrientation,
+                        cropEnabled = cropEnabled,
+                        onClickCropBorder = onClickCropBorder,
+                        onClickChapterList = onClickChapterList,
+                        onClickSettings = onClickSettings,
+                        visibleButtons = visibleButtons,
+                    )
+                }
+            }
         }
 
-        Spacer(modifier = Modifier.weight(1f))
-
-        AnimatedVisibility(
-            visible = visible,
-            enter = slideInVertically(
-                initialOffsetY = { it },
-                animationSpec = panelSlideSpec,
-            ) + fadeIn(animationSpec = panelFadeSpec),
-            exit = slideOutVertically(
-                targetOffsetY = { it },
-                animationSpec = panelSlideSpec,
-            ) + fadeOut(animationSpec = panelFadeSpec),
-        ) {
-            Column(
-                modifier = Modifier.navigationBarsPadding(),
-                verticalArrangement = Arrangement.spacedBy(MaterialTheme.padding.small),
+        if (showNavigator && bottomBarPosition != ReaderPreferences.BottomBarPosition.BOTTOM) {
+            val isLeft = bottomBarPosition == ReaderPreferences.BottomBarPosition.LEFT
+            AnimatedVisibility(
+                visible = visible,
+                enter = slideInHorizontally(
+                    initialOffsetX = { if (isLeft) -it else it },
+                    animationSpec = panelSlideSpec,
+                ) + fadeIn(animationSpec = panelFadeSpec),
+                exit = slideOutHorizontally(
+                    targetOffsetX = { if (isLeft) -it else it },
+                    animationSpec = panelSlideSpec,
+                ) + fadeOut(animationSpec = panelFadeSpec),
+                modifier = Modifier.align(if (isLeft) Alignment.CenterStart else Alignment.CenterEnd)
             ) {
-                if (showNavigator) {
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 8.dp)
+                        .statusBarsPadding()
+                        .navigationBarsPadding()
+                ) {
                     ChapterNavigator(
                         isRtl = isRtl,
                         onNextChapter = onNextChapter,
@@ -440,23 +503,13 @@ fun ReaderAppBars(
                         navigatorHeight = navigatorHeight,
                         cornerRadius = navigatorCornerRadius,
                         showTickMarks = navigatorShowTickMarks,
+                        isVertical = true,
                     )
                 }
-                BottomReaderBar(
-                    backgroundColor = backgroundColor,
-                    readingMode = readingMode,
-                    onClickReadingMode = onClickReadingMode,
-                    orientation = orientation,
-                    onClickOrientation = onClickOrientation,
-                    cropEnabled = cropEnabled,
-                    onClickCropBorder = onClickCropBorder,
-                    onClickChapterList = onClickChapterList,
-                    onClickSettings = onClickSettings,
-                    visibleButtons = visibleButtons,
-                )
-            }
         }
     }
+}
+
 }
 
 private fun autoScrollPageDelayMs(speed: Int): Long {
