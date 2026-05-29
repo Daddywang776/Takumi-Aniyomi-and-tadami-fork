@@ -389,7 +389,7 @@ class ExternalIntents {
 
         // Update the episode's progress and history
         launchIO {
-            if (cause == "playback_completion" || (currentPosition == duration && duration == 0L)) {
+            if (cause == "playback_completion") {
                 saveEpisodeProgress(
                     currentExtEpisode,
                     anime,

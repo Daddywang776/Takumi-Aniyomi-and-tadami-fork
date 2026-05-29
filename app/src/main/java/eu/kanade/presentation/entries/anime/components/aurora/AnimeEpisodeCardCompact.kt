@@ -43,6 +43,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -56,6 +57,7 @@ import eu.kanade.presentation.entries.components.aurora.AURORA_DIMMED_ITEM_ALPHA
 import eu.kanade.presentation.entries.components.aurora.AURORA_NEW_ITEM_HIGHLIGHT_ALPHA
 import eu.kanade.presentation.entries.manga.components.aurora.GlassmorphismCard
 import eu.kanade.presentation.theme.AuroraTheme
+import eu.kanade.presentation.util.toDurationString
 import eu.kanade.tachiyomi.data.download.anime.model.AnimeDownload
 import eu.kanade.tachiyomi.ui.entries.anime.EpisodeList
 import me.saket.swipe.SwipeableActionsBox
@@ -64,6 +66,7 @@ import tachiyomi.domain.entries.anime.model.AnimeCover
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.i18n.stringResource
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Compact episode card with 40x40 thumbnail and minimal design.
@@ -252,6 +255,19 @@ fun AnimeEpisodeCardCompact(
                                 label = stringResource(AYMR.strings.aurora_episode_badge_seen),
                             )
                         }
+                        if (!episode.seen && episode.lastSecondSeen > 0L && episode.totalSeconds > 0L) {
+                            val context = LocalContext.current
+                            val lastSeenDurationText = episode.lastSecondSeen.milliseconds.toDurationString(
+                                context,
+                                "0s",
+                            )
+                            val totalDurationText = episode.totalSeconds.milliseconds.toDurationString(context, "0s")
+                            AuroraEpisodeStatusBadge(
+                                status = AuroraEpisodeStatus.InProgress,
+                                icon = Icons.Outlined.Schedule,
+                                label = "$lastSeenDurationText / $totalDurationText",
+                            )
+                        }
                     }
 
                     // Progress bar for seen/in-progress episodes
@@ -365,6 +381,7 @@ internal enum class AuroraEpisodeStatus {
     Bookmark,
     Fillermark,
     Seen,
+    InProgress,
 }
 
 internal fun shouldShowAuroraEpisodeStatusLabel(status: AuroraEpisodeStatus): Boolean {
