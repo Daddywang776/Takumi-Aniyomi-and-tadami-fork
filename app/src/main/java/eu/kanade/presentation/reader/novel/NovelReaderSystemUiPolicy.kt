@@ -1,9 +1,19 @@
 package eu.kanade.presentation.reader.novel
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 
 internal object NovelReaderSystemUiSession {
@@ -159,4 +169,82 @@ internal fun WindowInsetsControllerCompat.restoreReaderSystemBarsState(
     isAppearanceLightStatusBars = state.isLightStatusBars
     isAppearanceLightNavigationBars = state.isLightNavigationBars
     systemBarsBehavior = state.systemBarsBehavior
+}
+
+@Composable
+internal fun SystemUIController(
+    fullScreenMode: Boolean,
+    keepScreenOn: Boolean,
+    showReaderUi: Boolean,
+) {
+    val view = LocalView.current
+
+    val capturedSystemBarsState = remember(view) { mutableStateOf<ReaderSystemBarsState?>(null) }
+    DisposableEffect(view) {
+        val activity = view.context.findActivity()
+        val window = activity?.window
+        val insetsController = if (window != null) {
+            WindowCompat.getInsetsController(window, view)
+        } else {
+            null
+        }
+        if (capturedSystemBarsState.value == null && insetsController != null) {
+            capturedSystemBarsState.value = insetsController.captureReaderSystemBarsState()
+        }
+        onDispose {
+            val activity = view.context.findActivity() ?: return@onDispose
+            val window = activity.window
+            val insetsController = WindowCompat.getInsetsController(window, view)
+            val internalChapterReplace = NovelReaderSystemUiSession.consumeInternalChapterReplace()
+            val restoredState = resolveReaderExitSystemBarsState(
+                captured = capturedSystemBarsState.value,
+                current = insetsController.captureReaderSystemBarsState(),
+            )
+            insetsController.restoreReaderSystemBarsState(restoredState)
+            if (shouldRestoreSystemBarsOnDispose(isInternalChapterReplace = internalChapterReplace)) {
+                insetsController.show(WindowInsetsCompat.Type.systemBars())
+            }
+            if (!internalChapterReplace) {
+                NovelReaderSystemUiSession.clear()
+            }
+            window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+    }
+    SideEffect {
+        val activity = view.context.findActivity() ?: return@SideEffect
+        val window = activity.window
+        val insetsController = WindowCompat.getInsetsController(window, view)
+        if (capturedSystemBarsState.value == null) {
+            capturedSystemBarsState.value = insetsController.captureReaderSystemBarsState()
+        }
+        val baseSystemBarsState = capturedSystemBarsState.value ?: insetsController.captureReaderSystemBarsState()
+        val activeSystemBarsState = resolveActiveReaderSystemBarsState(
+            showReaderUi = showReaderUi,
+            fullScreenMode = fullScreenMode,
+            base = baseSystemBarsState,
+        )
+
+        // Keep Screen On
+        if (keepScreenOn) {
+            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        } else {
+            window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        }
+
+        // Fullscreen Mode
+        if (shouldHideSystemBars(fullScreenMode = fullScreenMode, showReaderUi = showReaderUi)) {
+            insetsController.hide(WindowInsetsCompat.Type.systemBars())
+        } else {
+            insetsController.show(WindowInsetsCompat.Type.systemBars())
+        }
+        // Re-apply desired icon appearance after show/hide, as showing bars can
+        // transiently restore prior icon mode on first reveal.
+        insetsController.restoreReaderSystemBarsState(activeSystemBarsState)
+    }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }

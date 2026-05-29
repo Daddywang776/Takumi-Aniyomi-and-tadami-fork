@@ -186,8 +186,12 @@ class NovelReaderScreenModel(
         val app = Injekt.get<Application>()
         val networkHelper = Injekt.get<eu.kanade.tachiyomi.network.NetworkHelper>()
         val json = Injekt.get<Json>()
+        val geminiClient = networkHelper.client.newBuilder()
+            .callTimeout(300, TimeUnit.SECONDS)
+            .readTimeout(180, TimeUnit.SECONDS)
+            .build()
         GeminiTranslationService(
-            client = networkHelper.client,
+            client = geminiClient,
             json = json,
             promptResolver = GeminiPromptResolver(app),
         )
