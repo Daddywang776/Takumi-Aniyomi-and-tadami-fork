@@ -8,6 +8,9 @@ import eu.kanade.domain.entries.manga.model.getComicInfo
 import eu.kanade.domain.items.chapter.model.toSChapter
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.tachiyomi.data.cache.ChapterCache
+import eu.kanade.tachiyomi.data.download.engine.DownloadCompletionTracker
+import eu.kanade.tachiyomi.data.download.engine.DownloadSection
+import eu.kanade.tachiyomi.data.download.engine.DownloadTelemetryEmitter
 import eu.kanade.tachiyomi.data.download.manga.model.MangaDownload
 import eu.kanade.tachiyomi.data.library.manga.MangaLibraryUpdateNotifier
 import eu.kanade.tachiyomi.data.notification.NotificationHandler
@@ -93,6 +96,8 @@ class MangaDownloader(
     // SY -->
     private val sourcePreferences: SourcePreferences = Injekt.get(),
     // SY <--
+    var telemetryEmitter: DownloadTelemetryEmitter = DownloadTelemetryEmitter.NOOP,
+    var completionTracker: DownloadCompletionTracker = DownloadCompletionTracker(),
 ) {
 
     /**
@@ -145,18 +150,22 @@ class MangaDownloader(
      * @return true if the downloader is started, false otherwise.
      */
     fun start(): Boolean {
+        clearCompletedDownloads()
         if (isRunning || queueState.value.isEmpty()) {
             return false
         }
 
         val pending = queueState.value.filter { it.status != MangaDownload.State.DOWNLOADED }
+        if (pending.isEmpty()) {
+            return false
+        }
         pending.forEach { if (it.status != MangaDownload.State.QUEUE) it.status = MangaDownload.State.QUEUE }
 
         isPaused = false
 
         launchDownloaderJob()
 
-        return pending.isNotEmpty()
+        return true
     }
 
     /**
@@ -205,6 +214,12 @@ class MangaDownloader(
         notifier.dismissProgress()
     }
 
+    fun clearCompletedDownloads() {
+        removeFromQueueIf {
+            it.status == MangaDownload.State.DOWNLOADED
+        }
+    }
+
     /**
      * Prepares the subscriptions to start downloading.
      */
@@ -224,13 +239,16 @@ class MangaDownloader(
                     emit(activeDownloads)
 
                     if (activeDownloads.isEmpty()) break
-                    // Suspend until a download enters the ERROR state
-                    val activeDownloadsErroredFlow =
+                    // Suspend until one of the active downloads leaves the runnable states,
+                    // so the scheduler can immediately pick the next queued chapter.
+                    val activeDownloadsSettledFlow =
                         combine(activeDownloads.map(MangaDownload::statusFlow)) { states ->
-                            states.contains(MangaDownload.State.ERROR)
+                            states.any { it.value > MangaDownload.State.DOWNLOADING.value }
                         }.filter { it }
-                    activeDownloadsErroredFlow.first()
+                    activeDownloadsSettledFlow.first()
                 }
+
+                if (areAllDownloadsFinished()) stop()
             }.distinctUntilChanged()
 
             // Use supervisorScope to cancel child jobs when the downloader job is cancelled
@@ -256,14 +274,6 @@ class MangaDownloader(
     private fun CoroutineScope.launchDownloadJob(download: MangaDownload) = launchIO {
         try {
             downloadChapter(download)
-
-            // Remove successful download from queue
-            if (download.status == MangaDownload.State.DOWNLOADED) {
-                removeFromQueue(download)
-            }
-            if (areAllDownloadsFinished()) {
-                stop()
-            }
         } catch (e: Throwable) {
             if (e is CancellationException) throw e
             logcat(LogPriority.ERROR, e)
@@ -380,6 +390,10 @@ class MangaDownloader(
                 DataSaver.NoOp
             }
             val pageDownloadConcurrency = downloadPreferences.pageDownloadConcurrency().get().coerceIn(1, 10)
+            val telemetryLock = Any()
+            var chapterDownloadedBytes = 0L
+            var lastStatBytes = 0L
+            var lastStatTimestampMs = 0L
 
             // Delete all temporary (unfinished) files
             tmpDir.listFiles()
@@ -387,6 +401,8 @@ class MangaDownloader(
                 ?.forEach { it.delete() }
 
             download.status = MangaDownload.State.DOWNLOADING
+            download.downloadedBytes = 0L
+            download.currentSpeedBytesPerSecond = 0L
 
             // Start downloading images, consider we can have downloaded images already
             // Concurrently download a configurable number of pages at a time
@@ -403,7 +419,36 @@ class MangaDownloader(
                             }
                         }
 
-                        withIOContext { getOrDownloadImage(page, download, tmpDir, dataSaver) }
+                        withIOContext {
+                            getOrDownloadImage(
+                                page = page,
+                                download = download,
+                                tmpDir = tmpDir,
+                                dataSaver = dataSaver,
+                            ) { fileSize ->
+                                synchronized(telemetryLock) {
+                                    chapterDownloadedBytes += fileSize
+                                    download.downloadedBytes = chapterDownloadedBytes
+                                    val now = System.currentTimeMillis()
+                                    if (lastStatTimestampMs > 0L && chapterDownloadedBytes >= lastStatBytes) {
+                                        val elapsedMs = now - lastStatTimestampMs
+                                        val deltaBytes = chapterDownloadedBytes - lastStatBytes
+                                        if (elapsedMs > 0L && deltaBytes >= 0L) {
+                                            download.currentSpeedBytesPerSecond = (deltaBytes * 1000L) / elapsedMs
+                                        }
+                                    }
+                                    lastStatBytes = chapterDownloadedBytes
+                                    lastStatTimestampMs = now
+                                    telemetryEmitter.record(
+                                        section = DownloadSection.MANGA,
+                                        downloadKey = download.chapter.id.toString(),
+                                        bytesDownloaded = chapterDownloadedBytes,
+                                        bytesTotal = 0L,
+                                        timestampMs = now,
+                                    )
+                                }
+                            }
+                        }
                         emit(page)
                     }.flowOn(Dispatchers.IO)
                 }
@@ -436,6 +481,9 @@ class MangaDownloader(
             DiskUtil.createNoMediaFile(tmpDir, context)
 
             download.status = MangaDownload.State.DOWNLOADED
+            download.currentSpeedBytesPerSecond = 0L
+            removeFromQueue(download)
+            completionTracker.recordCompletion(DownloadSection.MANGA)
             achievementHandler.trackFeatureUsed(AchievementEvent.Feature.DOWNLOAD)
         } catch (error: Throwable) {
             if (error is CancellationException) throw error
@@ -458,6 +506,7 @@ class MangaDownloader(
         download: MangaDownload,
         tmpDir: UniFile,
         dataSaver: DataSaver,
+        onBytesDownloaded: (Long) -> Unit,
     ) {
         // If the image URL is empty, do nothing
         if (page.imageUrl == null) {
@@ -496,6 +545,12 @@ class MangaDownloader(
             page.uri = file.uri
             page.progress = 100
             page.status = Page.State.READY
+
+            // Emit byte-level telemetry after page download
+            val fileSize = file.length()
+            if (fileSize > 0L) {
+                onBytesDownloaded(fileSize)
+            }
         } catch (e: Throwable) {
             if (e is CancellationException) throw e
             // Mark this page as error and allow to download the remaining

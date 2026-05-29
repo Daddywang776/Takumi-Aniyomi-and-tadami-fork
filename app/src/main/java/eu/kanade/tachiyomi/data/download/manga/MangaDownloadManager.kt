@@ -1,6 +1,8 @@
 package eu.kanade.tachiyomi.data.download.manga
 
 import android.content.Context
+import eu.kanade.tachiyomi.data.download.engine.DownloadCompletionTracker
+import eu.kanade.tachiyomi.data.download.engine.DownloadTelemetryEmitter
 import eu.kanade.tachiyomi.data.download.manga.model.MangaDownload
 import eu.kanade.tachiyomi.source.MangaSource
 import eu.kanade.tachiyomi.source.model.Page
@@ -53,6 +55,18 @@ class MangaDownloadManager(
      */
     private val downloader = MangaDownloader(context, provider, cache)
 
+    var telemetryEmitter: DownloadTelemetryEmitter
+        get() = downloader.telemetryEmitter
+        set(value) {
+            downloader.telemetryEmitter = value
+        }
+
+    var completionTracker: DownloadCompletionTracker
+        get() = downloader.completionTracker
+        set(value) {
+            downloader.completionTracker = value
+        }
+
     val isRunning: Boolean
         get() = downloader.isRunning
 
@@ -98,6 +112,10 @@ class MangaDownloadManager(
     fun clearQueue() {
         downloader.clearQueue()
         downloader.stop()
+    }
+
+    fun clearCompletedDownloads() {
+        downloader.clearCompletedDownloads()
     }
 
     /**

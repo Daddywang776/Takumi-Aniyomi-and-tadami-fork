@@ -43,6 +43,28 @@ data class AnimeDownload(
             progressStateFlow.value = value
         }
 
+    @Transient
+    private val downloadedBytesStateFlow = MutableStateFlow(0L)
+
+    @Transient
+    val downloadedBytesFlow = downloadedBytesStateFlow.asStateFlow()
+    var downloadedBytes: Long
+        get() = downloadedBytesStateFlow.value
+        set(value) {
+            downloadedBytesStateFlow.value = value
+        }
+
+    @Transient
+    private val currentSpeedBytesStateFlow = MutableStateFlow(0L)
+
+    @Transient
+    val currentSpeedBytesFlow = currentSpeedBytesStateFlow.asStateFlow()
+    var currentSpeedBytesPerSecond: Long
+        get() = currentSpeedBytesStateFlow.value
+        set(value) {
+            currentSpeedBytesStateFlow.value = value
+        }
+
     /**
      * Updates the status of the download
      *

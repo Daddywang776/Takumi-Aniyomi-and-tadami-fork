@@ -613,15 +613,13 @@ class BrowseNovelSourceScreenModelTest {
 
     @Test
     fun `novelSourcePreferencesScreenOrNull returns null for source without settings`() {
-        val source = FakeNovelCatalogueSource(id = 1L, name = "Novel", lang = "en")
-        val result = novelSourcePreferencesScreenOrNull(sourceId = 1L, source = source)
+        val result = novelSourcePreferencesScreenOrNull(sourceId = 1L, isSourceConfigurable = false)
         result shouldBe null
     }
 
     @Test
     fun `novelSourcePreferencesScreenOrNull returns screen for configurable source`() {
-        val source = FakeConfigurableNovelCatalogueSource(id = 1L, name = "Novel", lang = "en")
-        val result = novelSourcePreferencesScreenOrNull(sourceId = 1L, source = source)
+        val result = novelSourcePreferencesScreenOrNull(sourceId = 1L, isSourceConfigurable = true)
         result shouldNotBe null
     }
 

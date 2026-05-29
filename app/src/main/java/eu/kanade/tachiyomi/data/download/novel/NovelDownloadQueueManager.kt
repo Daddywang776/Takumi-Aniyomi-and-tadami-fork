@@ -1,6 +1,9 @@
 package eu.kanade.tachiyomi.data.download.novel
 
 import android.app.Application
+import eu.kanade.tachiyomi.data.download.engine.DownloadCompletionTracker
+import eu.kanade.tachiyomi.data.download.engine.DownloadSection
+import eu.kanade.tachiyomi.data.download.engine.DownloadTelemetryEmitter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -202,6 +205,17 @@ fun mergeNovelQueuedTasks(
 
 object NovelDownloadQueueManager {
 
+    /**
+     * Telemetry emitter shared across the novel queue pipeline.
+     * Replace with a real emitter that feeds into [DownloadSpeedTracker]
+     * to enable live speed display for novels.
+     */
+    @Volatile
+    var telemetryEmitter: DownloadTelemetryEmitter = DownloadTelemetryEmitter.NOOP
+
+    @Volatile
+    var completionTracker: DownloadCompletionTracker = DownloadCompletionTracker()
+
     private val queueScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val downloadManager = NovelDownloadManager()
     private val translatedDownloadManager = NovelTranslatedDownloadManager()
@@ -214,6 +228,8 @@ object NovelDownloadQueueManager {
     private val runtimeState = NovelDownloadQueueRuntimeState()
     private var previousNotifiedSummary = QueueNotifySummary()
     private var notifyJob: kotlinx.coroutines.Job? = null
+
+    fun getDownloadSize(): Long = downloadManager.getDownloadSize() + translatedDownloadManager.getDownloadSize()
 
     fun startDownloads() {
         updateState { it.copy(isRunning = true) }
@@ -419,6 +435,7 @@ object NovelDownloadQueueManager {
                 val success = result.getOrElse { false }
                 if (success) {
                     removeTask(nextTask.taskId)
+                    completionTracker.recordCompletion(DownloadSection.NOVEL)
                     logcat(LogPriority.DEBUG) {
                         "Novel queue task completed: taskId=${nextTask.taskId}, novel=${nextTask.novel.id}, chapter=${nextTask.chapter.id}"
                     }

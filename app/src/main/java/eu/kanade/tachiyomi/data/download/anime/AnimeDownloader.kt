@@ -18,6 +18,9 @@ import eu.kanade.tachiyomi.animesource.model.Track
 import eu.kanade.tachiyomi.animesource.model.Video
 import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
 import eu.kanade.tachiyomi.data.download.anime.model.AnimeDownload
+import eu.kanade.tachiyomi.data.download.engine.DownloadCompletionTracker
+import eu.kanade.tachiyomi.data.download.engine.DownloadSection
+import eu.kanade.tachiyomi.data.download.engine.DownloadTelemetryEmitter
 import eu.kanade.tachiyomi.data.library.anime.AnimeLibraryUpdateNotifier
 import eu.kanade.tachiyomi.data.notification.NotificationHandler
 import eu.kanade.tachiyomi.ui.player.loader.EpisodeLoader
@@ -81,6 +84,8 @@ class AnimeDownloader(
     private val provider: AnimeDownloadProvider,
     private val cache: AnimeDownloadCache,
     private val sourceManager: AnimeSourceManager = Injekt.get(),
+    var telemetryEmitter: DownloadTelemetryEmitter = DownloadTelemetryEmitter.NOOP,
+    var completionTracker: DownloadCompletionTracker = DownloadCompletionTracker(),
     private val achievementHandler: AchievementHandler = Injekt.get(),
 ) {
     /**
@@ -134,16 +139,20 @@ class AnimeDownloader(
      * @return true if the downloader is started, false otherwise.
      */
     fun start(): Boolean {
+        clearCompletedDownloads()
         if (isRunning || queueState.value.isEmpty()) {
             return false
         }
 
         val pending = queueState.value.filter { it.status != AnimeDownload.State.DOWNLOADED }
+        if (pending.isEmpty()) {
+            return false
+        }
         pending.forEach { if (it.status != AnimeDownload.State.QUEUE) it.status = AnimeDownload.State.QUEUE }
 
         launchDownloaderJob()
 
-        return pending.isNotEmpty()
+        return true
     }
 
     /**
@@ -153,7 +162,10 @@ class AnimeDownloader(
         cancelDownloaderJob()
         queueState.value
             .filter { it.status == AnimeDownload.State.DOWNLOADING }
-            .forEach { it.status = AnimeDownload.State.ERROR }
+            .forEach {
+                it.status = AnimeDownload.State.ERROR
+                it.currentSpeedBytesPerSecond = 0L
+            }
 
         if (reason != null) {
             notifier.onWarning(reason)
@@ -176,7 +188,10 @@ class AnimeDownloader(
         cancelDownloaderJob()
         queueState.value
             .filter { it.status == AnimeDownload.State.DOWNLOADING }
-            .forEach { it.status = AnimeDownload.State.QUEUE }
+            .forEach {
+                it.status = AnimeDownload.State.QUEUE
+                it.currentSpeedBytesPerSecond = 0L
+            }
     }
 
     /**
@@ -187,6 +202,12 @@ class AnimeDownloader(
 
         internalClearQueue()
         notifier.dismissProgress()
+    }
+
+    fun clearCompletedDownloads() {
+        removeFromQueueIf {
+            it.status == AnimeDownload.State.DOWNLOADED
+        }
     }
 
     /**
@@ -209,12 +230,13 @@ class AnimeDownloader(
 
                     if (activeDownloads.isEmpty()) break
 
-                    // Suspend until a download enters the ERROR state
-                    val activeDownloadsErroredFlow =
+                    // Suspend until one of the active downloads leaves the runnable states,
+                    // so the scheduler can immediately pick the next queued episode.
+                    val activeDownloadsSettledFlow =
                         combine(activeDownloads.map(AnimeDownload::statusFlow)) { states ->
-                            states.contains(AnimeDownload.State.ERROR)
+                            states.any { it.value > AnimeDownload.State.DOWNLOADING.value }
                         }.filter { it }
-                    activeDownloadsErroredFlow.first()
+                    activeDownloadsSettledFlow.first()
                 }
 
                 if (areAllAnimeDownloadsFinished()) stop()
@@ -247,11 +269,6 @@ class AnimeDownloader(
         // This try-catch manages the job cancellation
         try {
             downloadEpisode(download)
-
-            // Remove successful download from queue
-            if (download.status == AnimeDownload.State.DOWNLOADED) {
-                removeFromQueue(download)
-            }
         } catch (e: Throwable) {
             if (e is CancellationException) throw e
             logcat(LogPriority.ERROR, e)
@@ -382,6 +399,9 @@ class AnimeDownloader(
             DiskUtil.createNoMediaFile(tmpDir, context)
 
             download.status = AnimeDownload.State.DOWNLOADED
+            download.currentSpeedBytesPerSecond = 0L
+            removeFromQueue(download)
+            completionTracker.recordCompletion(DownloadSection.ANIME)
             achievementHandler.trackFeatureUsed(AchievementEvent.Feature.DOWNLOAD)
         } catch (error: Throwable) {
             if (error is CancellationException) throw error
@@ -431,6 +451,8 @@ class AnimeDownloader(
 
                     download.status = AnimeDownload.State.DOWNLOADING
                     download.progress = 0
+                    download.downloadedBytes = 0L
+                    download.currentSpeedBytesPerSecond = 0L
 
                     // If videoFile is not existing then download it
                     if (preferences.useExternalDownloader().get() == download.changeDownloader) {
@@ -526,6 +548,8 @@ class AnimeDownloader(
         }
 
         var duration = 0L
+        var lastStatBytes = 0L
+        var lastStatTimestampMs = 0L
 
         val logCallback = LogCallback { log ->
             if (log.level <= Level.AV_LOG_WARNING) {
@@ -537,9 +561,29 @@ class AnimeDownloader(
 
         val statCallback = StatisticsCallback { s ->
             val outTime = (s.time / 1000.0).toLong()
+            val bytesDownloaded = s.size
+            val now = System.currentTimeMillis()
+
+            download.downloadedBytes = bytesDownloaded
+            if (lastStatTimestampMs > 0L && bytesDownloaded >= lastStatBytes) {
+                val elapsedMs = now - lastStatTimestampMs
+                val deltaBytes = bytesDownloaded - lastStatBytes
+                if (elapsedMs > 0L && deltaBytes >= 0L) {
+                    download.currentSpeedBytesPerSecond = (deltaBytes * 1000L) / elapsedMs
+                }
+            }
+            lastStatBytes = bytesDownloaded
+            lastStatTimestampMs = now
 
             if (duration != 0L && outTime > 0) {
                 download.progress = (100 * outTime / duration).toInt()
+                telemetryEmitter.record(
+                    section = DownloadSection.ANIME,
+                    downloadKey = download.episode.id.toString(),
+                    bytesDownloaded = bytesDownloaded,
+                    bytesTotal = 0L,
+                    timestampMs = now,
+                )
             }
         }
 
@@ -714,11 +758,7 @@ class AnimeDownloader(
                         tmpDir.delete()
                         queueState.value.find { anime -> anime.video == video }?.let { download ->
                             download.status = AnimeDownload.State.DOWNLOADED
-                            // Delete successful downloads from queue
-                            if (download.status == AnimeDownload.State.DOWNLOADED) {
-                                // Remove downloaded episode from queue
-                                removeFromQueue(download)
-                            }
+                            removeFromQueue(download)
                             if (areAllAnimeDownloadsFinished()) {
                                 stop()
                             }

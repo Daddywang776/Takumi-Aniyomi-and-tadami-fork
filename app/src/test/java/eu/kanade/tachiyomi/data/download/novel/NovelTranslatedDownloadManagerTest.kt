@@ -79,6 +79,35 @@ class NovelTranslatedDownloadManagerTest {
         legacyFile.exists() shouldBe false
     }
 
+    @Test
+    fun `getDownloadSize includes translated exports and updates after delete`() {
+        val source = MutableNovelSource(id = 10L, label = "Source A")
+        val manager = createManager(source)
+        val novel = Novel.create().copy(id = 1L, source = 10L, title = "Novel A")
+        val chapter = NovelChapter.create().copy(
+            id = 3L,
+            novelId = novel.id,
+            chapterNumber = 1.0,
+            name = "Prologue",
+        )
+
+        val stableFile = translatedStableFile(tempDir.resolve("downloads").toFile(), novel, chapter)
+            .apply {
+                parentFile?.mkdirs()
+                writeText("stable export")
+            }
+
+        manager.getDownloadSize() shouldBe stableFile.length()
+
+        manager.deleteTranslatedChapter(
+            novel = novel,
+            chapter = chapter,
+            format = NovelTranslatedDownloadFormat.TXT,
+        )
+
+        manager.getDownloadSize() shouldBe 0L
+    }
+
     private fun createManager(source: MutableNovelSource): NovelTranslatedDownloadManager {
         val storageManager = mockk<StorageManager>()
         every { storageManager.getDownloadsDirectory() } returns fakeUniFile(

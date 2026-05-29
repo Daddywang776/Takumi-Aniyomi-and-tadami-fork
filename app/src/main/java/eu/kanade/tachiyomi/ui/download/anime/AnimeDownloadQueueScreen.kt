@@ -1,34 +1,29 @@
 package eu.kanade.tachiyomi.ui.download.anime
 
-import android.view.LayoutInflater
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.view.ViewCompat
-import androidx.core.view.updatePadding
-import androidx.recyclerview.widget.LinearLayoutManager
-import com.tadami.aurora.databinding.DownloadListBinding
 import eu.kanade.domain.ui.UiPreferences
+import eu.kanade.presentation.download.DownloadQueueItem
+import eu.kanade.presentation.download.DownloadQueueSectionHeader
+import eu.kanade.tachiyomi.ui.download.DownloadQueueUiMapper
 import kotlinx.coroutines.CoroutineScope
-import tachiyomi.core.common.util.lang.launchUI
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.Scaffold
 import tachiyomi.presentation.core.screens.EmptyScreen
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
-import kotlin.math.roundToInt
 import tachiyomi.presentation.core.util.collectAsState as preferenceCollectAsState
 
 @Composable
@@ -40,8 +35,8 @@ fun AnimeDownloadQueueScreen(
     nestedScrollConnection: NestedScrollConnection,
 ) {
     val uiPreferences = Injekt.get<UiPreferences>()
-    val theme by uiPreferences.appTheme().preferenceCollectAsState()
-    val isAurora = theme.isAuroraStyle
+    val theme = uiPreferences.appTheme().preferenceCollectAsState()
+    val isAurora = theme.value.isAuroraStyle
 
     Scaffold(
         containerColor = if (isAurora) Color.Transparent else MaterialTheme.colorScheme.background,
@@ -54,52 +49,88 @@ fun AnimeDownloadQueueScreen(
             return@Scaffold
         }
 
-        val density = LocalDensity.current
-        val layoutDirection = LocalLayoutDirection.current
-        val left = with(density) { contentPadding.calculateLeftPadding(layoutDirection).toPx().roundToInt() }
-        val top = with(density) { contentPadding.calculateTopPadding().toPx().roundToInt() }
-        val right = with(density) { contentPadding.calculateRightPadding(layoutDirection).toPx().roundToInt() }
-        val bottom = with(density) { contentPadding.calculateBottomPadding().toPx().roundToInt() }
-
-        Box(modifier = Modifier.nestedScroll(nestedScrollConnection)) {
-            AndroidView(
-                modifier = Modifier.fillMaxWidth(),
-                factory = { context ->
-                    val binding = DownloadListBinding.inflate(
-                        LayoutInflater.from(context),
-                    )
-                    screenModel.controllerBinding = binding
-                    screenModel.adapter = AnimeDownloadAdapter(screenModel.listener)
-                    binding.root.adapter = screenModel.adapter
-                    screenModel.adapter?.isHandleDragEnabled = true
-                    binding.root.layoutManager = LinearLayoutManager(
-                        context,
-                    )
-
-                    ViewCompat.setNestedScrollingEnabled(binding.root, true)
-
-                    scope.launchUI {
-                        screenModel.getDownloadStatusFlow()
-                            .collect(screenModel::onStatusChange)
-                    }
-                    scope.launchUI {
-                        screenModel.getDownloadProgressFlow()
-                            .collect(screenModel::onUpdateDownloadedPages)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .nestedScroll(nestedScrollConnection)
+                .padding(contentPadding),
+        ) {
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                downloadList.forEach { header ->
+                    item(key = "hdr_${header.id}") {
+                        DownloadQueueSectionHeader(header = DownloadQueueUiMapper.toSectionHeader(header))
                     }
 
-                    binding.root
-                },
-                update = {
-                    screenModel.controllerBinding?.root?.updatePadding(
-                        left = left,
-                        top = top,
-                        right = right,
-                        bottom = bottom,
-                    )
+                    items(header.subItems, key = { (it as AnimeDownloadItem).download.episode.id }) { subItem ->
+                        val item = subItem as AnimeDownloadItem
+                        val download = item.download
 
-                    screenModel.adapter?.updateDataSet(downloadList)
-                },
-            )
+                        // Collect progress and status changes as Compose state to drive recomposition
+                        val progressState by download.progressFlow.collectAsState(initial = download.progress)
+                        val statusState by download.statusFlow.collectAsState(initial = download.status)
+                        val downloadedBytesState by download.downloadedBytesFlow.collectAsState(
+                            initial = download.downloadedBytes,
+                        )
+                        val currentSpeedState by download.currentSpeedBytesFlow.collectAsState(
+                            initial = download.currentSpeedBytesPerSecond,
+                        )
+
+                        val uiItem = DownloadQueueUiMapper.toUiItem(
+                            item = item,
+                            progress = progressState,
+                            status = statusState,
+                            downloadedBytes = downloadedBytesState,
+                            currentSpeedBytesPerSecond = currentSpeedState,
+                        )
+                        DownloadQueueItem(
+                            item = uiItem,
+                            onMoveToTop = {
+                                screenModel.reorder(
+                                    reorderWithinHeader(
+                                        downloadList = downloadList,
+                                        targetHeader = header,
+                                        targetDownload = download,
+                                        toTop = true,
+                                    ),
+                                )
+                            },
+                            onMoveToBottom = {
+                                screenModel.reorder(
+                                    reorderWithinHeader(
+                                        downloadList = downloadList,
+                                        targetHeader = header,
+                                        targetDownload = download,
+                                        toTop = false,
+                                    ),
+                                )
+                            },
+                            onCancel = { screenModel.cancel(listOf(download)) },
+                        )
+                    }
+                }
+            }
         }
     }
+}
+
+private fun reorderWithinHeader(
+    downloadList: List<AnimeDownloadHeaderItem>,
+    targetHeader: AnimeDownloadHeaderItem,
+    targetDownload: eu.kanade.tachiyomi.data.download.anime.model.AnimeDownload,
+    toTop: Boolean,
+): List<eu.kanade.tachiyomi.data.download.anime.model.AnimeDownload> {
+    val reordered = mutableListOf<eu.kanade.tachiyomi.data.download.anime.model.AnimeDownload>()
+    downloadList.forEach { header ->
+        val downloads = header.subItems.map { (it as AnimeDownloadItem).download }.toMutableList()
+        if (header.id == targetHeader.id) {
+            downloads.remove(targetDownload)
+            if (toTop) {
+                downloads.add(0, targetDownload)
+            } else {
+                downloads.add(targetDownload)
+            }
+        }
+        reordered.addAll(downloads)
+    }
+    return reordered
 }

@@ -27,6 +27,9 @@ class NovelTranslatedDownloadManager(
 
     private val downloadedIdsCache = mutableMapOf<Pair<Long, NovelTranslatedDownloadFormat>, Set<Long>>()
 
+    @Volatile
+    private var cachedTotalSize: Long? = null
+
     private val rootDir: UniFile?
         get() = storageManager?.getDownloadsDirectory()?.createDirectory(ROOT_DIR_NAME)
 
@@ -109,6 +112,7 @@ class NovelTranslatedDownloadManager(
         synchronized(downloadedIdsCache) {
             downloadedIdsCache.remove(Pair(novel.id, format))
         }
+        cachedTotalSize = null
     }
 
     suspend fun exportTranslatedChapter(
@@ -152,9 +156,17 @@ class NovelTranslatedDownloadManager(
             synchronized(downloadedIdsCache) {
                 downloadedIdsCache.remove(Pair(novel.id, format))
             }
+            cachedTotalSize = null
         }
 
         return result
+    }
+
+    fun getDownloadSize(): Long {
+        cachedTotalSize?.let { return it }
+        val size = calculateScopedDirectorySize(rootDir)
+        cachedTotalSize = size
+        return size
     }
 
     private fun exportFile(
@@ -233,6 +245,12 @@ class NovelTranslatedDownloadManager(
             .map { it.trim() }
             .filter { it.isNotEmpty() }
             .joinToString(separator = "\n\n")
+    }
+
+    private fun calculateScopedDirectorySize(directory: UniFile?): Long {
+        if (directory == null || !directory.exists()) return 0L
+        if (!directory.isDirectory) return directory.length().takeIf { it > 0L } ?: 0L
+        return directory.listFiles()?.sumOf(::calculateScopedDirectorySize) ?: 0L
     }
 
     private fun buildDocxBytes(text: String): ByteArray {

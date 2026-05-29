@@ -2,9 +2,6 @@ package eu.kanade.tachiyomi.ui.download
 
 import android.content.Intent
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.res.rememberAnimatedVectorPainter
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
@@ -26,10 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Sort
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.outlined.Pause
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
@@ -48,14 +42,11 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -73,11 +64,17 @@ import eu.kanade.presentation.components.AuroraTabRow
 import eu.kanade.presentation.components.DropdownMenu
 import eu.kanade.presentation.components.NestedMenuItem
 import eu.kanade.presentation.components.TabContent
+import eu.kanade.presentation.download.DownloadEngineCard
 import eu.kanade.presentation.more.settings.AuroraTopBarIconButton
 import eu.kanade.presentation.more.settings.AuroraTopBarLayout
-import eu.kanade.presentation.more.settings.AuroraTopBarTitleText
 import eu.kanade.presentation.theme.AuroraTheme
 import eu.kanade.presentation.util.Tab
+import eu.kanade.tachiyomi.data.download.anime.AnimeDownloadManager
+import eu.kanade.tachiyomi.data.download.anime.model.AnimeDownload
+import eu.kanade.tachiyomi.data.download.engine.DownloadEngineFacade
+import eu.kanade.tachiyomi.data.download.manga.MangaDownloadManager
+import eu.kanade.tachiyomi.data.download.manga.model.MangaDownload
+import eu.kanade.tachiyomi.ui.download.DownloadEngineScreenModel
 import eu.kanade.tachiyomi.ui.download.anime.AnimeDownloadHeaderItem
 import eu.kanade.tachiyomi.ui.download.anime.AnimeDownloadQueueScreenModel
 import eu.kanade.tachiyomi.ui.download.anime.animeDownloadTab
@@ -159,6 +156,7 @@ data object DownloadsTab : Tab {
     override fun Content() {
         val navigator = LocalNavigator.currentOrThrow
         val context = LocalContext.current
+        val isRussian = context.resources.configuration.locales.get(0).language == "ru"
         val scope = rememberCoroutineScope()
         val uiPreferences = Injekt.get<UiPreferences>()
         val theme by uiPreferences.appTheme().preferenceCollectAsState()
@@ -167,14 +165,31 @@ data object DownloadsTab : Tab {
         val animeScreenModel = rememberScreenModel { AnimeDownloadQueueScreenModel() }
         val mangaScreenModel = rememberScreenModel { MangaDownloadQueueScreenModel() }
         val novelScreenModel = rememberScreenModel { NovelDownloadQueueScreenModel() }
+        // Shared download engine facade combining all three backends
+        val engineFacade = remember {
+            DownloadEngineFacade(
+                animeManager = Injekt.get<AnimeDownloadManager>(),
+                mangaManager = Injekt.get<MangaDownloadManager>(),
+            )
+        }
+        val engineScreenModel = rememberScreenModel { DownloadEngineScreenModel(engineFacade) }
+        val engineSnapshot by engineScreenModel.state.collectAsState()
         val animeDownloadList by animeScreenModel.state.collectAsState()
         val mangaDownloadList by mangaScreenModel.state.collectAsState()
         val novelDownloadsState by novelScreenModel.state.collectAsState()
         val animeDownloadCount by remember {
-            derivedStateOf { animeDownloadList.sumOf { it.subItems.size } }
+            derivedStateOf {
+                animeDownloadList.sumOf { header ->
+                    header.subItems.count { it.download.status != AnimeDownload.State.DOWNLOADED }
+                }
+            }
         }
         val mangaDownloadCount by remember {
-            derivedStateOf { mangaDownloadList.sumOf { it.subItems.size } }
+            derivedStateOf {
+                mangaDownloadList.sumOf { header ->
+                    header.subItems.count { it.download.status != MangaDownload.State.DOWNLOADED }
+                }
+            }
         }
         val novelDownloadCount by remember(novelDownloadsState.queueCount) {
             derivedStateOf { novelDownloadsState.queueCount }
@@ -200,28 +215,7 @@ data object DownloadsTab : Tab {
         }
 
         val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior(rememberTopAppBarState())
-        var fabExpanded by remember { mutableStateOf(true) }
-        val nestedScrollConnection = remember {
-            // All this lines just for fab state :/
-            object : NestedScrollConnection {
-                override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                    fabExpanded = available.y >= 0
-                    return scrollBehavior.nestedScrollConnection.onPreScroll(available, source)
-                }
-
-                override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-                    return scrollBehavior.nestedScrollConnection.onPostScroll(consumed, available, source)
-                }
-
-                override suspend fun onPreFling(available: Velocity): Velocity {
-                    return scrollBehavior.nestedScrollConnection.onPreFling(available)
-                }
-
-                override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
-                    return scrollBehavior.nestedScrollConnection.onPostFling(consumed, available)
-                }
-            }
-        }
+        val nestedScrollConnection = scrollBehavior.nestedScrollConnection
 
         val screenContent: @Composable () -> Unit = {
             Scaffold(
@@ -232,8 +226,21 @@ data object DownloadsTab : Tab {
                             title = stringResource(MR.strings.label_download_queue),
                             titleContent = {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    AuroraTopBarTitleText(
-                                        title = stringResource(MR.strings.label_download_queue),
+                                    Text(
+                                        text = if (isRussian) {
+                                            "Очередь"
+                                        } else {
+                                            stringResource(
+                                                MR.strings.label_download_queue,
+                                            )
+                                        },
+                                        style = MaterialTheme.typography.titleLarge.copy(
+                                            fontSize = 18.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                        ),
+                                        color = auroraColors.textPrimary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
                                         modifier = Modifier.weight(1f, false),
                                     )
                                     if (currentDownloadCount > 0) {
@@ -260,7 +267,10 @@ data object DownloadsTab : Tab {
                                         isAurora = true,
                                         onOpenFolder = { openDownloadFolder(context) },
                                     )
-                                    DownloadQueueTab.NOVEL -> Unit
+                                    DownloadQueueTab.NOVEL -> NovelActions(
+                                        isAurora = true,
+                                        onOpenFolder = { openDownloadFolder(context, "novels") },
+                                    )
                                 }
                             },
                         )
@@ -298,97 +308,13 @@ data object DownloadsTab : Tab {
                                         isAurora = false,
                                         onOpenFolder = { openDownloadFolder(context) },
                                     )
-                                    DownloadQueueTab.NOVEL -> Unit
+                                    DownloadQueueTab.NOVEL -> NovelActions(
+                                        isAurora = false,
+                                        onOpenFolder = { openDownloadFolder(context, "novels") },
+                                    )
                                 }
                             },
                             scrollBehavior = scrollBehavior,
-                        )
-                    }
-                },
-                floatingActionButton = {
-                    AnimatedVisibility(
-                        visible = when (queueTabs[state.currentPage]) {
-                            DownloadQueueTab.ANIME -> animeDownloadList.isNotEmpty()
-                            DownloadQueueTab.MANGA -> mangaDownloadList.isNotEmpty()
-                            DownloadQueueTab.NOVEL -> novelDownloadsState.queueCount > 0
-                        },
-                        enter = fadeIn(),
-                        exit = fadeOut(),
-                    ) {
-                        val animeIsRunning by animeScreenModel.isDownloaderRunning.collectAsState()
-                        val mangaIsRunning by mangaScreenModel.isDownloaderRunning.collectAsState()
-                        ExtendedFloatingActionButton(
-                            text = {
-                                val id = when (queueTabs[state.currentPage]) {
-                                    DownloadQueueTab.ANIME -> if (animeIsRunning) {
-                                        MR.strings.action_pause
-                                    } else {
-                                        MR.strings.action_resume
-                                    }
-                                    DownloadQueueTab.MANGA -> if (mangaIsRunning) {
-                                        MR.strings.action_pause
-                                    } else {
-                                        MR.strings.action_resume
-                                    }
-                                    DownloadQueueTab.NOVEL -> when {
-                                        novelDownloadsState.isQueueRunning -> MR.strings.action_pause
-                                        novelDownloadsState.pendingCount > 0 -> MR.strings.action_resume
-                                        else -> MR.strings.action_retry
-                                    }
-                                }
-                                Text(text = stringResource(id))
-                            },
-                            icon = {
-                                val icon = when (queueTabs[state.currentPage]) {
-                                    DownloadQueueTab.ANIME -> if (animeIsRunning) {
-                                        Icons.Outlined.Pause
-                                    } else {
-                                        Icons.Filled.PlayArrow
-                                    }
-                                    DownloadQueueTab.MANGA -> if (mangaIsRunning) {
-                                        Icons.Outlined.Pause
-                                    } else {
-                                        Icons.Filled.PlayArrow
-                                    }
-                                    DownloadQueueTab.NOVEL -> if (novelDownloadsState.isQueueRunning) {
-                                        Icons.Outlined.Pause
-                                    } else {
-                                        Icons.Filled.PlayArrow
-                                    }
-                                }
-                                Icon(imageVector = icon, contentDescription = null)
-                            },
-                            onClick = {
-                                when (queueTabs[state.currentPage]) {
-                                    DownloadQueueTab.ANIME -> if (animeIsRunning) {
-                                        animeScreenModel.pauseDownloads()
-                                    } else {
-                                        animeScreenModel.startDownloads()
-                                    }
-
-                                    DownloadQueueTab.MANGA -> if (mangaIsRunning) {
-                                        mangaScreenModel.pauseDownloads()
-                                    } else {
-                                        mangaScreenModel.startDownloads()
-                                    }
-                                    DownloadQueueTab.NOVEL -> when {
-                                        novelDownloadsState.isQueueRunning -> novelScreenModel.pauseDownloads()
-                                        novelDownloadsState.pendingCount > 0 -> novelScreenModel.startDownloads()
-                                        else -> novelScreenModel.retryFailed()
-                                    }
-                                }
-                            },
-                            containerColor = if (isAurora) {
-                                auroraColors.accent
-                            } else {
-                                MaterialTheme.colorScheme.primaryContainer
-                            },
-                            contentColor = if (isAurora) {
-                                auroraColors.textOnAccent
-                            } else {
-                                MaterialTheme.colorScheme.onPrimaryContainer
-                            },
-                            expanded = fabExpanded,
                         )
                     }
                 },
@@ -422,7 +348,6 @@ data object DownloadsTab : Tab {
                         }
                         Box(
                             modifier = Modifier
-                                .padding(horizontal = 16.dp)
                                 .zIndex(1f),
                         ) {
                             AuroraTabRow(
@@ -459,6 +384,15 @@ data object DownloadsTab : Tab {
                             }
                         }
                     }
+
+                    // Shared download engine card
+                    DownloadEngineCard(
+                        snapshot = engineSnapshot,
+                        onPauseAll = engineScreenModel::pauseAll,
+                        onResumeAll = engineScreenModel::resumeAll,
+                        onCancelAll = engineScreenModel::cancelAll,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    )
 
                     HorizontalPager(
                         modifier = Modifier.fillMaxSize(),
@@ -761,6 +695,30 @@ data object DownloadsTab : Tab {
                     ),
                 )
             }
+        }
+    }
+
+    @Composable
+    private fun NovelActions(
+        isAurora: Boolean,
+        onOpenFolder: () -> Unit,
+    ) {
+        if (isAurora) {
+            AuroraTopBarIconButton(
+                onClick = onOpenFolder,
+                icon = Icons.Filled.FolderOpen,
+                contentDescription = stringResource(AYMR.strings.action_open_download_folder),
+            )
+        } else {
+            AppBarActions(
+                persistentListOf(
+                    AppBar.Action(
+                        title = stringResource(AYMR.strings.action_open_download_folder),
+                        icon = Icons.Filled.FolderOpen,
+                        onClick = onOpenFolder,
+                    ),
+                ),
+            )
         }
     }
 }

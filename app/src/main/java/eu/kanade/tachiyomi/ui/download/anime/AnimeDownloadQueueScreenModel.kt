@@ -130,6 +130,7 @@ class AnimeDownloadQueueScreenModel(
             job.cancel()
         }
         progressJobs.clear()
+        downloadManager.clearCompletedDownloads()
         adapter = null
         controllerBinding = null
     }

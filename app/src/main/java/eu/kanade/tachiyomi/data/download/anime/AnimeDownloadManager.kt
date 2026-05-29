@@ -4,6 +4,8 @@ import android.content.Context
 import eu.kanade.tachiyomi.animesource.AnimeSource
 import eu.kanade.tachiyomi.animesource.model.Video
 import eu.kanade.tachiyomi.data.download.anime.model.AnimeDownload
+import eu.kanade.tachiyomi.data.download.engine.DownloadCompletionTracker
+import eu.kanade.tachiyomi.data.download.engine.DownloadTelemetryEmitter
 import eu.kanade.tachiyomi.util.size
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
@@ -51,6 +53,18 @@ class AnimeDownloadManager(
      */
     private val downloader = AnimeDownloader(context, provider, cache, sourceManager)
 
+    var telemetryEmitter: DownloadTelemetryEmitter
+        get() = downloader.telemetryEmitter
+        set(value) {
+            downloader.telemetryEmitter = value
+        }
+
+    var completionTracker: DownloadCompletionTracker
+        get() = downloader.completionTracker
+        set(value) {
+            downloader.completionTracker = value
+        }
+
     val isRunning: Boolean
         get() = downloader.isRunning
 
@@ -95,6 +109,10 @@ class AnimeDownloadManager(
     fun clearQueue() {
         downloader.clearQueue()
         downloader.stop()
+    }
+
+    fun clearCompletedDownloads() {
+        downloader.clearCompletedDownloads()
     }
 
     /**
