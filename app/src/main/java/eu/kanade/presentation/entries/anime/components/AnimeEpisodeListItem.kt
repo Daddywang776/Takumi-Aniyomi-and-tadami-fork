@@ -40,7 +40,6 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -139,73 +138,47 @@ fun AnimeEpisodeListItem(
                 return@Row
             }
 
-            Column {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    EpisodeThumbnail(previewUrl = previewUrl)
+            EpisodeThumbnail(previewUrl = previewUrl)
 
-                    Column {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            val titleLines = if (previewUrl == null) 1 else 2
-                            Text(
-                                text = title,
-                                style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 14.sp),
-                                modifier = Modifier.weight(1f),
-                                maxLines = titleLines,
-                                minLines = titleLines,
-                                overflow = TextOverflow.Ellipsis,
-                                color = LocalContentColor.current.copy(alpha = if (seen) DISABLED_ALPHA else 1f),
-                            )
+            Spacer(modifier = Modifier.width(8.dp))
 
-                            if (previewUrl == null) {
-                                BookmarkDownloadIcons(
-                                    bookmark = bookmark,
-                                    downloadIndicatorEnabled = downloadIndicatorEnabled,
-                                    downloadStateProvider = downloadStateProvider,
-                                    downloadProgressProvider = downloadProgressProvider,
-                                    onDownloadClick = onDownloadClick,
-                                )
-                            }
-                        }
-
-                        EpisodeSummary(
-                            seen = seen,
-                            isAnyEpisodeSelected = isAnyEpisodeSelected,
-                            summary = summary,
-                        )
-                    }
-                }
-
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 16.sp),
                     modifier = Modifier.fillMaxWidth(),
-                ) {
-                    EpisodeInformation(
-                        seen = seen,
-                        date = date,
-                        watchProgress = watchProgress,
-                        fillermark = fillermark,
-                        scanlator = scanlator,
-                    )
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = LocalContentColor.current.copy(alpha = if (seen) DISABLED_ALPHA else 1f),
+                )
 
-                    if (previewUrl != null) {
-                        BookmarkDownloadIcons(
-                            bookmark = bookmark,
-                            downloadIndicatorEnabled = downloadIndicatorEnabled,
-                            downloadStateProvider = downloadStateProvider,
-                            downloadProgressProvider = downloadProgressProvider,
-                            onDownloadClick = onDownloadClick,
-                        )
-                    }
-                }
+                EpisodeSummary(
+                    seen = seen,
+                    isAnyEpisodeSelected = isAnyEpisodeSelected,
+                    summary = summary,
+                )
+
+                EpisodeInformation(
+                    seen = seen,
+                    date = date,
+                    watchProgress = watchProgress,
+                    fillermark = fillermark,
+                    scanlator = scanlator,
+                )
             }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            BookmarkDownloadIcons(
+                bookmark = bookmark,
+                downloadIndicatorEnabled = downloadIndicatorEnabled,
+                downloadStateProvider = downloadStateProvider,
+                downloadProgressProvider = downloadProgressProvider,
+                onDownloadClick = onDownloadClick,
+            )
         }
     }
 }
@@ -360,12 +333,11 @@ private val swipeActionThreshold = 56.dp
 private fun EpisodeThumbnail(
     previewUrl: String?,
 ) {
-    val targetWidth = ((LocalConfiguration.current.screenWidthDp * 0.4f).coerceAtMost(250f))
+    val targetWidth = 64.dp
     if (previewUrl != null) {
-        ItemCover.Thumb(
+        ItemCover.Book(
             modifier = Modifier
-                .width(targetWidth.dp)
-                .padding(end = 8.dp),
+                .width(targetWidth),
             data = ImageRequest.Builder(LocalContext.current)
                 .data(previewUrl)
                 .crossfade(true)
@@ -386,15 +358,14 @@ private fun EpisodeSummary(
             text = summary,
             style = MaterialTheme.typography.labelMedium,
             maxLines = if (expandSummary) Int.MAX_VALUE else 3,
-            minLines = 3,
             fontWeight = FontWeight.Normal,
             fontSize = 10.sp,
-            lineHeight = 11.sp,
+            lineHeight = 13.sp,
             overflow = TextOverflow.Ellipsis,
             color = LocalContentColor.current.copy(
                 alpha = if (seen) DISABLED_ALPHA else SECONDARY_ALPHA,
             ),
-            modifier = Modifier.padding(bottom = 4.dp, start = 4.dp, end = 4.dp)
+            modifier = Modifier.padding(bottom = 4.dp, end = 4.dp)
                 .then(
                     if (isAnyEpisodeSelected) {
                         Modifier

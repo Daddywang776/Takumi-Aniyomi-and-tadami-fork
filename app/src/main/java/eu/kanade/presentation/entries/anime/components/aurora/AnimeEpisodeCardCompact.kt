@@ -43,7 +43,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -136,11 +135,7 @@ fun AnimeEpisodeCardCompact(
             ) {
                 val showPreviewImage = showPreviews
                 if (showPreviewImage) {
-                    val targetWidth = (
-                        (LocalConfiguration.current.screenWidthDp * 0.28f).coerceAtMost(
-                            100f,
-                        ).coerceAtLeast(80f)
-                        )
+                    val targetWidth = 56.dp
                     val imageData = if (!episode.previewUrl.isNullOrBlank()) {
                         episode.previewUrl
                     } else {
@@ -152,10 +147,10 @@ fun AnimeEpisodeCardCompact(
                             lastModified = anime.coverLastModified,
                         )
                     }
-                    ItemCover.Thumb(
+                    ItemCover.Book(
                         data = imageData,
                         modifier = Modifier
-                            .width(targetWidth.dp)
+                            .width(targetWidth)
                             .clip(RoundedCornerShape(8.dp)),
                     )
                 }
