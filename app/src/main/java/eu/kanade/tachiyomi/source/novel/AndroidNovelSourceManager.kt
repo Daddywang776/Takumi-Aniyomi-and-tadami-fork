@@ -62,9 +62,6 @@ class AndroidNovelSourceManager(
                         Injekt.get(),
                     )
                     mutableMap[localNovelSource.id] = localNovelSource
-                    // Add built-in imported EPUB source
-                    val importedEpubSource = ImportedEpubNovelSource()
-                    mutableMap[importedEpubSource.id] = importedEpubSource
                     // Add built-in OmniResolver source
                     runCatching {
                         omniSourceFactory()
@@ -105,7 +102,6 @@ class AndroidNovelSourceManager(
         val onlineSourceIds = getOnlineSources().map { it.id }
         return stubSourcesMap.values.filterNot {
             it.id in onlineSourceIds ||
-                it.id == IMPORTED_EPUB_NOVEL_SOURCE_ID ||
                 it.id == LocalNovelSource.ID
         }
     }
