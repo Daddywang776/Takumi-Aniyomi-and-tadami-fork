@@ -222,4 +222,8 @@ class SourcePreferences(
         }
         return preference
     }
+
+    fun entrySuggestionsEnabled() = preferenceStore.getBoolean("entry_suggestions_enabled", true)
+
+    fun importEpubAddToLibrary() = preferenceStore.getBoolean("pref_epub_import_add_to_library", true)
 }

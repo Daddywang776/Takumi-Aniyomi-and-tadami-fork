@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.ui.library.novel
 
 import android.app.Application
 import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -10,6 +11,7 @@ import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.entries.novel.interactor.UpdateNovel
+import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.presentation.components.SEARCH_DEBOUNCE_MILLIS
 import eu.kanade.presentation.library.novel.NovelLibraryItem
 import eu.kanade.tachiyomi.data.download.novel.NovelDownloadCache
@@ -19,10 +21,6 @@ import eu.kanade.tachiyomi.data.download.novel.NovelDownloadQueueManager
 import eu.kanade.tachiyomi.data.download.novel.NovelTranslatedDownloadFormat
 import eu.kanade.tachiyomi.data.download.novel.NovelTranslatedDownloadManager
 import eu.kanade.tachiyomi.source.model.SManga
-import eu.kanade.tachiyomi.source.novel.IMPORTED_EPUB_STORAGE_DIR
-import eu.kanade.tachiyomi.source.novel.importer.ImportedEpubImporter
-import eu.kanade.tachiyomi.source.novel.importer.ImportedEpubParser
-import eu.kanade.tachiyomi.source.novel.importer.ImportedEpubStorage
 import eu.kanade.tachiyomi.ui.entries.novel.NovelDownloadAction
 import eu.kanade.tachiyomi.ui.entries.novel.NovelScreenModel
 import eu.kanade.tachiyomi.ui.library.sortPinnedSeriesFirst
@@ -54,6 +52,7 @@ import tachiyomi.domain.category.novel.interactor.SetNovelCategories
 import tachiyomi.domain.entries.novel.interactor.GetLibraryNovel
 import tachiyomi.domain.entries.novel.model.Novel
 import tachiyomi.domain.entries.novel.model.NovelUpdate
+import tachiyomi.domain.entries.novel.repository.NovelRepository
 import tachiyomi.domain.items.novelchapter.model.NovelChapter
 import tachiyomi.domain.items.novelchapter.model.NovelChapterUpdate
 import tachiyomi.domain.items.novelchapter.repository.NovelChapterRepository
@@ -68,9 +67,11 @@ import tachiyomi.domain.series.novel.interactor.GetNovelIdsInAnySeries
 import tachiyomi.domain.series.novel.interactor.UpdateNovelSeries
 import tachiyomi.domain.series.novel.model.NovelSeries
 import tachiyomi.domain.source.novel.service.NovelSourceManager
+import tachiyomi.domain.storage.service.StorageManager
+import tachiyomi.source.local.entries.novel.LocalNovelSource
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
-import java.io.File
+import java.io.IOException
 import kotlin.random.Random
 
 class NovelLibraryScreenModel(
@@ -113,16 +114,6 @@ class NovelLibraryScreenModel(
     ),
 ) {
     var activeCategoryIndex: Int by mutableStateOf(0)
-    private val importedEpubImporter by lazy {
-        val application = Injekt.get<Application>()
-        ImportedEpubImporter(
-            context = application,
-            parser = ImportedEpubParser(application),
-            storage = ImportedEpubStorage(
-                File(application.filesDir, IMPORTED_EPUB_STORAGE_DIR),
-            ),
-        )
-    }
 
     init {
         screenModelScope.launch {
@@ -933,8 +924,58 @@ class NovelLibraryScreenModel(
 
     suspend fun importEpub(uri: Uri) {
         withContext(Dispatchers.IO) {
-            importedEpubImporter.import(uri)
+            val context = Injekt.get<Application>()
+            val storageManager = Injekt.get<StorageManager>()
+            val localDir = storageManager.getLocalNovelSourceDirectory()
+                ?: throw IOException("Local novel directory not configured. Set a storage location first.")
+            val novelRepository = Injekt.get<NovelRepository>()
+            val sourcePreferences = Injekt.get<SourcePreferences>()
+
+            val displayName = getEpubDisplayName(context, uri)
+            val sanitizedName = displayName.replace("[/\\\\:*?\"<>|]".toRegex(), "_")
+
+            val targetFile = localDir.findFile(sanitizedName)
+                ?: localDir.createFile(sanitizedName)
+                ?: throw IOException("Cannot create file: $sanitizedName")
+
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                targetFile.openOutputStream().use { output ->
+                    input.copyTo(output)
+                }
+            }
+
+            val addToLibrary = sourcePreferences.importEpubAddToLibrary().get()
+            val novel = Novel.create().copy(
+                source = LocalNovelSource.ID,
+                url = sanitizedName,
+                title = sanitizedName.removeSuffix(".epub").removeSuffix(".EPUB"),
+                favorite = addToLibrary,
+                dateAdded = if (addToLibrary) System.currentTimeMillis() else 0L,
+                initialized = true,
+            )
+
+            novelRepository.insertNovel(novel)
         }
+    }
+
+    private fun getEpubDisplayName(context: Application, uri: Uri): String {
+        context.contentResolver.query(
+            uri,
+            arrayOf(OpenableColumns.DISPLAY_NAME),
+            null,
+            null,
+            null,
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (nameIndex >= 0) {
+                    val name = cursor.getString(nameIndex)
+                    if (!name.isNullOrBlank()) return name
+                }
+            }
+            return cursor.runCatching { getString(0) }.getOrNull() ?: uri.lastPathSegment ?: "untitled.epub"
+        }
+        return uri.lastPathSegment ?: "untitled.epub"
     }
     fun openCreateSeries() {
         mutableState.update { it.copy(dialog = Dialog.CreateSeries) }

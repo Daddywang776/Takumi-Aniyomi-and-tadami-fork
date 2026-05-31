@@ -7,13 +7,18 @@ class NetworkToLocalNovel(
     private val novelRepository: NovelRepository,
 ) {
 
-    suspend fun await(novel: Novel): Novel {
+    suspend fun await(novel: Novel, autoFavorite: Boolean = false): Novel {
         val localNovel = getNovel(novel.url, novel.source)
         return when {
             localNovel == null -> {
-                val insertedId = insertNovel(novel)
+                val novelToInsert = if (autoFavorite) {
+                    novel.copy(favorite = true, dateAdded = System.currentTimeMillis())
+                } else {
+                    novel
+                }
+                val insertedId = insertNovel(novelToInsert)
                 if (insertedId != null) {
-                    novel.copy(id = insertedId)
+                    novelToInsert.copy(id = insertedId)
                 } else {
                     getNovel(novel.url, novel.source)
                         ?: throw IllegalStateException(
@@ -22,16 +27,18 @@ class NetworkToLocalNovel(
                 }
             }
             !localNovel.favorite -> {
-                // if the novel isn't a favorite, set its display title from source
-                // if it later becomes a favorite, updated title will go to db
-                localNovel.copy(
-                    title = novel.title,
-                    thumbnailUrl = if (localNovel.thumbnailUrl.isNullOrBlank()) {
-                        novel.thumbnailUrl
-                    } else {
-                        localNovel.thumbnailUrl
-                    },
-                )
+                if (autoFavorite) {
+                    localNovel.copy(favorite = true, dateAdded = System.currentTimeMillis())
+                } else {
+                    localNovel.copy(
+                        title = novel.title,
+                        thumbnailUrl = if (localNovel.thumbnailUrl.isNullOrBlank()) {
+                            novel.thumbnailUrl
+                        } else {
+                            localNovel.thumbnailUrl
+                        },
+                    )
+                }
             }
             else -> {
                 localNovel
