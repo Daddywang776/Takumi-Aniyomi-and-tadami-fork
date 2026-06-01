@@ -50,6 +50,7 @@ import eu.kanade.tachiyomi.animesource.AnimeCatalogueSource
 import eu.kanade.tachiyomi.data.suggestions.SuggestionCoordinator
 import eu.kanade.tachiyomi.data.suggestions.SuggestionItem
 import eu.kanade.tachiyomi.data.suggestions.SuggestionSeed
+import eu.kanade.tachiyomi.data.suggestions.SuggestionSourceWeight
 import eu.kanade.tachiyomi.data.suggestions.SuggestionState
 import eu.kanade.tachiyomi.data.suggestions.SuggestionTitleResolver
 import eu.kanade.tachiyomi.data.suggestions.anime.AnimeFallbackOutcome
@@ -60,6 +61,8 @@ import eu.kanade.tachiyomi.data.suggestions.novel.NovelFallbackOutcome
 import eu.kanade.tachiyomi.data.suggestions.novel.NovelRelatedSuggestionCoordinator
 import eu.kanade.tachiyomi.data.suggestions.novel.NovelSearchFallbackEngine
 import eu.kanade.tachiyomi.data.suggestions.sources.SuggestionMediaType
+import eu.kanade.tachiyomi.data.suggestions.util.bestMatchScoreFor
+import eu.kanade.tachiyomi.data.suggestions.util.dedupeByCleanTitle
 import eu.kanade.tachiyomi.novelsource.NovelCatalogueSource
 import eu.kanade.tachiyomi.source.CatalogueSource
 import eu.kanade.tachiyomi.ui.browse.anime.source.globalsearch.GlobalAnimeSearchScreen
@@ -102,10 +105,11 @@ class EntrySuggestionsScreen(
             primaryTitle = seed.primaryTitle,
             navigateUp = navigator::pop,
             onSuggestionClick = { item ->
+                val query = item.searchQueries.firstOrNull { it.isNotBlank() } ?: item.title
                 when (item.mediaType) {
-                    SuggestionMediaType.ANIME -> navigator.push(GlobalAnimeSearchScreen(item.searchQuery))
-                    SuggestionMediaType.MANGA -> navigator.push(GlobalMangaSearchScreen(item.searchQuery))
-                    SuggestionMediaType.NOVEL -> navigator.push(GlobalNovelSearchScreen(item.searchQuery))
+                    SuggestionMediaType.ANIME -> navigator.push(GlobalAnimeSearchScreen(query))
+                    SuggestionMediaType.MANGA -> navigator.push(GlobalMangaSearchScreen(query))
+                    SuggestionMediaType.NOVEL -> navigator.push(GlobalNovelSearchScreen(query))
                 }
             },
             onRetryClick = screenModel::fetchSuggestions,
@@ -173,13 +177,14 @@ class EntrySuggestionsScreenModel(
                 }
 
                 val combined = (externalItems + pluginItems)
-                    .distinctBy { it.providerId ?: it.providerUrl }
+                    .dedupeByCleanTitle()
                     .filter { item ->
                         val isSelf = (entryUrl != null && item.providerUrl == entryUrl) ||
                             (item.providerId?.endsWith(":$entryUrl") == true)
                         val isFranchise = SuggestionTitleResolver.isFranchiseDuplicate(item.title, primaryTitle)
                         !isSelf && !isFranchise
                     }
+                    .sortedByDescending { SuggestionSourceWeight.finalScore(it.reason, it.bestMatchScoreFor(seed)) }
 
                 allItems = combined
                 mutableState.value = when {
@@ -233,7 +238,7 @@ class EntrySuggestionsScreenModel(
                 } else {
                     emptyList()
                 }
-                (relatedList + searchList).distinctBy { it.providerId ?: it.providerUrl }
+                (relatedList + searchList).dedupeByCleanTitle()
             }
             SuggestionMediaType.MANGA -> {
                 val sourceManager = Injekt.get<MangaSourceManager>()

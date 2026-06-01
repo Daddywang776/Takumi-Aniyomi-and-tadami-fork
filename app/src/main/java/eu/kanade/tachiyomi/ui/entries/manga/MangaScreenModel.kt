@@ -46,11 +46,14 @@ import eu.kanade.tachiyomi.data.download.manga.model.MangaDownload
 import eu.kanade.tachiyomi.data.suggestions.SuggestionCoordinator
 import eu.kanade.tachiyomi.data.suggestions.SuggestionItem
 import eu.kanade.tachiyomi.data.suggestions.SuggestionSeed
+import eu.kanade.tachiyomi.data.suggestions.SuggestionSourceWeight
 import eu.kanade.tachiyomi.data.suggestions.SuggestionState
 import eu.kanade.tachiyomi.data.suggestions.SuggestionTitleResolver
 import eu.kanade.tachiyomi.data.suggestions.manga.MangaFallbackOutcome
 import eu.kanade.tachiyomi.data.suggestions.manga.MangaSearchFallbackEngine
 import eu.kanade.tachiyomi.data.suggestions.sources.SuggestionMediaType
+import eu.kanade.tachiyomi.data.suggestions.util.bestMatchScoreFor
+import eu.kanade.tachiyomi.data.suggestions.util.dedupeByCleanTitle
 import eu.kanade.tachiyomi.data.track.EnhancedMangaTracker
 import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.network.HttpException
@@ -244,13 +247,14 @@ class MangaScreenModel(
     private fun emitProgressiveSuggestions(list: List<SuggestionItem>, currentManga: Manga?) {
         val seed = suggestionSeedUsed ?: return
         val sorted = synchronized(list) {
-            list.distinctBy { it.providerId ?: it.providerUrl }
+            list.dedupeByCleanTitle()
                 .filter { item ->
                     val isSelf = (currentManga != null && item.providerUrl == currentManga.url) ||
                         (item.providerId?.endsWith(":${currentManga?.url}") == true)
                     val isFranchise = SuggestionTitleResolver.isFranchiseDuplicate(item.title, seed.primaryTitle)
                     !isSelf && !isFranchise
                 }
+                .sortedByDescending { SuggestionSourceWeight.finalScore(it.reason, it.bestMatchScoreFor(seed)) }
                 .take(20)
         }
         if (sorted.isNotEmpty()) {
@@ -350,7 +354,7 @@ class MangaScreenModel(
                 }
 
                 val finalCombined = synchronized(suggestionsList) {
-                    suggestionsList.distinctBy { it.providerId ?: it.providerUrl }
+                    suggestionsList.dedupeByCleanTitle()
                         .filter { item ->
                             val isSelf = (currentManga != null && item.providerUrl == currentManga.url) ||
                                 (item.providerId?.endsWith(":${currentManga?.url}") == true)
@@ -361,6 +365,7 @@ class MangaScreenModel(
                                 )
                             !isSelf && !isFranchise
                         }
+                        .sortedByDescending { SuggestionSourceWeight.finalScore(it.reason, it.bestMatchScoreFor(seed)) }
                         .take(20)
                 }
 

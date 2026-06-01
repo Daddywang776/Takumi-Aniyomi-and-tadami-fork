@@ -47,11 +47,14 @@ import eu.kanade.tachiyomi.data.download.anime.model.AnimeDownload
 import eu.kanade.tachiyomi.data.suggestions.SuggestionCoordinator
 import eu.kanade.tachiyomi.data.suggestions.SuggestionItem
 import eu.kanade.tachiyomi.data.suggestions.SuggestionSeed
+import eu.kanade.tachiyomi.data.suggestions.SuggestionSourceWeight
 import eu.kanade.tachiyomi.data.suggestions.SuggestionState
 import eu.kanade.tachiyomi.data.suggestions.SuggestionTitleResolver
 import eu.kanade.tachiyomi.data.suggestions.anime.AnimeFallbackOutcome
 import eu.kanade.tachiyomi.data.suggestions.anime.AnimeSearchFallbackEngine
 import eu.kanade.tachiyomi.data.suggestions.sources.SuggestionMediaType
+import eu.kanade.tachiyomi.data.suggestions.util.bestMatchScoreFor
+import eu.kanade.tachiyomi.data.suggestions.util.dedupeByCleanTitle
 import eu.kanade.tachiyomi.data.track.EnhancedAnimeTracker
 import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.network.HttpException
@@ -378,13 +381,14 @@ class AnimeScreenModel(
     private fun emitProgressiveSuggestions(list: List<SuggestionItem>, currentAnime: Anime?) {
         val seed = suggestionSeedUsed ?: return
         val sorted = synchronized(list) {
-            list.distinctBy { it.providerId ?: it.providerUrl }
+            list.dedupeByCleanTitle()
                 .filter { item ->
                     val isSelf = (currentAnime != null && item.providerUrl == currentAnime.url) ||
                         (item.providerId?.endsWith(":${currentAnime?.url}") == true)
                     val isFranchise = SuggestionTitleResolver.isFranchiseDuplicate(item.title, seed.primaryTitle)
                     !isSelf && !isFranchise
                 }
+                .sortedByDescending { SuggestionSourceWeight.finalScore(it.reason, it.bestMatchScoreFor(seed)) }
                 .take(20)
         }
         if (sorted.isNotEmpty()) {
@@ -482,7 +486,7 @@ class AnimeScreenModel(
                 }
 
                 val finalCombined = synchronized(suggestionsList) {
-                    suggestionsList.distinctBy { it.providerId ?: it.providerUrl }
+                    suggestionsList.dedupeByCleanTitle()
                         .filter { item ->
                             val isSelf = (currentAnime != null && item.providerUrl == currentAnime.url) ||
                                 (item.providerId?.endsWith(":${currentAnime?.url}") == true)

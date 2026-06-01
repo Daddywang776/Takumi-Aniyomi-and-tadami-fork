@@ -730,7 +730,12 @@ fun MangaScreenAuroraImpl(
                                 item(key = "suggestions_row") {
                                     eu.kanade.presentation.entries.components.aurora.AuroraSuggestionsRow(
                                         state = state.suggestions,
-                                        onSuggestionClick = { item -> onSearch(item.searchQuery, true) },
+                                        onSuggestionClick = { item ->
+                                            onSearch(
+                                                item.searchQueries.firstOrNull { it.isNotBlank() } ?: item.title,
+                                                true,
+                                            )
+                                        },
                                         onOpenSuggestions = onOpenSuggestions,
                                         onRetryClick = onRetrySuggestions,
                                         modifier = Modifier
