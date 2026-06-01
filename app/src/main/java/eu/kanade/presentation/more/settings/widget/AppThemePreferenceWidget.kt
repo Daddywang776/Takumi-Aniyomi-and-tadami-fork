@@ -1,9 +1,12 @@
 package eu.kanade.presentation.more.settings.widget
 
 import android.app.Activity
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.PreviewLightDark
@@ -58,6 +62,7 @@ import tachiyomi.core.common.preference.InMemoryPreferenceStore
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
+import tachiyomi.presentation.core.util.LocalAppHaptics
 import tachiyomi.presentation.core.util.collectAsState
 import tachiyomi.presentation.core.util.secondaryItemAlpha
 import uy.kohesive.injekt.Injekt
@@ -70,15 +75,25 @@ internal fun AppThemePreferenceWidget(
     amoled: Boolean,
     onItemClick: (AppTheme) -> Unit,
 ) {
-    BasePreferenceWidget(
-        subcomponent = {
-            AppThemesList(
-                currentTheme = value,
-                amoled = amoled,
-                onItemClick = onItemClick,
-            )
-        },
-    )
+    val isAurora = LocalSettingsUiStyle.current == SettingsUiStyle.Aurora
+
+    if (isAurora) {
+        AppThemesList(
+            currentTheme = value,
+            amoled = amoled,
+            onItemClick = onItemClick,
+        )
+    } else {
+        BasePreferenceWidget(
+            subcomponent = {
+                AppThemesList(
+                    currentTheme = value,
+                    amoled = amoled,
+                    onItemClick = onItemClick,
+                )
+            },
+        )
+    }
 }
 
 @Composable
@@ -173,23 +188,64 @@ fun AppThemePreviewItem(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
+    val appHaptics = LocalAppHaptics.current
+    val isAurora = LocalSettingsUiStyle.current == SettingsUiStyle.Aurora
+
+    // Interactive spring-scale states
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.94f else 1f,
+        animationSpec = androidx.compose.animation.core.spring(
+            dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+            stiffness = androidx.compose.animation.core.Spring.StiffnessLow,
+        ),
+        label = "theme_preview_item_scale",
+    )
+
+    val borderShape = RoundedCornerShape(16.dp)
+    val innerShape = RoundedCornerShape(12.dp)
+
+    val borderWidth = if (selected) {
+        if (isAurora) 3.dp else 4.dp
+    } else {
+        1.dp
+    }
+
+    val borderColor = if (selected) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        if (isAurora) {
+            MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+        } else {
+            DividerDefaults.color
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .aspectRatio(9f / 16f)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
             .border(
-                width = 4.dp,
-                color = if (selected) {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    DividerDefaults.color
-                },
-                shape = RoundedCornerShape(17.dp),
+                width = borderWidth,
+                color = borderColor,
+                shape = borderShape,
             )
-            .padding(4.dp)
-            .clip(RoundedCornerShape(13.dp))
+            .padding(if (isAurora) 3.dp else 4.dp)
+            .clip(innerShape)
             .background(MaterialTheme.colorScheme.background)
-            .clickable(onClick = onClick),
+            .clickable(
+                interactionSource = interactionSource,
+                indication = androidx.compose.foundation.LocalIndication.current,
+                onClick = {
+                    appHaptics.tap()
+                    onClick()
+                },
+            ),
     ) {
         // App Bar
         Row(
@@ -229,7 +285,11 @@ fun AppThemePreviewItem(
             modifier = Modifier
                 .padding(start = 8.dp, top = 2.dp)
                 .background(
-                    color = DividerDefaults.color,
+                    color = if (isAurora) {
+                        MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)
+                    } else {
+                        DividerDefaults.color
+                    },
                     shape = MaterialTheme.shapes.small,
                 )
                 .fillMaxWidth(0.5f)

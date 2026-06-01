@@ -7,28 +7,38 @@ import android.net.Uri
 import androidx.activity.compose.ManagedActivityResultLauncher
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.Cloud
+import androidx.compose.material.icons.outlined.CloudDownload
+import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.Sync
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MultiChoiceSegmentedButtonRow
-import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -41,15 +51,22 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import com.hippo.unifile.UniFile
 import eu.kanade.domain.sync.SyncPreferences
+import eu.kanade.presentation.more.resolveAuroraMoreCardBorderColor
+import eu.kanade.presentation.more.resolveAuroraMoreCardContainerColor
 import eu.kanade.presentation.more.settings.AuroraTopBarIconButton
+import eu.kanade.presentation.more.settings.LocalSettingsUiStyle
 import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.presentation.more.settings.SettingsUiStyle
 import eu.kanade.presentation.more.settings.rememberResolvedSettingsUiStyle
@@ -59,6 +76,9 @@ import eu.kanade.presentation.more.settings.screen.data.RestoreBackupScreen
 import eu.kanade.presentation.more.settings.screen.data.StorageInfo
 import eu.kanade.presentation.more.settings.widget.BasePreferenceWidget
 import eu.kanade.presentation.more.settings.widget.PrefsHorizontalPadding
+import eu.kanade.presentation.theme.AuroraSurfaceLevel
+import eu.kanade.presentation.theme.AuroraTheme
+import eu.kanade.presentation.theme.resolveAuroraElevation
 import eu.kanade.presentation.util.relativeTimeSpanString
 import eu.kanade.tachiyomi.data.backup.create.BackupCreateJob
 import eu.kanade.tachiyomi.data.backup.restore.BackupRestoreJob
@@ -94,6 +114,7 @@ import tachiyomi.i18n.MR
 import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.components.material.TextButton
 import tachiyomi.presentation.core.i18n.stringResource
+import tachiyomi.presentation.core.util.LocalAppHaptics
 import tachiyomi.presentation.core.util.collectAsState
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -259,44 +280,313 @@ object SettingsDataScreen : SearchableSettings {
                 Preference.PreferenceItem.CustomPreference(
                     title = stringResource(restorePreferenceKeyString),
                 ) {
-                    BasePreferenceWidget(
-                        subcomponent = {
-                            MultiChoiceSegmentedButtonRow(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(intrinsicSize = IntrinsicSize.Min)
-                                    .padding(horizontal = PrefsHorizontalPadding),
-                            ) {
-                                SegmentedButton(
-                                    modifier = Modifier.fillMaxHeight(),
-                                    checked = false,
-                                    onCheckedChange = { navigator.push(CreateBackupScreen()) },
-                                    shape = RectangleShape,
-                                ) {
-                                    Text(stringResource(MR.strings.pref_create_backup))
-                                }
-                                SegmentedButton(
-                                    modifier = Modifier.fillMaxHeight(),
-                                    checked = false,
-                                    onCheckedChange = {
-                                        if (!BackupRestoreJob.isRunning(context)) {
-                                            if (DeviceUtil.isMiui && DeviceUtil.isMiuiOptimizationDisabled()) {
-                                                context.toast(MR.strings.restore_miui_warning)
-                                            }
+                    val context = LocalContext.current
+                    val navigator = LocalNavigator.currentOrThrow
+                    val appHaptics = LocalAppHaptics.current
 
-                                            // no need to catch because it's wrapped with a chooser
-                                            chooseBackup.launch("*/*")
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        val isAurora = LocalSettingsUiStyle.current == SettingsUiStyle.Aurora
+                        val cardShape = RoundedCornerShape(16.dp)
+
+                        // Create Backup interactive state
+                        val createInteractionSource = remember { MutableInteractionSource() }
+                        val isCreatePressed by createInteractionSource.collectIsPressedAsState()
+                        val createScale by animateFloatAsState(
+                            targetValue = if (isCreatePressed) 0.96f else 1f,
+                            animationSpec = androidx.compose.animation.core.spring(
+                                dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                                stiffness = androidx.compose.animation.core.Spring.StiffnessLow,
+                            ),
+                            label = "create_backup_scale",
+                        )
+
+                        // Restore Backup interactive state
+                        val restoreInteractionSource = remember { MutableInteractionSource() }
+                        val isRestorePressed by restoreInteractionSource.collectIsPressedAsState()
+                        val restoreScale by animateFloatAsState(
+                            targetValue = if (isRestorePressed) 0.96f else 1f,
+                            animationSpec = androidx.compose.animation.core.spring(
+                                dampingRatio = androidx.compose.animation.core.Spring.DampingRatioMediumBouncy,
+                                stiffness = androidx.compose.animation.core.Spring.StiffnessLow,
+                            ),
+                            label = "restore_backup_scale",
+                        )
+
+                        // Create Backup card
+                        if (isAurora) {
+                            val auroraColors = AuroraTheme.colors
+                            Card(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .graphicsLayer {
+                                        scaleX = createScale
+                                        scaleY = createScale
+                                    }
+                                    .clickable(
+                                        interactionSource = createInteractionSource,
+                                        indication = androidx.compose.foundation.LocalIndication.current,
+                                        onClick = {
+                                            appHaptics.tap()
+                                            navigator.push(CreateBackupScreen())
+                                        },
+                                    ),
+                                shape = cardShape,
+                                colors = CardDefaults.cardColors(
+                                    containerColor = resolveAuroraMoreCardContainerColor(auroraColors),
+                                ),
+                                border = if (auroraColors.isEInk) {
+                                    BorderStroke(
+                                        width = 1.dp,
+                                        color = resolveAuroraMoreCardBorderColor(auroraColors),
+                                    )
+                                } else {
+                                    BorderStroke(
+                                        width = 1.dp,
+                                        color = if (auroraColors.isDark) {
+                                            Color.White.copy(alpha = 0.08f)
                                         } else {
-                                            context.toast(MR.strings.restore_in_progress)
-                                        }
+                                            auroraColors.accent.copy(alpha = 0.12f)
+                                        },
+                                    )
+                                },
+                                elevation = CardDefaults.cardElevation(
+                                    defaultElevation = if (!auroraColors.isDark && !auroraColors.isEInk) {
+                                        resolveAuroraElevation(auroraColors, AuroraSurfaceLevel.Glass)
+                                    } else {
+                                        0.dp
                                     },
-                                    shape = RectangleShape,
+                                ),
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 20.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
                                 ) {
-                                    Text(stringResource(MR.strings.pref_restore_backup))
+                                    Icon(
+                                        imageVector = Icons.Outlined.CloudUpload,
+                                        contentDescription = null,
+                                        tint = auroraColors.accent,
+                                        modifier = Modifier.size(28.dp),
+                                    )
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Text(
+                                        text = stringResource(MR.strings.pref_create_backup),
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontWeight = FontWeight.SemiBold,
+                                            letterSpacing = 0.2.sp,
+                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                        ),
+                                        color = auroraColors.textPrimary,
+                                        modifier = Modifier.padding(horizontal = 8.dp),
+                                        maxLines = 2,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    )
                                 }
                             }
-                        },
-                    )
+                        } else {
+                            Card(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .graphicsLayer {
+                                        scaleX = createScale
+                                        scaleY = createScale
+                                    }
+                                    .clickable(
+                                        interactionSource = createInteractionSource,
+                                        indication = androidx.compose.foundation.LocalIndication.current,
+                                        onClick = {
+                                            appHaptics.tap()
+                                            navigator.push(CreateBackupScreen())
+                                        },
+                                    ),
+                                shape = cardShape,
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                ),
+                                border = BorderStroke(
+                                    width = 1.dp,
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                                ),
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 20.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.CloudUpload,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(28.dp),
+                                    )
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Text(
+                                        text = stringResource(MR.strings.pref_create_backup),
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontWeight = FontWeight.SemiBold,
+                                            letterSpacing = 0.2.sp,
+                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                        ),
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.padding(horizontal = 8.dp),
+                                        maxLines = 2,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
+                        }
+
+                        // Restore Backup card
+                        if (isAurora) {
+                            val auroraColors = AuroraTheme.colors
+                            Card(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .graphicsLayer {
+                                        scaleX = restoreScale
+                                        scaleY = restoreScale
+                                    }
+                                    .clickable(
+                                        interactionSource = restoreInteractionSource,
+                                        indication = androidx.compose.foundation.LocalIndication.current,
+                                        onClick = {
+                                            appHaptics.tap()
+                                            if (!BackupRestoreJob.isRunning(context)) {
+                                                if (DeviceUtil.isMiui &&
+                                                    DeviceUtil.isMiuiOptimizationDisabled()
+                                                ) {
+                                                    context.toast(MR.strings.restore_miui_warning)
+                                                }
+                                                chooseBackup.launch("*/*")
+                                            } else {
+                                                context.toast(MR.strings.restore_in_progress)
+                                            }
+                                        },
+                                    ),
+                                shape = cardShape,
+                                colors = CardDefaults.cardColors(
+                                    containerColor = resolveAuroraMoreCardContainerColor(auroraColors),
+                                ),
+                                border = if (auroraColors.isEInk) {
+                                    BorderStroke(
+                                        width = 1.dp,
+                                        color = resolveAuroraMoreCardBorderColor(auroraColors),
+                                    )
+                                } else {
+                                    BorderStroke(
+                                        width = 1.dp,
+                                        color = if (auroraColors.isDark) {
+                                            Color.White.copy(alpha = 0.08f)
+                                        } else {
+                                            auroraColors.accent.copy(alpha = 0.12f)
+                                        },
+                                    )
+                                },
+                                elevation = CardDefaults.cardElevation(
+                                    defaultElevation = if (!auroraColors.isDark && !auroraColors.isEInk) {
+                                        resolveAuroraElevation(auroraColors, AuroraSurfaceLevel.Glass)
+                                    } else {
+                                        0.dp
+                                    },
+                                ),
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 20.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.CloudDownload,
+                                        contentDescription = null,
+                                        tint = auroraColors.accent,
+                                        modifier = Modifier.size(28.dp),
+                                    )
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Text(
+                                        text = stringResource(MR.strings.pref_restore_backup),
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontWeight = FontWeight.SemiBold,
+                                            letterSpacing = 0.2.sp,
+                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                        ),
+                                        color = auroraColors.textPrimary,
+                                        modifier = Modifier.padding(horizontal = 8.dp),
+                                        maxLines = 2,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
+                        } else {
+                            Card(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .graphicsLayer {
+                                        scaleX = restoreScale
+                                        scaleY = restoreScale
+                                    }
+                                    .clickable(
+                                        interactionSource = restoreInteractionSource,
+                                        indication = androidx.compose.foundation.LocalIndication.current,
+                                        onClick = {
+                                            appHaptics.tap()
+                                            if (!BackupRestoreJob.isRunning(context)) {
+                                                if (DeviceUtil.isMiui &&
+                                                    DeviceUtil.isMiuiOptimizationDisabled()
+                                                ) {
+                                                    context.toast(MR.strings.restore_miui_warning)
+                                                }
+                                                chooseBackup.launch("*/*")
+                                            } else {
+                                                context.toast(MR.strings.restore_in_progress)
+                                            }
+                                        },
+                                    ),
+                                shape = cardShape,
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                                ),
+                                border = BorderStroke(
+                                    width = 1.dp,
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+                                ),
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 20.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.CloudDownload,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(28.dp),
+                                    )
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Text(
+                                        text = stringResource(MR.strings.pref_restore_backup),
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontWeight = FontWeight.SemiBold,
+                                            letterSpacing = 0.2.sp,
+                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                        ),
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.padding(horizontal = 8.dp),
+                                        maxLines = 2,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
+                        }
+                    }
                 },
 
                 // Automatic backups
