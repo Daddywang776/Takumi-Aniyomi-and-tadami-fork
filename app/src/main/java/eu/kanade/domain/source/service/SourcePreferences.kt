@@ -225,5 +225,29 @@ class SourcePreferences(
 
     fun entrySuggestionsEnabled() = preferenceStore.getBoolean("entry_suggestions_enabled", true)
 
+    /**
+     * F3.2 — Suggestion source toggles for NOVEL catalogues.
+     *
+     * Each flag independently controls whether the corresponding source
+     * participates in the "Similar works" pipeline for novels. The defaults
+     * preserve the previous behaviour (everything on); turning a flag off
+     * excludes that source from the candidate set, which is the standard
+     * user-facing escape hatch for noisy recommendations.
+     */
+    fun suggestionsUseMangaUpdatesNovel() = preferenceStore.getBoolean(
+        "suggestions_use_mangaupdates_novel",
+        true,
+    )
+
+    fun suggestionsUseNovelUpdates() = preferenceStore.getBoolean(
+        "suggestions_use_novelupdates",
+        true,
+    )
+
+    fun suggestionsPopularBackfillEnabled() = preferenceStore.getBoolean(
+        "suggestions_popular_backfill_enabled",
+        true,
+    )
+
     fun importEpubAddToLibrary() = preferenceStore.getBoolean("pref_epub_import_add_to_library", true)
 }
