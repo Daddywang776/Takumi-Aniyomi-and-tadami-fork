@@ -657,6 +657,7 @@ internal fun paginatePlainPageBlocks(
     textSizePx: Float,
     lineHeightMultiplier: Float,
     typeface: android.graphics.Typeface?,
+    chapterTitleTypeface: android.graphics.Typeface? = null,
     textAlign: ReaderTextAlign,
     forceParagraphIndent: Boolean = false,
     chapterTitle: String? = null,
@@ -714,7 +715,11 @@ internal fun paginatePlainPageBlocks(
             widthPx = widthPx,
             textSizePx = blockMetrics.textSizePx,
             lineHeightMultiplier = blockMetrics.lineHeightMultiplier,
-            typeface = typeface,
+            typeface = if (isChapterTitle) {
+                android.graphics.Typeface.create(chapterTitleTypeface ?: typeface, android.graphics.Typeface.BOLD)
+            } else {
+                typeface
+            },
             textAlign = textAlign,
             firstLineIndentPx = firstLineIndentPx,
         )
@@ -900,6 +905,7 @@ internal fun paginateRichPageBlocks(
     textSizePx: Float,
     lineHeightMultiplier: Float,
     typeface: android.graphics.Typeface?,
+    chapterTitleTypeface: android.graphics.Typeface? = null,
     textAlign: ReaderTextAlign,
     chapterTitle: String? = null,
     allowChapterTitleBlock: Boolean = true,
@@ -954,7 +960,11 @@ internal fun paginateRichPageBlocks(
             widthPx = widthPx,
             textSizePx = blockMetrics.textSizePx,
             lineHeightMultiplier = blockMetrics.lineHeightMultiplier,
-            typeface = typeface,
+            typeface = if (isChapterTitle) {
+                android.graphics.Typeface.create(chapterTitleTypeface ?: typeface, android.graphics.Typeface.BOLD)
+            } else {
+                typeface
+            },
             textAlign = textAlign,
             firstLineIndentPx = firstLineIndentPx,
         )
@@ -1068,6 +1078,7 @@ internal fun paginateMixedRichPageBlocks(
     textSizePx: Float,
     lineHeightMultiplier: Float,
     typeface: android.graphics.Typeface?,
+    chapterTitleTypeface: android.graphics.Typeface? = null,
     textAlign: ReaderTextAlign,
     forceParagraphIndent: Boolean,
     chapterTitle: String? = null,
@@ -1088,6 +1099,7 @@ internal fun paginateMixedRichPageBlocks(
             textSizePx = textSizePx,
             lineHeightMultiplier = lineHeightMultiplier,
             typeface = typeface,
+            chapterTitleTypeface = chapterTitleTypeface,
             textAlign = textAlign,
             chapterTitle = chapterTitle,
             allowChapterTitleBlock = currentChunkCanUseChapterTitle,
