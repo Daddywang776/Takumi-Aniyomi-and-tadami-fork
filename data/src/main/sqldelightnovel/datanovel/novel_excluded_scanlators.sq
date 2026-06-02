@@ -6,6 +6,7 @@ CREATE TABLE novel_excluded_scanlators(
 );
 
 CREATE INDEX novel_excluded_scanlators_novel_id_index ON novel_excluded_scanlators(novel_id);
+CREATE INDEX novel_excluded_scanlators_novel_id_scanlator_index ON novel_excluded_scanlators(novel_id, scanlator);
 
 insert:
 INSERT INTO novel_excluded_scanlators(novel_id, scanlator)

@@ -12,7 +12,7 @@ class NovelDatabaseMigrationTest {
 
     @Test
     fun `schema version increments for narrowed novel triggers`() {
-        NovelDatabase.Schema.version shouldBe 14L
+        NovelDatabase.Schema.version shouldBe 15L
     }
 
     @Test
@@ -109,6 +109,42 @@ class NovelDatabaseMigrationTest {
                     ON DELETE CASCADE
                 )
             """.trimIndent(),
+            parameters = 0,
+        )
+        driver.execute(
+            identifier = null,
+            sql = """
+                CREATE TABLE novel_history(
+                    _id INTEGER NOT NULL PRIMARY KEY,
+                    chapter_id INTEGER NOT NULL UNIQUE,
+                    last_read INTEGER,
+                    time_read INTEGER NOT NULL,
+                    FOREIGN KEY(chapter_id) REFERENCES novel_chapters (_id)
+                    ON DELETE CASCADE
+                )
+            """.trimIndent(),
+            parameters = 0,
+        )
+        driver.execute(
+            identifier = null,
+            sql = "CREATE INDEX novel_history_chapter_id_index ON novel_history(chapter_id);",
+            parameters = 0,
+        )
+        driver.execute(
+            identifier = null,
+            sql = """
+                CREATE TABLE novel_excluded_scanlators(
+                    novel_id INTEGER NOT NULL,
+                    scanlator TEXT NOT NULL,
+                    FOREIGN KEY(novel_id) REFERENCES novels (_id)
+                    ON DELETE CASCADE
+                )
+            """.trimIndent(),
+            parameters = 0,
+        )
+        driver.execute(
+            identifier = null,
+            sql = "CREATE INDEX novel_excluded_scanlators_novel_id_index ON novel_excluded_scanlators(novel_id);",
             parameters = 0,
         )
         driver.execute(

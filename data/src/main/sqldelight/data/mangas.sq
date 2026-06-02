@@ -41,9 +41,12 @@ CREATE TABLE mangas(
 
 CREATE INDEX library_favorite_index ON mangas(favorite) WHERE favorite = 1;
 CREATE INDEX mangas_url_index ON mangas(url);
+CREATE INDEX mangas_favorite_modified_at_index ON mangas(favorite_modified_at DESC);
 
 CREATE TRIGGER update_last_favorite_at_mangas
 AFTER UPDATE OF favorite ON mangas
+FOR EACH ROW
+WHEN old.favorite != new.favorite
 BEGIN
   UPDATE mangas
   SET favorite_modified_at = strftime('%s', 'now')

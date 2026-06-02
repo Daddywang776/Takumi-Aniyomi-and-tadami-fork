@@ -38,9 +38,12 @@ CREATE TABLE novels(
 
 CREATE INDEX library_favorite_index_novels ON novels(favorite) WHERE favorite = 1;
 CREATE INDEX novels_url_index ON novels(url);
+CREATE INDEX novels_favorite_modified_at_index ON novels(favorite_modified_at DESC);
 
 CREATE TRIGGER update_last_favorite_at_novels
 AFTER UPDATE OF favorite ON novels
+FOR EACH ROW
+WHEN old.favorite != new.favorite
 BEGIN
   UPDATE novels
   SET favorite_modified_at = strftime('%s', 'now')

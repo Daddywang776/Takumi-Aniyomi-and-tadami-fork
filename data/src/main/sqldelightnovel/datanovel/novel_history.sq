@@ -9,7 +9,7 @@ CREATE TABLE novel_history(
     ON DELETE CASCADE
 );
 
-CREATE INDEX novel_history_chapter_id_index ON novel_history(chapter_id);
+CREATE INDEX novel_history_last_read_index ON novel_history(last_read DESC);
 
 getHistoryByNovelId:
 SELECT
