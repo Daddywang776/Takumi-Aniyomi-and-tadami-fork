@@ -81,6 +81,8 @@ fun AnimeLibrarySettingsDialog(
                 )
                 3 -> GroupPage(
                     groupPreference = screenModel.libraryPreferences.animeGroupLibraryBy(),
+                    globalGroupPreference = screenModel.libraryPreferences.globalGroupLibrary(),
+                    globalGroupByPreference = screenModel.libraryPreferences.globalGroupLibraryBy(),
                 )
             }
         }
