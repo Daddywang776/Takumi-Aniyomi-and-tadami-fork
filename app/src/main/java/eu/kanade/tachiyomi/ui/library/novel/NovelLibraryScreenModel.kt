@@ -139,13 +139,16 @@ class NovelLibraryScreenModel(
                 downloadedIdsFlow,
             ) { flowsArray ->
                 val searchQuery = flowsArray[0] as String?
+
                 @Suppress("UNCHECKED_CAST")
                 val library = flowsArray[1] as NovelLibraryMap
                 val filterPrefs = flowsArray[2] as FilterPreferences
                 val sortPrefs = flowsArray[3] as SortPreferences
+
                 @Suppress("UNCHECKED_CAST")
                 val tracks = flowsArray[4] as Map<Long, List<NovelTrack>>
                 val groupType = flowsArray[5] as Int
+
                 @Suppress("UNCHECKED_CAST")
                 val downloadedIds = flowsArray[6] as Set<Long>
 

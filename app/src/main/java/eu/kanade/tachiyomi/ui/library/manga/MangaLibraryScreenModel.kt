@@ -137,10 +137,13 @@ class MangaLibraryScreenModel(
                 downloadCache.changes.conflate(),
             ) { flowsArray ->
                 val searchQuery = flowsArray[0] as String?
+
                 @Suppress("UNCHECKED_CAST")
                 val library = flowsArray[1] as MangaLibraryMap
+
                 @Suppress("UNCHECKED_CAST")
                 val tracks = flowsArray[2] as Map<Long, List<MangaTrack>>
+
                 @Suppress("UNCHECKED_CAST")
                 val trackingFilter = flowsArray[3] as Map<Long, TriState>
                 val groupType = flowsArray[4] as Int
