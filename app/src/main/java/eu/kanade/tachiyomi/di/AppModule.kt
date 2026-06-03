@@ -123,12 +123,14 @@ class AppModule(val app: Application) : InjektModule {
     }
 
     /**
-     * We use a separate SqlDelight database for ranobe. If a previous/dev build created an
-     * incompatible or partially initialized file (e.g. correct user_version but missing tables),
-     * the app will crash on first query. Self-heal by deleting the file so it is recreated.
+     * If a previous/dev build created an incompatible or partially initialized SQLite file
+     * (e.g. correct user_version but missing tables after an interrupted migration), the app
+     * will crash on the first query. Self-heal by deleting the file so SQLDelight recreates it.
+     *
+     * This helper is intentionally generic: pass the database file name and one required table
+     * name. If the table is absent (or the file cannot be opened), the DB files are deleted.
      */
-    private fun ensureNovelDatabaseIsUsable(context: Context) {
-        val dbName = "tachiyomi.noveldb"
+    private fun ensureDatabaseIsUsable(context: Context, dbName: String, requiredTable: String) {
         val dbFile = context.getDatabasePath(dbName)
         if (!dbFile.exists()) return
 
@@ -136,7 +138,7 @@ class AppModule(val app: Application) : InjektModule {
             val db = SQLiteDatabase.openDatabase(dbFile.absolutePath, null, SQLiteDatabase.OPEN_READWRITE)
             val cursor = db.rawQuery(
                 "SELECT 1 FROM sqlite_master WHERE type='table' AND name=? LIMIT 1",
-                arrayOf("novelsources"),
+                arrayOf(requiredTable),
             )
             val hasRequiredTable = cursor.moveToFirst()
             cursor.close()
@@ -147,7 +149,7 @@ class AppModule(val app: Application) : InjektModule {
         if (shouldDelete) {
             // `Context.deleteDatabase()` can fail if the DB is locked/open in another process.
             // Be aggressive: try deleteDatabase first, then delete DB/WAL/SHM files directly.
-            Log.w(LOG_TAG, "Novel DB missing required tables, recreating: ${dbFile.absolutePath}")
+            Log.w(LOG_TAG, "DB '$dbName' missing required table '$requiredTable', recreating: ${dbFile.absolutePath}")
 
             runCatching { context.deleteDatabase(dbName) }
 
@@ -157,10 +159,22 @@ class AppModule(val app: Application) : InjektModule {
             runCatching { File(dbFile.absolutePath + "-shm").delete() }
 
             if (dbFile.exists()) {
-                Log.e(LOG_TAG, "Failed to delete novel DB file; app may crash. path=${dbFile.absolutePath}")
+                Log.e(LOG_TAG, "Failed to delete DB file '$dbName'; app may crash. path=${dbFile.absolutePath}")
             }
         }
     }
+
+    private fun ensureNovelDatabaseIsUsable(context: Context) =
+        ensureDatabaseIsUsable(context, "tachiyomi.noveldb", "novelsources")
+
+    private fun ensureMangaDatabaseIsUsable(context: Context) =
+        ensureDatabaseIsUsable(context, "tachiyomi.db", "mangas")
+
+    private fun ensureAnimeDatabaseIsUsable(context: Context) =
+        ensureDatabaseIsUsable(context, "tachiyomi.animedb", "animes")
+
+    private fun ensureAchievementsDatabaseIsUsable(context: Context) =
+        ensureDatabaseIsUsable(context, AchievementsDatabase.NAME, "achievements")
 
     private fun ensureNotesSchema(
         db: SupportSQLiteDatabase,
@@ -322,6 +336,11 @@ class AppModule(val app: Application) : InjektModule {
     override fun InjektRegistrar.registerInjectables() {
         addSingleton(app)
 
+        ensureMangaDatabaseIsUsable(app)
+        ensureAnimeDatabaseIsUsable(app)
+        ensureNovelDatabaseIsUsable(app)
+        ensureAchievementsDatabaseIsUsable(app)
+
         val sqlDriverManga = AndroidSqliteDriver(
             schema = Database.Schema,
             context = app,
@@ -347,8 +366,6 @@ class AppModule(val app: Application) : InjektModule {
                 }
             },
         )
-
-        ensureNovelDatabaseIsUsable(app)
 
         val sqlDriverAnime = AndroidSqliteDriver(
             schema = AnimeDatabase.Schema,

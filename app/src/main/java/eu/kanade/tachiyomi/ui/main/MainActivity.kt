@@ -185,7 +185,16 @@ class MainActivity : BaseActivity() {
             fallbackColorArgb = resolveMainActivityThemeBackgroundArgb(),
         )
 
-        val didMigration = Migrator.awaitAndRelease()
+        // Await preference migrations without blocking the main thread.
+        // The splash screen will keep showing (ready = false) until this completes,
+        // giving migrations time to finish without triggering an ANR.
+        val didMigration = mutableStateOf(false)
+        val migrationReady = mutableStateOf(false)
+        lifecycleScope.launch {
+            didMigration.value = Migrator.await()
+            Migrator.release()
+            migrationReady.value = true
+        }
 
         // Do not let the launcher create a new activity http://stackoverflow.com/questions/16283079
         if (!isTaskRoot) {
@@ -393,7 +402,12 @@ class MainActivity : BaseActivity() {
                 }
             }
 
-            var showChangelog by remember { mutableStateOf(didMigration && !BuildConfig.DEBUG) }
+            var showChangelog by remember { mutableStateOf(false) }
+            LaunchedEffect(migrationReady.value) {
+                if (migrationReady.value && didMigration.value && !BuildConfig.DEBUG) {
+                    showChangelog = true
+                }
+            }
             if (showChangelog) {
                 AlertDialog(
                     onDismissRequest = { showChangelog = false },
