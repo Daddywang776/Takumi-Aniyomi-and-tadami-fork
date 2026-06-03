@@ -46,6 +46,14 @@ class GetMangaMetadata(
         )
     }
 
+    suspend fun getCached(mangaId: Long): ExternalMetadata? {
+        val metadataSource = preferences.metadataSource().get()
+        if (metadataSource == MetadataSource.NONE) {
+            return null
+        }
+        return metadataCache.get(MetadataContentType.MANGA, mangaId, metadataSource)
+    }
+
     private fun createAnilistAdapter(): MetadataAdapter<MangaTrack, MangaTrackSearch> {
         return object : MetadataAdapter<MangaTrack, MangaTrackSearch> {
             override val contentType = MetadataContentType.MANGA

@@ -479,6 +479,8 @@ class MangaScreenModel(
             val needRefreshChapter = chapters.isEmpty()
             val metadataSource = uiPreferences.metadataSource().get()
             val willLoadMetadata = metadataSource != MetadataSource.NONE
+            val cachedMetadata = getMangaMetadata.getCached(mangaId)
+            val hasCachedMetadata = cachedMetadata != null && !cachedMetadata.isStale()
 
             // Show what we have earlier
             mutableState.update {
@@ -493,7 +495,8 @@ class MangaScreenModel(
                     downloadedOnly = basePreferences.downloadedOnly().get(),
                     isRefreshingData = needRefreshInfo || needRefreshChapter,
                     dialog = null,
-                    isMetadataLoading = willLoadMetadata,
+                    isMetadataLoading = willLoadMetadata && !hasCachedMetadata,
+                    mangaMetadata = cachedMetadata,
                     suggestions = if (sourcePreferences.entrySuggestionsEnabled().get()) {
                         SuggestionState.Loading
                     } else {
@@ -509,7 +512,11 @@ class MangaScreenModel(
             }
 
             // Fetch suggestions asynchronously
-            loadSuggestions(buildSuggestionSeed(manga, null), manga = manga, source = manga.toCatalogueSource())
+            loadSuggestions(
+                buildSuggestionSeed(manga, cachedMetadata),
+                manga = manga,
+                source = manga.toCatalogueSource(),
+            )
 
             // Start observe tracking since it only needs mangaId
             observeTrackers()

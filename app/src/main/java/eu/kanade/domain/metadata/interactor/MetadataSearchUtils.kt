@@ -4,8 +4,8 @@ fun normalizeMetadataSearchQuery(title: String): String {
     var normalized = title.trim()
 
     val suffixesToRemove = listOf(
-        "\\s+РЎРµР·РѕРЅ\\s*\\d*",
-        "\\s+СЃРµР·РѕРЅ\\s*\\d*",
+        "\\s+Сезон\\s*\\d*",
+        "\\s+сезон\\s*\\d*",
         "\\s+Season\\s*\\d*",
         "\\s+season\\s*\\d*",
         "\\s+TV\\b",
@@ -57,11 +57,11 @@ fun parseOriginalTitle(description: String?): String? {
 
     val patterns = listOf(
         Regex("""Original:\s*([^\n\r]+)""", RegexOption.IGNORE_CASE),
-        Regex("""РћСЂРёРіРёРЅР°Р»:\s*([^\n\r]+)""", RegexOption.IGNORE_CASE),
+        Regex("""Оригинал:\s*([^\n\r]+)""", RegexOption.IGNORE_CASE),
         Regex("""Original Title:\s*([^\n\r]+)""", RegexOption.IGNORE_CASE),
-        Regex("""РћСЂРёРіРёРЅР°Р»СЊРЅРѕРµ РЅР°Р·РІР°РЅРёРµ:\s*([^\n\r]+)""", RegexOption.IGNORE_CASE),
+        Regex("""Оригинальное название:\s*([^\n\r]+)""", RegexOption.IGNORE_CASE),
         Regex("""Original:\s*\(([^)]+)\)""", RegexOption.IGNORE_CASE),
-        Regex("""РћСЂРёРіРёРЅР°Р»:\s*\(([^)]+)\)""", RegexOption.IGNORE_CASE),
+        Regex("""Оригинал:\s*\(([^)]+)\)""", RegexOption.IGNORE_CASE),
     )
 
     for (pattern in patterns) {
@@ -77,9 +77,9 @@ fun parseOriginalTitle(description: String?): String? {
 
     description.lines().forEach { line ->
         if (line.contains("Original", ignoreCase = true) ||
-            line.contains("РћСЂРёРіРёРЅР°Р»", ignoreCase = true) ||
+            line.contains("Оригинал", ignoreCase = true) ||
             line.contains("Romaji", ignoreCase = true) ||
-            line.contains("РЇРїРѕРЅСЃРєРѕРµ", ignoreCase = true)
+            line.contains("Японское", ignoreCase = true)
         ) {
             val colonIndex = line.indexOf(':')
             if (colonIndex > 0) {

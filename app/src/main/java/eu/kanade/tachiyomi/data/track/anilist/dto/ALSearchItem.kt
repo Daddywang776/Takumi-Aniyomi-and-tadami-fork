@@ -20,7 +20,7 @@ data class ALSearchItem(
     fun toALManga(): ALManga = ALManga(
         remoteId = id,
         title = title.userPreferred,
-        imageUrl = coverImage.large,
+        imageUrl = coverImage.extraLarge ?: coverImage.large,
         description = description,
         format = format?.replace("_", "-") ?: "",
         publishingStatus = status ?: "",
@@ -33,7 +33,7 @@ data class ALSearchItem(
     fun toALAnime(): ALAnime = ALAnime(
         remoteId = id,
         title = title.userPreferred,
-        imageUrl = coverImage.large,
+        imageUrl = coverImage.extraLarge ?: coverImage.large,
         description = description,
         format = format?.replace("_", "-") ?: "",
         publishingStatus = status ?: "",
@@ -51,6 +51,7 @@ data class ALItemTitle(
 
 @Serializable
 data class ItemCover(
+    val extraLarge: String? = null,
     val large: String,
 )
 

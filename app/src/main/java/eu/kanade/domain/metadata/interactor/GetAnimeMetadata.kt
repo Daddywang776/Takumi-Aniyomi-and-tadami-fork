@@ -46,6 +46,14 @@ class GetAnimeMetadata(
         )
     }
 
+    suspend fun getCached(animeId: Long): ExternalMetadata? {
+        val metadataSource = preferences.metadataSource().get()
+        if (metadataSource == MetadataSource.NONE) {
+            return null
+        }
+        return metadataCache.get(MetadataContentType.ANIME, animeId, metadataSource)
+    }
+
     private fun createAnilistAdapter(): MetadataAdapter<AnimeTrack, AnimeTrackSearch> {
         return object : MetadataAdapter<AnimeTrack, AnimeTrackSearch> {
             override val contentType = MetadataContentType.ANIME

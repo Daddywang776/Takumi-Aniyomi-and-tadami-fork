@@ -1,7 +1,7 @@
 package eu.kanade.domain.metadata.interactor
 
 import logcat.LogPriority
-import logcat.logcat
+import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.metadata.cache.ExternalMetadataCache
 import tachiyomi.domain.metadata.model.ExternalMetadata
 import tachiyomi.domain.metadata.model.MetadataContentType
@@ -65,16 +65,25 @@ class MetadataResolver<Track : Any, Remote : Any>(
 
         val fromTracking = getFromTracking(target)
         if (fromTracking != null) {
+            logcat(LogPriority.INFO) {
+                "Metadata resolved from tracking for ${adapter.contentType} '${target.title}' (${target.mediaId}) using ${adapter.source}: remoteId=${fromTracking.remoteId}"
+            }
             cache.upsert(fromTracking)
             return fromTracking
         }
 
         val fromSearch = searchAndCache(target)
         if (fromSearch != null) {
+            logcat(LogPriority.INFO) {
+                "Metadata resolved from search for ${adapter.contentType} '${target.title}' (${target.mediaId}) using ${adapter.source}: remoteId=${fromSearch.remoteId}"
+            }
             return fromSearch
         }
 
         cacheNotFound(target)
+        logcat(LogPriority.WARN) {
+            "Metadata resolution failed (not found) for ${adapter.contentType} '${target.title}' (${target.mediaId}) using ${adapter.source}."
+        }
         return null
     }
 
@@ -95,6 +104,9 @@ class MetadataResolver<Track : Any, Remote : Any>(
                 isManualMatch = true,
             )
         } catch (e: Exception) {
+            logcat(LogPriority.ERROR, throwable = e) {
+                "Metadata tracking resolver error for ${adapter.contentType} ${target.mediaId} using ${adapter.source}: ${e.message}"
+            }
             if (adapter.isNotAuthenticated(e)) {
                 throw e
             }
@@ -168,6 +180,9 @@ class MetadataResolver<Track : Any, Remote : Any>(
             cache.upsert(metadata)
             metadata
         } catch (e: Exception) {
+            logcat(LogPriority.ERROR, throwable = e) {
+                "Metadata search resolver error for ${adapter.contentType} ${target.mediaId} using ${adapter.source}: ${e.message}"
+            }
             if (adapter.isNotAuthenticated(e)) {
                 throw e
             }

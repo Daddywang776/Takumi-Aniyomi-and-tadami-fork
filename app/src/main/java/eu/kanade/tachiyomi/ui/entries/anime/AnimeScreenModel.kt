@@ -591,6 +591,8 @@ class AnimeScreenModel(
             // Check if metadata loading will be needed
             val metadataSource = uiPreferences.metadataSource().get()
             val willLoadMetadata = metadataSource != MetadataSource.NONE
+            val cachedMetadata = getAnimeMetadata.getCached(animeId)
+            val hasCachedMetadata = cachedMetadata != null && !cachedMetadata.isStale()
 
             // Show what we have earlier
             mutableState.update {
@@ -603,8 +605,9 @@ class AnimeScreenModel(
                     downloadedOnly = basePreferences.downloadedOnly().get(),
                     isRefreshingData = needRefreshInfo || needRefreshEpisode || needRefreshSeason,
                     dialog = null,
-                    // Start with isMetadataLoading = true if metadata will be loaded
-                    isMetadataLoading = willLoadMetadata,
+                    // Start with isMetadataLoading = true if metadata will be loaded and is not cached
+                    isMetadataLoading = willLoadMetadata && !hasCachedMetadata,
+                    animeMetadata = cachedMetadata,
                     suggestions = if (sourcePreferences.entrySuggestionsEnabled().get()) {
                         SuggestionState.Loading
                     } else {
@@ -620,7 +623,11 @@ class AnimeScreenModel(
             }
 
             // Fetch suggestions asynchronously
-            loadSuggestions(buildSuggestionSeed(anime, null), anime = anime, source = anime.toCatalogueSource())
+            loadSuggestions(
+                buildSuggestionSeed(anime, cachedMetadata),
+                anime = anime,
+                source = anime.toCatalogueSource(),
+            )
             // Start observe tracking since it only needs animeId
             observeTrackers()
 

@@ -3,8 +3,10 @@ package eu.kanade.tachiyomi.data.track.anilist
 import com.tadami.aurora.BuildConfig
 import eu.kanade.tachiyomi.data.track.anilist.dto.ALOAuth
 import eu.kanade.tachiyomi.data.track.anilist.dto.isExpired
+import logcat.LogPriority
 import okhttp3.Interceptor
 import okhttp3.Response
+import tachiyomi.core.common.util.system.logcat
 import java.io.IOException
 
 class AnilistInterceptor(val anilist: Anilist, private var token: String?) : Interceptor {
@@ -46,7 +48,27 @@ class AnilistInterceptor(val anilist: Anilist, private var token: String?) : Int
             .header("User-Agent", "Tadami v${BuildConfig.VERSION_NAME} (${BuildConfig.APPLICATION_ID})")
             .build()
 
-        return chain.proceed(authRequest)
+        var response = chain.proceed(authRequest)
+        var attempt = 1
+        val maxAttempts = 3
+        while (response.code == 429 && attempt < maxAttempts) {
+            val retryAfterHeader = response.header("Retry-After")
+            val secondsToWait = retryAfterHeader?.toIntOrNull() ?: (5 * attempt)
+
+            logcat(LogPriority.WARN) {
+                "AniList API returned 429 (Rate Limit) on attempt $attempt. Retrying after $secondsToWait seconds..."
+            }
+
+            response.close()
+            try {
+                Thread.sleep(secondsToWait * 1000L + 500)
+            } catch (e: InterruptedException) {
+                throw IOException("Interrupted during rate limit retry", e)
+            }
+            response = chain.proceed(authRequest)
+            attempt++
+        }
+        return response
     }
 
     /**

@@ -258,6 +258,7 @@ class AnilistApi(val client: OkHttpClient, interceptor: AnilistInterceptor) {
                             |userPreferred
                         |}
                         |coverImage {
+                            |extraLarge
                             |large
                         |}
                         |format
@@ -315,6 +316,7 @@ class AnilistApi(val client: OkHttpClient, interceptor: AnilistInterceptor) {
                             |userPreferred
                         |}
                         |coverImage {
+                            |extraLarge
                             |large
                         |}
                         |format
@@ -385,6 +387,7 @@ class AnilistApi(val client: OkHttpClient, interceptor: AnilistInterceptor) {
                                 |userPreferred
                             |}
                             |coverImage {
+                                |extraLarge
                                 |large
                             |}
                             |format
@@ -466,6 +469,7 @@ class AnilistApi(val client: OkHttpClient, interceptor: AnilistInterceptor) {
                                 |userPreferred
                             |}
                             |coverImage {
+                                |extraLarge
                                 |large
                             |}
                             |format
@@ -599,6 +603,7 @@ class AnilistApi(val client: OkHttpClient, interceptor: AnilistInterceptor) {
                         |userPreferred
                     |}
                     |coverImage {
+                        |extraLarge
                         |large
                     |}
                     |format
@@ -636,7 +641,7 @@ class AnilistApi(val client: OkHttpClient, interceptor: AnilistInterceptor) {
                             ALAnime(
                                 remoteId = media.id,
                                 title = media.title.userPreferred,
-                                imageUrl = media.coverImage.large,
+                                imageUrl = media.coverImage.extraLarge ?: media.coverImage.large,
                                 description = media.description,
                                 format = media.format?.replace("_", "-") ?: "",
                                 publishingStatus = media.status ?: "",
@@ -676,6 +681,7 @@ class AnilistApi(val client: OkHttpClient, interceptor: AnilistInterceptor) {
                         |userPreferred
                     |}
                     |coverImage {
+                        |extraLarge
                         |large
                     |}
                     |format
@@ -713,7 +719,7 @@ class AnilistApi(val client: OkHttpClient, interceptor: AnilistInterceptor) {
                             ALManga(
                                 remoteId = media.id,
                                 title = media.title.userPreferred,
-                                imageUrl = media.coverImage.large,
+                                imageUrl = media.coverImage.extraLarge ?: media.coverImage.large,
                                 description = media.description,
                                 format = media.format?.replace("_", "-") ?: "",
                                 publishingStatus = media.status ?: "",
