@@ -10,8 +10,7 @@ import eu.kanade.tachiyomi.core.common.Constants
 import eu.kanade.tachiyomi.data.backup.restore.BackupRestoreJob
 import eu.kanade.tachiyomi.data.download.anime.AnimeDownloadManager
 import eu.kanade.tachiyomi.data.download.manga.MangaDownloadManager
-import eu.kanade.tachiyomi.data.library.anime.AnimeLibraryUpdateJob
-import eu.kanade.tachiyomi.data.library.manga.MangaLibraryUpdateJob
+import eu.kanade.tachiyomi.data.library.LibraryUpdateCoordinator
 import eu.kanade.tachiyomi.data.updater.AppUpdateDownloadJob
 import eu.kanade.tachiyomi.ui.main.MainActivity
 import eu.kanade.tachiyomi.ui.player.PlayerActivity
@@ -268,7 +267,7 @@ class NotificationReceiver : BroadcastReceiver() {
      * @param context context of application
      */
     private fun cancelLibraryUpdate(context: Context) {
-        MangaLibraryUpdateJob.stop(context)
+        LibraryUpdateCoordinator.stop(context)
     }
 
     /**
@@ -277,7 +276,7 @@ class NotificationReceiver : BroadcastReceiver() {
      * @param context context of application
      */
     private fun cancelAnimelibUpdate(context: Context) {
-        AnimeLibraryUpdateJob.stop(context)
+        LibraryUpdateCoordinator.stop(context)
     }
 
     private fun startDownloadAppUpdate(context: Context, intent: Intent) {

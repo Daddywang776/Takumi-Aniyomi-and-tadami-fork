@@ -75,7 +75,7 @@ class NovelLibraryUpdateNotifier(
             )
 
         context.notify(
-            Notifications.ID_NOVEL_LIBRARY_PROGRESS,
+            Notifications.ID_LIBRARY_PROGRESS,
             progressNotificationBuilder
                 .setProgress(total, current, false)
                 .build(),
@@ -149,7 +149,7 @@ class NovelLibraryUpdateNotifier(
     }
 
     fun cancelProgressNotification() {
-        context.cancelNotification(Notifications.ID_NOVEL_LIBRARY_PROGRESS)
+        context.cancelNotification(Notifications.ID_LIBRARY_PROGRESS)
     }
 
     /**

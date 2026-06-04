@@ -111,7 +111,7 @@ class AnimeLibraryUpdateNotifier(
         }
 
         context.notify(
-            Notifications.ID_ANIME_LIBRARY_PROGRESS,
+            Notifications.ID_LIBRARY_PROGRESS,
             progressNotificationBuilder
                 .setProgress(total, current, false)
                 .build(),
@@ -336,7 +336,7 @@ class AnimeLibraryUpdateNotifier(
      * Cancels the progress notification.
      */
     fun cancelProgressNotification() {
-        context.cancelNotification(Notifications.ID_ANIME_LIBRARY_PROGRESS)
+        context.cancelNotification(Notifications.ID_LIBRARY_PROGRESS)
     }
 
     private suspend fun getAnimeIcon(anime: Anime): Bitmap? {

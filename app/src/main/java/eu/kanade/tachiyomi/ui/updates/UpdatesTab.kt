@@ -72,8 +72,7 @@ import eu.kanade.presentation.updates.anime.AnimeUpdatesAuroraContent
 import eu.kanade.presentation.updates.manga.MangaUpdatesAuroraContent
 import eu.kanade.presentation.updates.novel.NovelUpdatesAuroraContent
 import eu.kanade.presentation.util.Tab
-import eu.kanade.tachiyomi.data.library.anime.AnimeLibraryUpdateJob
-import eu.kanade.tachiyomi.data.library.manga.MangaLibraryUpdateJob
+import eu.kanade.tachiyomi.data.library.LibraryUpdateCoordinator
 import eu.kanade.tachiyomi.data.library.novel.NovelLibraryUpdateJob
 import eu.kanade.tachiyomi.ui.download.DownloadsTab
 import eu.kanade.tachiyomi.ui.entries.novel.NovelScreen
@@ -314,11 +313,14 @@ data object UpdatesTab : Tab {
 
             fun refreshAllTabs() {
                 refreshingTabId = null
-                val animeStarted = if (showAnimeSection) AnimeLibraryUpdateJob.startNow(context) else false
-                val mangaStarted = if (showMangaSection) MangaLibraryUpdateJob.startNow(context) else false
-                val novelStarted = if (showNovelSection) NovelLibraryUpdateJob.startNow(context) else false
+                val started = LibraryUpdateCoordinator.startAll(
+                    context = context,
+                    updateAnime = showAnimeSection,
+                    updateManga = showMangaSection,
+                    updateNovel = showNovelSection,
+                )
                 showUpdateToast(
-                    started = animeStarted || mangaStarted || novelStarted,
+                    started = started,
                     startedMessage = updatingAllLibraryMessage,
                 )
             }
