@@ -1,9 +1,14 @@
 package eu.kanade.presentation.entries.components.aurora
 
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.PaddingValues
@@ -27,6 +32,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -72,11 +78,11 @@ internal fun resolveAuroraTitleHeroCtaSurfaceSpec(
 ): AuroraTitleHeroCtaSurfaceSpec {
     return when (mode) {
         AuroraTitleHeroCtaMode.Aurora -> AuroraTitleHeroCtaSurfaceSpec(
-            containerAlpha = if (isDark) 0.50f else 0.88f,
+            containerAlpha = 0.50f,
             usesGradient = false,
-            innerGlowAlpha = if (isDark) 0.55f else 0.08f,
-            highlightAlpha = if (isDark) 0f else 0.12f,
-            borderAlpha = if (isDark) 0.12f else 0.10f,
+            innerGlowAlpha = 0.55f,
+            highlightAlpha = 0f,
+            borderAlpha = 0.12f,
         )
         AuroraTitleHeroCtaMode.Classic -> AuroraTitleHeroCtaSurfaceSpec(
             containerAlpha = 1f,
@@ -104,6 +110,7 @@ private fun AuroraTitleHeroActionSurface(
     modifier: Modifier = Modifier,
     shape: Shape,
     contentPadding: PaddingValues,
+    interactionSource: MutableInteractionSource,
     content: @Composable BoxScope.(contentColor: Color) -> Unit,
 ) {
     val colors = AuroraTheme.colors
@@ -140,8 +147,23 @@ private fun AuroraTitleHeroActionSurface(
             ),
         )
     }
+
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.96f else 1f,
+        animationSpec = spring(
+            dampingRatio = 0.75f,
+            stiffness = Spring.StiffnessMediumLow,
+        ),
+        label = "ctaSpringScale",
+    )
+
     Box(
         modifier = modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
             .clip(shape)
             .background(colors.accent.copy(alpha = surfaceSpec.containerAlpha))
             .background(
@@ -165,7 +187,11 @@ private fun AuroraTitleHeroActionSurface(
                     base
                 }
             }
-            .clickable(onClick = onClick)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick,
+            )
             .padding(contentPadding),
         contentAlignment = Alignment.Center,
     ) {
@@ -184,19 +210,27 @@ internal fun AuroraTitleHeroActionButton(
     textSize: TextUnit,
     textWeight: FontWeight,
 ) {
+    val colors = AuroraTheme.colors
     val titleHeroMode = rememberAuroraTitleHeroCtaMode()
     val labelShadow = remember(titleHeroMode) {
         resolveAuroraCtaLabelShadowSpec(
             enabled = titleHeroMode == AuroraTitleHeroCtaMode.Aurora,
         ).toComposeShadow()
     }
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
+    val actualShape = remember(cornerRadius) {
+        RoundedCornerShape(cornerRadius)
+    }
 
     AuroraTitleHeroActionSurface(
         mode = titleHeroMode,
         onClick = onClick,
         modifier = modifier,
-        shape = RoundedCornerShape(cornerRadius),
+        shape = actualShape,
         contentPadding = contentPadding,
+        interactionSource = interactionSource,
     ) { contentColor ->
         Row(
             modifier = Modifier.offset(x = (-2).dp),
@@ -232,6 +266,7 @@ internal fun AuroraTitleHeroActionFab(
     iconSize: Dp = 32.dp,
 ) {
     val titleHeroMode = rememberAuroraTitleHeroCtaMode()
+    val interactionSource = remember { MutableInteractionSource() }
 
     AuroraTitleHeroActionSurface(
         mode = titleHeroMode,
@@ -239,6 +274,7 @@ internal fun AuroraTitleHeroActionFab(
         modifier = modifier.size(containerSize),
         shape = RoundedCornerShape(20.dp),
         contentPadding = PaddingValues(0.dp),
+        interactionSource = interactionSource,
     ) { contentColor ->
         Icon(
             imageVector = Icons.Filled.PlayArrow,

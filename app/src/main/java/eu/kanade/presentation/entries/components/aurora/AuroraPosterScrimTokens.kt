@@ -16,10 +16,10 @@ fun resolveAuroraPosterScrimAlphaStops(isDark: Boolean): List<Pair<Float, Float>
     } else {
         listOf(
             0.0f to 0.00f,
-            0.3f to 0.08f,
-            0.5f to 0.22f,
-            0.7f to 0.42f,
-            1.0f to 0.65f,
+            0.3f to 0.00f,
+            0.5f to 0.00f,
+            0.7f to 0.00f,
+            1.0f to 0.00f,
         )
     }
 }

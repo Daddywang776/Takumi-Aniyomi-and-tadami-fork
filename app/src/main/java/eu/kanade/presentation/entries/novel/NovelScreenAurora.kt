@@ -80,6 +80,7 @@ import eu.kanade.presentation.entries.components.EntryBottomActionMenu
 import eu.kanade.presentation.entries.components.aurora.AuroraTitleHeroActionFab
 import eu.kanade.presentation.entries.components.aurora.AuroraZIndex
 import eu.kanade.presentation.entries.components.aurora.auroraPosterLongPress
+import eu.kanade.presentation.entries.components.aurora.auroraSpringClick
 import eu.kanade.presentation.entries.components.normalizeAuroraGlobalSearchQuery
 import eu.kanade.presentation.entries.manga.components.ScanlatorBranchSelector
 import eu.kanade.presentation.entries.novel.components.aurora.ChaptersHeader
@@ -424,7 +425,7 @@ fun NovelScreenAuroraImpl(
                                     isReading = isReading,
                                     modifier = Modifier.fillMaxWidth(),
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(if (colors.isDark) 8.dp else 16.dp))
                                 NovelStatsCard(
                                     novel = novel,
                                     rating = state.rating,
@@ -434,7 +435,7 @@ fun NovelScreenAuroraImpl(
                                     sourceName = state.source.name,
                                     modifier = Modifier.fillMaxWidth(),
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(if (colors.isDark) 8.dp else 16.dp))
                                 NovelInfoCard(
                                     novel = novel,
                                     translation = auroraEntryTranslation,
@@ -446,7 +447,7 @@ fun NovelScreenAuroraImpl(
                                     modifier = Modifier.fillMaxWidth(),
                                 )
 
-                                Spacer(modifier = Modifier.height(12.dp))
+                                Spacer(modifier = Modifier.height(if (colors.isDark) 12.dp else 16.dp))
                                 NovelActionCard(
                                     novel = novel,
                                     trackingCount = trackingCount,
@@ -1034,7 +1035,7 @@ fun NovelScreenAuroraImpl(
                                 sourceName = state.source.name,
                                 modifier = Modifier.fillMaxWidth(),
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(if (colors.isDark) 8.dp else 16.dp))
                             NovelInfoCard(
                                 novel = novel,
                                 translation = auroraEntryTranslation,
@@ -1046,7 +1047,7 @@ fun NovelScreenAuroraImpl(
                                 modifier = Modifier.fillMaxWidth(),
                             )
 
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(if (colors.isDark) 12.dp else 16.dp))
                             NovelActionCard(
                                 novel = novel,
                                 trackingCount = trackingCount,
@@ -1086,15 +1087,29 @@ fun NovelScreenAuroraImpl(
                                         .fillMaxWidth()
                                         .auroraCenteredMaxWidth(contentMaxWidthDp)
                                         .padding(horizontal = 16.dp, vertical = 6.dp)
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(Color.White.copy(alpha = 0.08f))
-                                        .clickable { onOpenSuggestions() }
+                                        .background(
+                                            brush = Brush.linearGradient(
+                                                colors = if (colors.isDark) {
+                                                    listOf(
+                                                        Color.White.copy(alpha = 0.12f),
+                                                        Color.White.copy(alpha = 0.08f),
+                                                    )
+                                                } else {
+                                                    listOf(
+                                                        colors.accent.copy(alpha = 0.15f),
+                                                        colors.accent.copy(alpha = 0.10f),
+                                                    )
+                                                },
+                                            ),
+                                            shape = RoundedCornerShape(12.dp),
+                                        )
+                                        .auroraSpringClick(onClick = onOpenSuggestions)
                                         .padding(vertical = 12.dp, horizontal = 16.dp),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     Text(
                                         text = stringResource(MR.strings.suggestions_similar_titles),
-                                        color = Color.White,
+                                        color = if (colors.isDark) Color.White else colors.accent,
                                         fontWeight = FontWeight.SemiBold,
                                         fontSize = 14.sp,
                                     )
@@ -2059,19 +2074,28 @@ private fun AuroraChapterListToggleButton(
     onClick: () -> Unit,
 ) {
     val colors = AuroraTheme.colors
+    val shape = RoundedCornerShape(16.dp)
 
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
+            .clip(shape)
             .background(
-                brush = Brush.linearGradient(
-                    colors = listOf(
-                        Color.White.copy(alpha = 0.12f),
-                        Color.White.copy(alpha = 0.08f),
-                    ),
+                brush = Brush.verticalGradient(
+                    colors = if (colors.isDark) {
+                        listOf(
+                            Color.White.copy(alpha = 0.12f),
+                            Color.White.copy(alpha = 0.08f),
+                        )
+                    } else {
+                        listOf(
+                            colors.surface.copy(alpha = 0.55f),
+                            colors.surface.copy(alpha = 0.30f),
+                        )
+                    },
                 ),
+                shape = shape,
             )
-            .clickable(onClick = onClick)
+            .auroraSpringClick(onClick = onClick)
             .padding(horizontal = 24.dp, vertical = 12.dp),
     ) {
         Text(

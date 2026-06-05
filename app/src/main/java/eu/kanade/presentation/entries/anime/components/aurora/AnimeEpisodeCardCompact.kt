@@ -343,7 +343,7 @@ fun AnimeEpisodeCardCompact(
             startActions = listOfNotNull(startSwipeAction),
             endActions = listOfNotNull(endSwipeAction),
             swipeThreshold = auroraSwipeActionThreshold,
-            backgroundUntilSwipeThreshold = MaterialTheme.colorScheme.surfaceContainerLowest,
+            backgroundUntilSwipeThreshold = Color.Transparent,
         ) {
             episodeCard()
         }

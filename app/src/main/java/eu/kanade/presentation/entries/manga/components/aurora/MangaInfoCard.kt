@@ -1,7 +1,6 @@
 package eu.kanade.presentation.entries.manga.components.aurora
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,15 +24,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import eu.kanade.presentation.entries.components.aurora.auroraSpringClick
 import eu.kanade.presentation.entries.translation.AuroraEntryTranslationState
 import eu.kanade.presentation.theme.AuroraTheme
 import tachiyomi.domain.entries.manga.model.Manga
 import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.i18n.stringResource
 
-/**
- * Info card containing description and genre tags.
- */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MangaInfoCard(
@@ -88,7 +85,7 @@ fun MangaInfoCard(
                             .weight(1f)
                             .then(
                                 if (descriptionToggleEnabled) {
-                                    Modifier.clickable { onToggleDescription() }
+                                    Modifier.auroraSpringClick { onToggleDescription() }
                                 } else {
                                     Modifier
                                 },
@@ -106,7 +103,7 @@ fun MangaInfoCard(
                             tint = colors.accent,
                             modifier = Modifier
                                 .padding(start = 8.dp)
-                                .clickable { onToggleDescription() },
+                                .auroraSpringClick { onToggleDescription() },
                         )
                     }
                 }
@@ -139,7 +136,7 @@ fun MangaInfoCard(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(8.dp))
                                         .background(colors.accent.copy(alpha = 0.15f))
-                                        .clickable { onTagSearch(genre) }
+                                        .auroraSpringClick { onTagSearch(genre) }
                                         .padding(horizontal = 8.dp, vertical = 4.dp),
                                 ) {
                                     Text(
@@ -163,7 +160,7 @@ fun MangaInfoCard(
                                 tint = colors.accent,
                                 modifier = Modifier
                                     .padding(start = 8.dp)
-                                    .clickable { onToggleGenres() },
+                                    .auroraSpringClick { onToggleGenres() },
                             )
                         }
                     }

@@ -99,6 +99,7 @@ import eu.kanade.presentation.entries.components.ResolvedCover
 import eu.kanade.presentation.entries.components.aurora.AuroraTitleHeroActionFab
 import eu.kanade.presentation.entries.components.aurora.AuroraZIndex
 import eu.kanade.presentation.entries.components.aurora.auroraPosterLongPress
+import eu.kanade.presentation.entries.components.aurora.auroraSpringClick
 import eu.kanade.presentation.entries.components.normalizeAuroraGlobalSearchQuery
 import eu.kanade.presentation.entries.components.resolveExternalMetadataCover
 import eu.kanade.presentation.entries.reduceTitleFastScrollOverlayAccumulator
@@ -857,34 +858,17 @@ fun AnimeScreenAuroraImpl(
                                                 .padding(16.dp),
                                             contentAlignment = Alignment.Center,
                                         ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .clip(RoundedCornerShape(16.dp))
-                                                    .background(
-                                                        brush = Brush.linearGradient(
-                                                            colors = listOf(
-                                                                Color.White.copy(alpha = 0.12f),
-                                                                Color.White.copy(alpha = 0.08f),
-                                                            ),
-                                                        ),
+                                            AuroraEpisodeListToggleButton(
+                                                text = if (episodesExpanded) {
+                                                    stringResource(AYMR.strings.action_show_less)
+                                                } else {
+                                                    stringResource(
+                                                        AYMR.strings.action_show_all_episodes,
+                                                        filteredEpisodes.size,
                                                     )
-                                                    .clickable { episodesExpanded = !episodesExpanded }
-                                                    .padding(horizontal = 24.dp, vertical = 12.dp),
-                                            ) {
-                                                Text(
-                                                    text = if (episodesExpanded) {
-                                                        stringResource(AYMR.strings.action_show_less)
-                                                    } else {
-                                                        stringResource(
-                                                            AYMR.strings.action_show_all_episodes,
-                                                            filteredEpisodes.size,
-                                                        )
-                                                    },
-                                                    color = colors.accent,
-                                                    fontSize = 14.sp,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                )
-                                            }
+                                                },
+                                                onClick = { episodesExpanded = !episodesExpanded },
+                                            )
                                         }
                                     }
                                 }
@@ -1059,15 +1043,29 @@ fun AnimeScreenAuroraImpl(
                                             .fillMaxWidth()
                                             .auroraCenteredMaxWidth(contentMaxWidthDp)
                                             .padding(horizontal = 16.dp, vertical = 6.dp)
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(Color.White.copy(alpha = 0.08f))
-                                            .clickable { onOpenSuggestions() }
+                                            .background(
+                                                brush = Brush.linearGradient(
+                                                    colors = if (colors.isDark) {
+                                                        listOf(
+                                                            Color.White.copy(alpha = 0.12f),
+                                                            Color.White.copy(alpha = 0.08f),
+                                                        )
+                                                    } else {
+                                                        listOf(
+                                                            colors.accent.copy(alpha = 0.15f),
+                                                            colors.accent.copy(alpha = 0.10f),
+                                                        )
+                                                    },
+                                                ),
+                                                shape = RoundedCornerShape(12.dp),
+                                            )
+                                            .auroraSpringClick(onClick = onOpenSuggestions)
                                             .padding(vertical = 12.dp, horizontal = 16.dp),
                                         contentAlignment = Alignment.Center,
                                     ) {
                                         Text(
                                             text = stringResource(MR.strings.suggestions_similar_titles),
-                                            color = Color.White,
+                                            color = if (colors.isDark) Color.White else colors.accent,
                                             fontWeight = FontWeight.SemiBold,
                                             fontSize = 14.sp,
                                         )
@@ -1205,34 +1203,17 @@ fun AnimeScreenAuroraImpl(
                                         .padding(16.dp),
                                     contentAlignment = Alignment.Center,
                                 ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(16.dp))
-                                            .background(
-                                                brush = Brush.linearGradient(
-                                                    colors = listOf(
-                                                        Color.White.copy(alpha = 0.12f),
-                                                        Color.White.copy(alpha = 0.08f),
-                                                    ),
-                                                ),
+                                    AuroraEpisodeListToggleButton(
+                                        text = if (episodesExpanded) {
+                                            stringResource(AYMR.strings.action_show_less)
+                                        } else {
+                                            stringResource(
+                                                AYMR.strings.action_show_all_episodes,
+                                                filteredEpisodes.size,
                                             )
-                                            .clickable { episodesExpanded = !episodesExpanded }
-                                            .padding(horizontal = 24.dp, vertical = 12.dp),
-                                    ) {
-                                        Text(
-                                            text = if (episodesExpanded) {
-                                                stringResource(AYMR.strings.action_show_less)
-                                            } else {
-                                                stringResource(
-                                                    AYMR.strings.action_show_all_episodes,
-                                                    filteredEpisodes.size,
-                                                )
-                                            },
-                                            color = colors.accent,
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                        )
-                                    }
+                                        },
+                                        onClick = { episodesExpanded = !episodesExpanded },
+                                    )
                                 }
                             }
                         }
@@ -1886,5 +1867,44 @@ private fun getLocalizedSeasonLabel(season: String): String {
             if (isRussian) "Экстры" else "Extras"
         }
         else -> season
+    }
+}
+
+@Composable
+private fun AuroraEpisodeListToggleButton(
+    text: String,
+    onClick: () -> Unit,
+) {
+    val colors = AuroraTheme.colors
+    val shape = RoundedCornerShape(16.dp)
+
+    Box(
+        modifier = Modifier
+            .clip(shape)
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = if (colors.isDark) {
+                        listOf(
+                            Color.White.copy(alpha = 0.12f),
+                            Color.White.copy(alpha = 0.08f),
+                        )
+                    } else {
+                        listOf(
+                            colors.surface.copy(alpha = 0.55f),
+                            colors.surface.copy(alpha = 0.30f),
+                        )
+                    },
+                ),
+                shape = shape,
+            )
+            .auroraSpringClick(onClick = onClick)
+            .padding(horizontal = 24.dp, vertical = 12.dp),
+    ) {
+        Text(
+            text = text,
+            color = colors.accent,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }

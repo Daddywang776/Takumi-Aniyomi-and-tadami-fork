@@ -28,21 +28,40 @@ fun GlassmorphismCard(
     content: @Composable () -> Unit,
 ) {
     val colors = AuroraTheme.colors
-    val bgColors = resolveAuroraDetailCardBackgroundColors(colors)
-    val borderColors = resolveAuroraDetailCardBorderColors(colors)
-    val tintedBgColors = overlayColor?.let { tintAuroraCardBackgroundColors(bgColors, it) } ?: bgColors
+    val shape = RoundedCornerShape(cornerRadius)
 
-    Box(
-        modifier = modifier
+    val cardModifier = if (!colors.isDark && !colors.isEInk) {
+        modifier
             .padding(horizontal = horizontalPadding, vertical = verticalPadding)
-            .clip(RoundedCornerShape(cornerRadius))
+            .clip(shape)
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        colors.surface.copy(alpha = 0.55f),
+                        colors.surface.copy(alpha = 0.30f),
+                    ),
+                ),
+                shape = shape,
+            )
+            .padding(innerPadding)
+    } else {
+        val bgColors = resolveAuroraDetailCardBackgroundColors(colors)
+        val borderColors = resolveAuroraDetailCardBorderColors(colors)
+        val tintedBgColors = overlayColor?.let { tintAuroraCardBackgroundColors(bgColors, it) } ?: bgColors
+        modifier
+            .padding(horizontal = horizontalPadding, vertical = verticalPadding)
+            .clip(shape)
             .background(brush = Brush.linearGradient(colors = tintedBgColors))
             .border(
                 width = 1.dp,
                 brush = Brush.linearGradient(colors = borderColors),
-                shape = RoundedCornerShape(cornerRadius),
+                shape = shape,
             )
-            .padding(innerPadding),
+            .padding(innerPadding)
+    }
+
+    Box(
+        modifier = cardModifier,
     ) {
         content()
     }

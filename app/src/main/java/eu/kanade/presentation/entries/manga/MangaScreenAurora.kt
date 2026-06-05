@@ -79,6 +79,7 @@ import eu.kanade.presentation.entries.components.EntryBottomActionMenu
 import eu.kanade.presentation.entries.components.aurora.AuroraTitleHeroActionFab
 import eu.kanade.presentation.entries.components.aurora.AuroraZIndex
 import eu.kanade.presentation.entries.components.aurora.auroraPosterLongPress
+import eu.kanade.presentation.entries.components.aurora.auroraSpringClick
 import eu.kanade.presentation.entries.components.normalizeAuroraGlobalSearchQuery
 import eu.kanade.presentation.entries.components.resolveExternalMetadataCover
 import eu.kanade.presentation.entries.manga.components.ChapterDownloadAction
@@ -459,12 +460,12 @@ fun MangaScreenAuroraImpl(
                                     hasProgress = detailsSnapshot.progress?.hasProgress == true,
                                     onContinueReading = onContinueReading,
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(if (colors.isDark) 8.dp else 16.dp))
                                 MangaStatsCard(
                                     detailsSnapshot = detailsSnapshot,
                                     modifier = Modifier.fillMaxWidth(),
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(if (colors.isDark) 8.dp else 16.dp))
                                 MangaInfoCard(
                                     manga = manga,
                                     translation = auroraEntryTranslation,
@@ -477,7 +478,7 @@ fun MangaScreenAuroraImpl(
                                     onToggleGenres = { genresExpanded = !genresExpanded },
                                     modifier = Modifier.fillMaxWidth(),
                                 )
-                                Spacer(modifier = Modifier.height(12.dp))
+                                Spacer(modifier = Modifier.height(if (colors.isDark) 12.dp else 16.dp))
                                 MangaActionCard(
                                     manga = manga,
                                     trackingCount = state.trackingCount,
@@ -619,34 +620,17 @@ fun MangaScreenAuroraImpl(
                                                 .padding(16.dp),
                                             contentAlignment = Alignment.Center,
                                         ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .clip(RoundedCornerShape(16.dp))
-                                                    .background(
-                                                        brush = Brush.linearGradient(
-                                                            colors = listOf(
-                                                                Color.White.copy(alpha = 0.12f),
-                                                                Color.White.copy(alpha = 0.08f),
-                                                            ),
-                                                        ),
+                                            AuroraChapterListToggleButton(
+                                                text = if (chaptersExpanded) {
+                                                    stringResource(AYMR.strings.action_show_less)
+                                                } else {
+                                                    stringResource(
+                                                        AYMR.strings.action_show_all_chapters,
+                                                        chapters.size,
                                                     )
-                                                    .clickable { chaptersExpanded = !chaptersExpanded }
-                                                    .padding(horizontal = 24.dp, vertical = 12.dp),
-                                            ) {
-                                                Text(
-                                                    text = if (chaptersExpanded) {
-                                                        stringResource(AYMR.strings.action_show_less)
-                                                    } else {
-                                                        stringResource(
-                                                            AYMR.strings.action_show_all_chapters,
-                                                            chapters.size,
-                                                        )
-                                                    },
-                                                    color = colors.accent,
-                                                    fontSize = 14.sp,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                )
-                                            }
+                                                },
+                                                onClick = { chaptersExpanded = !chaptersExpanded },
+                                            )
                                         }
                                     }
                                 }
@@ -719,7 +703,7 @@ fun MangaScreenAuroraImpl(
                                     detailsSnapshot = detailsSnapshot,
                                     modifier = Modifier.fillMaxWidth(),
                                 )
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.height(if (colors.isDark) 8.dp else 16.dp))
                                 MangaInfoCard(
                                     manga = manga,
                                     translation = auroraEntryTranslation,
@@ -731,7 +715,7 @@ fun MangaScreenAuroraImpl(
                                     modifier = Modifier.fillMaxWidth(),
                                 )
 
-                                Spacer(modifier = Modifier.height(12.dp))
+                                Spacer(modifier = Modifier.height(if (colors.isDark) 12.dp else 16.dp))
                                 MangaActionCard(
                                     manga = manga,
                                     trackingCount = state.trackingCount,
@@ -770,15 +754,29 @@ fun MangaScreenAuroraImpl(
                                             .fillMaxWidth()
                                             .auroraCenteredMaxWidth(contentMaxWidthDp)
                                             .padding(horizontal = 16.dp, vertical = 6.dp)
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(Color.White.copy(alpha = 0.08f))
-                                            .clickable { onOpenSuggestions() }
+                                            .background(
+                                                brush = Brush.linearGradient(
+                                                    colors = if (colors.isDark) {
+                                                        listOf(
+                                                            Color.White.copy(alpha = 0.12f),
+                                                            Color.White.copy(alpha = 0.08f),
+                                                        )
+                                                    } else {
+                                                        listOf(
+                                                            colors.accent.copy(alpha = 0.15f),
+                                                            colors.accent.copy(alpha = 0.10f),
+                                                        )
+                                                    },
+                                                ),
+                                                shape = RoundedCornerShape(12.dp),
+                                            )
+                                            .auroraSpringClick(onClick = onOpenSuggestions)
                                             .padding(vertical = 12.dp, horizontal = 16.dp),
                                         contentAlignment = Alignment.Center,
                                     ) {
                                         Text(
                                             text = stringResource(MR.strings.suggestions_similar_titles),
-                                            color = Color.White,
+                                            color = if (colors.isDark) Color.White else colors.accent,
                                             fontWeight = FontWeight.SemiBold,
                                             fontSize = 14.sp,
                                         )
@@ -901,31 +899,14 @@ fun MangaScreenAuroraImpl(
                                         .padding(16.dp),
                                     contentAlignment = Alignment.Center,
                                 ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(16.dp))
-                                            .background(
-                                                brush = Brush.linearGradient(
-                                                    colors = listOf(
-                                                        Color.White.copy(alpha = 0.12f),
-                                                        Color.White.copy(alpha = 0.08f),
-                                                    ),
-                                                ),
-                                            )
-                                            .clickable { chaptersExpanded = !chaptersExpanded }
-                                            .padding(horizontal = 24.dp, vertical = 12.dp),
-                                    ) {
-                                        Text(
-                                            text = if (chaptersExpanded) {
-                                                stringResource(AYMR.strings.action_show_less)
-                                            } else {
-                                                stringResource(AYMR.strings.action_show_all_chapters, chapters.size)
-                                            },
-                                            color = colors.accent,
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                        )
-                                    }
+                                    AuroraChapterListToggleButton(
+                                        text = if (chaptersExpanded) {
+                                            stringResource(AYMR.strings.action_show_less)
+                                        } else {
+                                            stringResource(AYMR.strings.action_show_all_chapters, chapters.size)
+                                        },
+                                        onClick = { chaptersExpanded = !chaptersExpanded },
+                                    )
                                 }
                             }
                         }
@@ -1407,6 +1388,45 @@ private fun AuroraActionButton(
             contentDescription = contentDescription,
             tint = tint,
             modifier = Modifier.size(22.dp),
+        )
+    }
+}
+
+@Composable
+private fun AuroraChapterListToggleButton(
+    text: String,
+    onClick: () -> Unit,
+) {
+    val colors = AuroraTheme.colors
+    val shape = RoundedCornerShape(16.dp)
+
+    Box(
+        modifier = Modifier
+            .clip(shape)
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = if (colors.isDark) {
+                        listOf(
+                            Color.White.copy(alpha = 0.12f),
+                            Color.White.copy(alpha = 0.08f),
+                        )
+                    } else {
+                        listOf(
+                            colors.surface.copy(alpha = 0.55f),
+                            colors.surface.copy(alpha = 0.30f),
+                        )
+                    },
+                ),
+                shape = shape,
+            )
+            .auroraSpringClick(onClick = onClick)
+            .padding(horizontal = 24.dp, vertical = 12.dp),
+    ) {
+        Text(
+            text = text,
+            color = colors.accent,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
         )
     }
 }

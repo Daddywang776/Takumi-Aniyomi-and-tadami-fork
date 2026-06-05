@@ -287,7 +287,7 @@ object NovelChapterCardCompactUi {
                 startActions = listOfNotNull(startSwipeAction),
                 endActions = listOfNotNull(endSwipeAction),
                 swipeThreshold = novelSwipeActionThreshold,
-                backgroundUntilSwipeThreshold = MaterialTheme.colorScheme.surfaceContainerLowest,
+                backgroundUntilSwipeThreshold = Color.Transparent,
             ) {
                 chapterCard()
             }

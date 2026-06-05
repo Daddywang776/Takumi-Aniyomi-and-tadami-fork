@@ -17,6 +17,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
@@ -24,6 +26,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImagePainter
+import eu.kanade.domain.ui.model.EInkProfile
 import eu.kanade.presentation.components.AuroraCoverPlaceholderVariant
 import eu.kanade.presentation.components.rememberAuroraCoverPlaceholderPainter
 import eu.kanade.presentation.entries.components.aurora.AuroraPosterBackgroundSpec
@@ -31,7 +34,6 @@ import eu.kanade.presentation.entries.components.aurora.auroraPosterBackgroundSp
 import eu.kanade.presentation.entries.components.aurora.auroraPosterBlur
 import eu.kanade.presentation.entries.components.aurora.buildAuroraPosterBackgroundRequest
 import eu.kanade.presentation.entries.components.aurora.rememberAuroraPosterBackgroundPainter
-import eu.kanade.presentation.entries.components.aurora.rememberAuroraPosterColorFilter
 import eu.kanade.presentation.entries.components.aurora.resolveAuroraPosterScrimBrush
 import eu.kanade.presentation.novel.sourceAwareNovelCoverModel
 import eu.kanade.presentation.theme.AuroraTheme
@@ -77,11 +79,7 @@ fun FullscreenPosterBackground(
         is String -> posterModel.isNotBlank()
         else -> true
     }
-    val posterColorFilter = rememberAuroraPosterColorFilter()
-    var previousSuccessfulBackgroundSpec by remember(novel.id) {
-        mutableStateOf<AuroraPosterBackgroundSpec?>(null)
-    }
-
+    val colors = AuroraTheme.colors
     val hasScrolledAway = firstVisibleItemIndex > 0 || scrollOffset > 100
 
     val dimAlpha by animateFloatAsState(
@@ -104,6 +102,25 @@ fun FullscreenPosterBackground(
         ),
         label = "blurOverlayAlpha",
     )
+
+    val posterColorFilter = remember(colors.isDark, colors.eInkProfile, blurOverlayAlpha) {
+        if (colors.eInkProfile == EInkProfile.MONOCHROME) {
+            ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+        } else if (!colors.isDark) {
+            ColorFilter.colorMatrix(
+                ColorMatrix().apply {
+                    setToSaturation(1f - (blurOverlayAlpha * 0.35f))
+                },
+            )
+        } else {
+            null
+        }
+    }
+
+    var previousSuccessfulBackgroundSpec by remember(novel.id) {
+        mutableStateOf<AuroraPosterBackgroundSpec?>(null)
+    }
+
     val containerWidthPx = with(density) { configuration.screenWidthDp.dp.roundToPx() }
     val containerHeightPx = with(density) { configuration.screenHeightDp.dp.roundToPx() }
     val backgroundSpec = remember(
@@ -134,7 +151,6 @@ fun FullscreenPosterBackground(
                 },
             ),
     ) {
-        val colors = AuroraTheme.colors
         val scrimColor = if (colors.isDark) Color.Black else colors.background
 
         if (isPosterLoadable) {
@@ -207,7 +223,7 @@ fun FullscreenPosterBackground(
                 alpha = blurOverlayAlpha,
                 modifier = Modifier
                     .fillMaxSize()
-                    .auroraPosterBlur(20.dp),
+                    .auroraPosterBlur(if (colors.isDark) 20.dp else 32.dp),
             )
         } else {
             Image(
@@ -248,7 +264,7 @@ fun FullscreenPosterBackground(
                     if (colors.isDark) {
                         Color.Black.copy(alpha = dimAlpha)
                     } else {
-                        colors.background.copy(alpha = dimAlpha * 0.35f)
+                        colors.background.copy(alpha = dimAlpha * 0.60f)
                     },
                 ),
         )

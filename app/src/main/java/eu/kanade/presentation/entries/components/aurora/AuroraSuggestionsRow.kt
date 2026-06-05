@@ -46,6 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
+import eu.kanade.presentation.theme.AuroraTheme
 import eu.kanade.tachiyomi.data.suggestions.SuggestionItem
 import eu.kanade.tachiyomi.data.suggestions.SuggestionState
 import kotlinx.coroutines.delay
@@ -67,6 +68,8 @@ fun AuroraSuggestionsRow(
     if (state is SuggestionState.Idle || state is SuggestionState.Disabled) return
     if (state is SuggestionState.Success && state.items.isEmpty()) return
 
+    val colors = AuroraTheme.colors
+
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
@@ -75,7 +78,7 @@ fun AuroraSuggestionsRow(
         ) {
             Text(
                 text = stringResource(MR.strings.suggestions_similar_titles),
-                color = Color.White.copy(alpha = 0.9f),
+                color = if (colors.isDark) Color.White.copy(alpha = 0.9f) else colors.textPrimary,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 15.sp,
             )
@@ -83,28 +86,33 @@ fun AuroraSuggestionsRow(
                 if (state is SuggestionState.Error) {
                     Text(
                         text = stringResource(MR.strings.action_retry),
-                        color = Color(0xFF64B5F6),
+                        color = colors.accent,
                         fontWeight = FontWeight.Bold,
                         fontSize = 13.sp,
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .clickable(onClick = onRetryClick)
                             .padding(horizontal = 12.dp, vertical = 6.dp)
-                            .background(Color.White.copy(alpha = 0.1f)),
+                            .background(
+                                if (colors.isDark) {
+                                    Color.White.copy(alpha = 0.1f)
+                                } else {
+                                    colors.accent.copy(alpha = 0.15f)
+                                },
+                            ),
                     )
                 }
+                val buttonModifier = Modifier
+                    .auroraSpringClick(onClick = onOpenSuggestions)
+                    .padding(4.dp)
                 Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable(onClick = onOpenSuggestions)
-                        .background(Color.White.copy(alpha = 0.1f)),
+                    modifier = buttonModifier,
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                         contentDescription = stringResource(MR.strings.action_open_suggestions),
-                        tint = Color.White.copy(alpha = 0.9f),
+                        tint = colors.accent,
                     )
                 }
             }
@@ -121,12 +129,21 @@ fun AuroraSuggestionsRow(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 8.dp)
-                        .background(Color.White.copy(alpha = 0.05f), RoundedCornerShape(8.dp))
+                        .background(
+                            if (colors.isDark) {
+                                Color.White.copy(
+                                    alpha = 0.05f,
+                                )
+                            } else {
+                                colors.textSecondary.copy(alpha = 0.08f)
+                            },
+                            RoundedCornerShape(8.dp),
+                        )
                         .padding(12.dp),
                 ) {
                     Text(
                         text = state.message ?: stringResource(MR.strings.suggestions_empty_state),
-                        color = Color.White.copy(alpha = 0.6f),
+                        color = if (colors.isDark) Color.White.copy(alpha = 0.6f) else colors.textSecondary,
                         fontSize = 13.sp,
                     )
                 }
@@ -141,7 +158,7 @@ fun AuroraSuggestionsRow(
                 ) {
                     Text(
                         text = state.message,
-                        color = Color.White.copy(alpha = 0.8f),
+                        color = if (colors.isDark) Color.White.copy(alpha = 0.8f) else colors.textPrimary,
                         fontSize = 13.sp,
                     )
                 }
@@ -285,6 +302,7 @@ private fun getCoverModel(item: SuggestionItem): Any? {
 
 @Composable
 private fun AuroraSuggestionsShimmer() {
+    val colors = AuroraTheme.colors
     val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
     val shimmerAlpha by infiniteTransition.animateFloat(
         initialValue = 0.3f,
@@ -306,7 +324,16 @@ private fun AuroraSuggestionsShimmer() {
                     .width(CardWidth)
                     .height(CardHeight)
                     .clip(CardShape)
-                    .background(Color.White.copy(alpha = shimmerAlpha)),
+                    .background(
+                        if (colors.isDark) {
+                            Color.White.copy(alpha = shimmerAlpha)
+                        } else {
+                            Color.Black.copy(
+                                alpha =
+                                shimmerAlpha * 0.12f,
+                            )
+                        },
+                    ),
             )
         }
     }
