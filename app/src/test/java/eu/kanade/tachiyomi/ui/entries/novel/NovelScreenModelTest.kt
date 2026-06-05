@@ -1442,6 +1442,40 @@ class NovelScreenModelTest {
         }
     }
 
+    @Test
+    fun `toggle chapter read records novel activity`() {
+        runBlocking {
+            val novel = novelForResumeTests(402L)
+            val chapters = listOf(
+                novelChapter(id = 1L, novelId = novel.id, chapterNumber = 1.0, read = false),
+            )
+            val activityDataRepository =
+                mockk<tachiyomi.domain.achievement.repository.ActivityDataRepository>(relaxed = true)
+            val screenModel = createResumeScreenModel(
+                novel = novel,
+                chapters = chapters,
+                activityDataRepository = activityDataRepository,
+            )
+
+            try {
+                awaitResumeScreenModel(screenModel)
+
+                screenModel.toggleChapterRead(1L)
+                delay(100)
+
+                coVerify(exactly = 1) {
+                    activityDataRepository.recordReading(
+                        id = 1L,
+                        chaptersCount = 1,
+                        durationMs = 0L,
+                    )
+                }
+            } finally {
+                screenModel.onDispose()
+            }
+        }
+    }
+
     private class FakeLifecycleOwner : LifecycleOwner {
         private class NoopStartedLifecycle : Lifecycle() {
             override val currentState: State
@@ -1475,6 +1509,7 @@ class NovelScreenModelTest {
         },
         snackbarHostState: SnackbarHostState = SnackbarHostState(),
         source: NovelSource? = null,
+        activityDataRepository: tachiyomi.domain.achievement.repository.ActivityDataRepository = mockk(relaxed = true),
     ): NovelScreenModel {
         val novelRepository = FakeNovelRepository(novel)
         val preferenceStore = FakePreferenceStore()
@@ -1580,6 +1615,7 @@ class NovelScreenModelTest {
             translationQueueManager = translationQueueManager,
             suggestionCoordinator = mockk<SuggestionCoordinator>(relaxed = true),
             sourcePreferences = sourcePreferences,
+            activityDataRepository = activityDataRepository,
         )
     }
 

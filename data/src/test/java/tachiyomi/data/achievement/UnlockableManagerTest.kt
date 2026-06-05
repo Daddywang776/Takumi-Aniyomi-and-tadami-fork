@@ -23,7 +23,9 @@ class UnlockableManagerTest {
         override suspend fun updateXP(userId: String, totalXP: Int, currentXP: Int, level: Int, xpToNextLevel: Int) {}
         override suspend fun addTitle(userId: String, title: String) {}
         override suspend fun addBadge(userId: String, badge: String) {}
+        override suspend fun removeBadge(userId: String, badge: String) {}
         override suspend fun addTheme(userId: String, themeId: String) {}
+        override suspend fun removeTheme(userId: String, themeId: String) {}
         override suspend fun updateAchievementCounts(userId: String, unlocked: Int, total: Int) {}
         override suspend fun deleteProfile(userId: String) {}
     }

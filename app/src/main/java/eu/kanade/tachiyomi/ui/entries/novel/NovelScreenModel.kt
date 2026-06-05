@@ -106,6 +106,7 @@ import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.data.achievement.handler.AchievementEventBus
 import tachiyomi.domain.achievement.model.AchievementEvent
+import tachiyomi.domain.achievement.repository.ActivityDataRepository
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.category.novel.interactor.GetNovelCategories
 import tachiyomi.domain.category.novel.interactor.SetNovelCategories
@@ -224,6 +225,7 @@ class NovelScreenModel(
     private val novelReaderPreferences: NovelReaderPreferences = Injekt.get(),
     private val translationQueueManager: TranslationQueueManager = Injekt.get(),
     private val eventBus: AchievementEventBus? = runCatching { Injekt.get<AchievementEventBus>() }.getOrNull(),
+    private val activityDataRepository: ActivityDataRepository = Injekt.get(),
     private val suggestionCoordinator: SuggestionCoordinator = Injekt.get(),
     private val sourcePreferences: SourcePreferences = Injekt.get(),
     val snackbarHostState: SnackbarHostState = SnackbarHostState(),
@@ -1620,6 +1622,11 @@ class NovelScreenModel(
                 if (shouldEmitCompletion) {
                     eventBus?.tryEmit(AchievementEvent.NovelCompleted(chapter.novelId))
                 }
+                activityDataRepository.recordReading(
+                    id = chapter.id,
+                    chaptersCount = 1,
+                    durationMs = 0L,
+                )
             }
             if (newRead) {
                 maybeTrackMarkedRead(chapter.chapterNumber)
@@ -1676,6 +1683,11 @@ class NovelScreenModel(
                             novelId = chapter.novelId,
                             chapterNumber = chapter.chapterNumber.toInt(),
                         ),
+                    )
+                    activityDataRepository.recordReading(
+                        id = chapter.id,
+                        chaptersCount = 1,
+                        durationMs = 0L,
                     )
                 }
                 eventBus?.tryEmit(AchievementEvent.NovelCompleted(chaptersBecomingRead.first().novelId))
@@ -1774,6 +1786,11 @@ class NovelScreenModel(
                             chapterNumber = chapter.chapterNumber.toInt(),
                         ),
                     )
+                    activityDataRepository.recordReading(
+                        id = chapter.id,
+                        chaptersCount = 1,
+                        durationMs = 0L,
+                    )
                 }
                 val markedIds = chaptersToMarkRead.mapTo(hashSetOf()) { it.id }
                 val willComplete = state.chapters.all { it.read || it.id in markedIds }
@@ -1822,6 +1839,11 @@ class NovelScreenModel(
                             novelId = chapter.novelId,
                             chapterNumber = chapter.chapterNumber.toInt(),
                         ),
+                    )
+                    activityDataRepository.recordReading(
+                        id = chapter.id,
+                        chaptersCount = 1,
+                        durationMs = 0L,
                     )
                 }
                 val markedIds = chaptersToAchieve.mapTo(hashSetOf()) { it.id }

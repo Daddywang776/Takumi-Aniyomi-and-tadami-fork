@@ -134,6 +134,7 @@ import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.data.achievement.handler.AchievementEventBus
 import tachiyomi.domain.achievement.model.AchievementEvent
+import tachiyomi.domain.achievement.repository.ActivityDataRepository
 import tachiyomi.domain.entries.novel.interactor.GetNovel
 import tachiyomi.domain.entries.novel.model.Novel
 import tachiyomi.domain.history.novel.model.NovelHistoryUpdate
@@ -182,6 +183,7 @@ class NovelReaderScreenModel(
         novelReaderPreferences = novelReaderPreferences,
     ),
     private val eventBus: AchievementEventBus? = runCatching { Injekt.get<AchievementEventBus>() }.getOrNull(),
+    private val activityDataRepository: ActivityDataRepository = Injekt.get(),
     private val isSystemDark: () -> Boolean = { Injekt.get<Application>().isNightMode() },
     private val geminiTranslationService: GeminiTranslationService = run {
         val app = Injekt.get<Application>()
@@ -1713,6 +1715,11 @@ class NovelReaderScreenModel(
                 if (nextUpdate.emitNovelCompleted) {
                     eventBus?.tryEmit(AchievementEvent.NovelCompleted(nextUpdate.novelId))
                 }
+                activityDataRepository.recordReading(
+                    id = nextUpdate.chapterId,
+                    chaptersCount = 1,
+                    durationMs = nextUpdate.sessionReadDurationMs.coerceAtLeast(0L),
+                )
                 if (Injekt.get<eu.kanade.domain.track.service.TrackPreferences>().autoUpdateTrack().get()) {
                     val context = Injekt.get<Application>()
                     Injekt.get<TrackNovelChapter>().await(

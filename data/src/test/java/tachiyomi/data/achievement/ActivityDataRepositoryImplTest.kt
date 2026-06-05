@@ -241,6 +241,17 @@ class ActivityDataRepositoryImplTest {
     }
 
     @Test
+    fun `recordReading contributes to month stats regardless of content source`() = runTest {
+        repository.recordReading(id = 10L, chaptersCount = 2, durationMs = 120000)
+        repository.recordReading(id = 11L, chaptersCount = 3, durationMs = 180000)
+
+        val stats = repository.getCurrentMonthStats()
+
+        assertEquals(5, stats.chaptersRead)
+        assertEquals(5, stats.timeInAppMinutes)
+    }
+
+    @Test
     fun `activity level calculation is correct`() = runTest {
         val date = LocalDate.now()
 

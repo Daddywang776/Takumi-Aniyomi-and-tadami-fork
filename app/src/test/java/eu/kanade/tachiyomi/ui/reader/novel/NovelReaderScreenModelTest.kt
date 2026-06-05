@@ -66,6 +66,7 @@ import org.junit.jupiter.api.parallel.Isolated
 import tachiyomi.core.common.preference.InMemoryPreferenceStore
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
+import tachiyomi.domain.achievement.repository.ActivityDataRepository
 import tachiyomi.domain.entries.novel.interactor.GetNovel
 import tachiyomi.domain.entries.novel.model.Novel
 import tachiyomi.domain.entries.novel.model.NovelUpdate
@@ -1643,6 +1644,7 @@ class NovelReaderScreenModelTest {
                 url = "https://example.org/ch1",
             )
             val chapterRepo = FakeNovelChapterRepository(chapter)
+            val activityDataRepository = mockk<ActivityDataRepository>(relaxed = true)
 
             val screenModel = trackedNovelReaderScreenModel(
                 chapterId = chapter.id,
@@ -1652,6 +1654,7 @@ class NovelReaderScreenModelTest {
                 pluginStorage = FakeNovelPluginStorage(emptyList()),
                 novelReaderPreferences = createNovelReaderPreferences(),
                 isSystemDark = { false },
+                activityDataRepository = activityDataRepository,
             )
 
             withTimeout(1_000) {
@@ -1661,10 +1664,18 @@ class NovelReaderScreenModelTest {
             }
 
             screenModel.updateReadingProgress(currentIndex = 9, totalItems = 10)
+            screenModel.awaitPendingProgressPersistence()
             yield()
 
             chapterRepo.lastUpdate?.read shouldBe true
             chapterRepo.lastUpdate?.lastPageRead shouldBe 9L
+            coVerify(exactly = 1) {
+                activityDataRepository.recordReading(
+                    id = chapter.id,
+                    chaptersCount = 1,
+                    durationMs = match { it >= 0L },
+                )
+            }
         }
     }
 
@@ -2745,6 +2756,7 @@ class NovelReaderScreenModelTest {
         googleTranslationService: GoogleTranslationService = this.googleTranslationService,
         translationQueueManager: TranslationQueueManager = this.translationQueueManager,
         novelDownloadManager: NovelDownloadManager? = null,
+        activityDataRepository: ActivityDataRepository = mockk(relaxed = true),
     ): NovelReaderScreenModel {
         ensureReaderScreenModelDependencies()
         return NovelReaderScreenModel(
@@ -2770,6 +2782,7 @@ class NovelReaderScreenModelTest {
             deepSeekModelsService = deepSeekModelsService,
             googleTranslationService = googleTranslationService,
             translationQueueManager = translationQueueManager,
+            activityDataRepository = activityDataRepository,
         ).also(activeScreenModels::add)
     }
 

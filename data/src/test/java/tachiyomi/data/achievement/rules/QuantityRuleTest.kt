@@ -53,4 +53,14 @@ class QuantityRuleTest {
 
         result shouldBe 12
     }
+
+    @Test
+    fun `quantity rule uses chapter count for manga chapter events`() = runTest {
+        val context = mockk<RuleContext>()
+        coEvery { context.getChaptersRead(AchievementCategory.MANGA) } returns 42
+
+        val rule = QuantityRule("read_10_chapters", AchievementCategory.MANGA)
+
+        rule.evaluateDelta(AchievementEvent.ChapterRead(1L, 1), 0, context) shouldBe RuleResult.Update(42)
+    }
 }

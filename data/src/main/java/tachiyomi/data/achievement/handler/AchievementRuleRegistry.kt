@@ -2,6 +2,7 @@ package tachiyomi.data.achievement.handler
 
 import tachiyomi.data.achievement.rules.BalancedRule
 import tachiyomi.data.achievement.rules.ChadRule
+import tachiyomi.data.achievement.rules.CompletionCountRule
 import tachiyomi.data.achievement.rules.CrybabyRule
 import tachiyomi.data.achievement.rules.DekuRule
 import tachiyomi.data.achievement.rules.DiversityRule
@@ -40,24 +41,24 @@ class AchievementRuleRegistry(
             QuantityRule("read_100_chapters", AchievementCategory.MANGA),
             QuantityRule("read_500_chapters", AchievementCategory.MANGA),
             QuantityRule("read_1000_chapters", AchievementCategory.MANGA),
-            QuantityRule("complete_10_manga", AchievementCategory.MANGA),
-            QuantityRule("complete_50_manga", AchievementCategory.MANGA),
+            CompletionCountRule("complete_10_manga", AchievementCategory.MANGA),
+            CompletionCountRule("complete_50_manga", AchievementCategory.MANGA),
 
             QuantityRule("read_10_novel_chapters", AchievementCategory.NOVEL),
             QuantityRule("read_50_novel_chapters", AchievementCategory.NOVEL),
             QuantityRule("read_100_novel_chapters", AchievementCategory.NOVEL),
             QuantityRule("read_500_novel_chapters", AchievementCategory.NOVEL),
             QuantityRule("read_1000_novel_chapters", AchievementCategory.NOVEL),
-            QuantityRule("complete_10_novel", AchievementCategory.NOVEL),
-            QuantityRule("complete_50_novel", AchievementCategory.NOVEL),
+            CompletionCountRule("complete_10_novel", AchievementCategory.NOVEL),
+            CompletionCountRule("complete_50_novel", AchievementCategory.NOVEL),
 
             QuantityRule("watch_10_episodes", AchievementCategory.ANIME),
             QuantityRule("watch_50_episodes", AchievementCategory.ANIME),
             QuantityRule("watch_100_episodes", AchievementCategory.ANIME),
             QuantityRule("watch_500_episodes", AchievementCategory.ANIME),
             QuantityRule("watch_1000_episodes", AchievementCategory.ANIME),
-            QuantityRule("complete_10_anime", AchievementCategory.ANIME),
-            QuantityRule("complete_50_anime", AchievementCategory.ANIME),
+            CompletionCountRule("complete_10_anime", AchievementCategory.ANIME),
+            CompletionCountRule("complete_50_anime", AchievementCategory.ANIME),
 
             QuantityRule("content_master", AchievementCategory.BOTH),
             QuantityRule("content_god", AchievementCategory.BOTH),
