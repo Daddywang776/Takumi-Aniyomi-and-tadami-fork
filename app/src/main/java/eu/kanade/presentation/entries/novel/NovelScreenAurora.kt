@@ -73,6 +73,7 @@ import androidx.compose.ui.zIndex
 import eu.kanade.domain.entries.novel.model.normalizeNovelDescription
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.domain.ui.UiPreferences
+import eu.kanade.presentation.components.auroraMenuRimLightBrush
 import eu.kanade.presentation.entries.TitleFastScrollOverlayAccumulator
 import eu.kanade.presentation.entries.components.AuroraEntryDropdownMenu
 import eu.kanade.presentation.entries.components.AuroraEntryDropdownMenuItem
@@ -82,6 +83,8 @@ import eu.kanade.presentation.entries.components.aurora.AuroraTitleHeroActionFab
 import eu.kanade.presentation.entries.components.aurora.AuroraZIndex
 import eu.kanade.presentation.entries.components.aurora.auroraPosterLongPress
 import eu.kanade.presentation.entries.components.aurora.auroraSpringClick
+import eu.kanade.presentation.entries.components.aurora.resolveAuroraDetailCardBackgroundColors
+import eu.kanade.presentation.entries.components.aurora.resolveAuroraDetailCardBorderColors
 import eu.kanade.presentation.entries.components.normalizeAuroraGlobalSearchQuery
 import eu.kanade.presentation.entries.manga.components.ScanlatorBranchSelector
 import eu.kanade.presentation.entries.novel.components.aurora.ChaptersHeader
@@ -2076,9 +2079,21 @@ private fun NovelAuroraChapterGroupCard(
                 shape = shape,
             )
     } else {
+        val bgColors = resolveAuroraDetailCardBackgroundColors(colors)
+        val borderColors = resolveAuroraDetailCardBorderColors(colors)
+        val borderBrush = if (colors.isDark) {
+            auroraMenuRimLightBrush(colors)
+        } else {
+            Brush.linearGradient(colors = borderColors)
+        }
         modifier
             .clip(shape)
-            .background(colors.surface.copy(alpha = 0.86f))
+            .background(brush = Brush.linearGradient(colors = bgColors))
+            .border(
+                width = 1.dp,
+                brush = borderBrush,
+                shape = shape,
+            )
     }
 
     Box(

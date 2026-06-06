@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import eu.kanade.presentation.components.auroraMenuRimLightBrush
 import eu.kanade.presentation.entries.components.aurora.resolveAuroraDetailCardBackgroundColors
 import eu.kanade.presentation.entries.components.aurora.resolveAuroraDetailCardBorderColors
 import eu.kanade.presentation.theme.AuroraTheme
@@ -92,13 +93,18 @@ fun GlassmorphismCard(
         val bgColors = resolveAuroraDetailCardBackgroundColors(colors)
         val borderColors = resolveAuroraDetailCardBorderColors(colors)
         val tintedBgColors = overlayColor?.let { tintAuroraCardBackgroundColors(bgColors, it) } ?: bgColors
+        val borderBrush = if (colors.isDark) {
+            auroraMenuRimLightBrush(colors)
+        } else {
+            Brush.linearGradient(colors = borderColors)
+        }
         modifier
             .padding(horizontal = horizontalPadding, vertical = verticalPadding)
             .clip(shape)
             .background(brush = Brush.linearGradient(colors = tintedBgColors))
             .border(
                 width = 1.dp,
-                brush = Brush.linearGradient(colors = borderColors),
+                brush = borderBrush,
                 shape = shape,
             )
             .padding(innerPadding)
