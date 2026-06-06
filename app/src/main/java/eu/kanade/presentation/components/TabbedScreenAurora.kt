@@ -64,8 +64,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -620,15 +623,49 @@ internal fun AuroraTabRow(
             .then(
                 if (isLightTheme) {
                     Modifier
-                        .shadow(
-                            elevation = 6.dp,
-                            shape = tabShape,
-                        )
+                        .drawBehind {
+                            val radius = 28.dp.toPx()
+                            val cornerRadius = CornerRadius(radius, radius)
+
+                            val neutralOffsetY = 3.dp.toPx()
+                            val warmOffsetY = 5.dp.toPx()
+
+                            val neutralInset = 1.dp.toPx()
+                            val warmInset = 3.dp.toPx()
+
+                            // 1. Neutral shadow
+                            drawRoundRect(
+                                color = Color.Black.copy(alpha = 0.035f),
+                                topLeft = Offset(x = neutralInset, y = neutralOffsetY),
+                                size = Size(width = size.width - neutralInset * 2, height = size.height),
+                                cornerRadius = cornerRadius,
+                            )
+
+                            // 2. Accent glow
+                            drawRoundRect(
+                                color = colors.accent.copy(alpha = 0.025f),
+                                topLeft = Offset(x = warmInset, y = warmOffsetY),
+                                size = Size(width = size.width - warmInset * 2, height = size.height),
+                                cornerRadius = cornerRadius,
+                            )
+                        }
                         .background(
                             brush = Brush.verticalGradient(
                                 listOf(
-                                    Color.White.copy(alpha = 0.70f),
+                                    Color.White.copy(alpha = 0.78f),
+                                    Color.White.copy(alpha = 0.68f),
                                     Color.White.copy(alpha = 0.60f),
+                                ),
+                            ),
+                            shape = tabShape,
+                        )
+                        .border(
+                            width = 1.dp,
+                            brush = Brush.verticalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.75f),
+                                    Color.White.copy(alpha = 0.28f),
+                                    Color.White.copy(alpha = 0.12f),
                                 ),
                             ),
                             shape = tabShape,
@@ -654,7 +691,7 @@ internal fun AuroraTabRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .onSizeChanged { containerWidthPx = it.width }
-                .padding(horizontal = 4.dp, vertical = 4.dp)
+                .padding(horizontal = 4.dp, vertical = 6.dp)
                 .then(if (scrollable) Modifier.horizontalScroll(scrollState) else Modifier),
             horizontalArrangement = if (scrollable) Arrangement.Start else Arrangement.SpaceEvenly,
         ) {
