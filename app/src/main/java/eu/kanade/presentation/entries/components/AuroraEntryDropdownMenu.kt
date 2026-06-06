@@ -10,10 +10,12 @@ import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import eu.kanade.presentation.components.auroraMenuRimLightBrush
 import eu.kanade.presentation.theme.AuroraTheme
 import tachiyomi.presentation.core.util.LocalAppHaptics
 
@@ -27,6 +29,12 @@ fun AuroraEntryDropdownMenu(
     val colors = AuroraTheme.colors
     val shape = RoundedCornerShape(16.dp)
 
+    val borderBrush = if (colors.isDark) {
+        auroraMenuRimLightBrush(colors)
+    } else {
+        SolidColor(colors.accent.copy(alpha = 0.26f))
+    }
+
     DropdownMenu(
         expanded = expanded,
         onDismissRequest = onDismissRequest,
@@ -37,7 +45,7 @@ fun AuroraEntryDropdownMenu(
         shadowElevation = 0.dp,
         border = BorderStroke(
             width = 1.dp,
-            color = colors.accent.copy(alpha = 0.26f),
+            brush = borderBrush,
         ),
         modifier = modifier.widthIn(min = 168.dp, max = 236.dp),
         content = content,

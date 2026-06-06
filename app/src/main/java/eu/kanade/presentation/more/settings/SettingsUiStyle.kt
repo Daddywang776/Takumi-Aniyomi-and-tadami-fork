@@ -18,6 +18,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.domain.ui.model.EInkProfile
+import eu.kanade.presentation.components.auroraMenuRimLightBrush
 import eu.kanade.presentation.more.resolveAuroraMoreCardContainerColor
 import eu.kanade.presentation.theme.AuroraColors
 import eu.kanade.presentation.theme.AuroraTheme
@@ -145,6 +146,21 @@ fun Modifier.auroraCardStyle(
                 ),
                 shape = shape,
             )
+    } else if (colors.isDark && !colors.isEInk) {
+        val borderBrush = auroraMenuRimLightBrush(colors)
+        val baseModifier = if (applyModifierBackgroundInDark) {
+            this.background(
+                color = resolveAuroraMoreCardContainerColor(colors),
+                shape = shape,
+            )
+        } else {
+            this
+        }
+        baseModifier.border(
+            width = 1.dp,
+            brush = borderBrush,
+            shape = shape,
+        )
     } else if (applyModifierBackgroundInDark) {
         this.background(
             color = resolveAuroraMoreCardContainerColor(colors),
