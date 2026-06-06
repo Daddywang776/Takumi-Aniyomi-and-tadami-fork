@@ -733,12 +733,13 @@ internal fun HomeHubRecentPosterCard(
     val fallbackPainter = rememberThemeAwareCoverErrorPainter(
         variant = AuroraCoverPlaceholderVariant.Portrait,
     )
+    val isLightTheme = !colors.isDark && !colors.isEInk
     val outerSurface = if (colors.isDark) {
         colors.glass.copy(alpha = surfaceSpec.containerAlpha)
     } else if (colors.isEInk) {
         resolveAuroraSurfaceColor(colors, AuroraSurfaceLevel.Glass)
     } else {
-        Color.White
+        Color.Transparent
     }
     val posterSurface = if (colors.isDark) {
         colors.cardBackground.copy(alpha = surfaceSpec.posterAlpha)
@@ -746,19 +747,7 @@ internal fun HomeHubRecentPosterCard(
         resolveAuroraSurfaceColor(colors, AuroraSurfaceLevel.Subtle)
     }
 
-    Card(
-        onClick = {
-            appHaptics.tap()
-            onClick()
-        },
-        modifier = modifier,
-        shape = cardShape,
-        colors = CardDefaults.cardColors(containerColor = outerSurface),
-        elevation = CardDefaults.cardElevation(
-            defaultElevation = if (!colors.isDark && !colors.isEInk) 2.dp else 0.dp,
-            pressedElevation = if (!colors.isDark && !colors.isEInk) 6.dp else 0.dp,
-        ),
-    ) {
+    val cardContent: @Composable () -> Unit = {
         Column(modifier = Modifier.padding(6.dp)) {
             Box(
                 modifier = Modifier
@@ -822,6 +811,77 @@ internal fun HomeHubRecentPosterCard(
                     )
                 }
             }
+        }
+    }
+
+    if (isLightTheme) {
+        Box(
+            modifier = modifier
+                .drawBehind {
+                    val radius = 18.dp.toPx()
+                    val cornerRadius = CornerRadius(radius, radius)
+                    val neutralOffsetY = 3.dp.toPx()
+                    val warmOffsetY = 5.dp.toPx()
+                    val neutralInset = 1.dp.toPx()
+                    val warmInset = 3.dp.toPx()
+
+                    drawRoundRect(
+                        color = Color.Black.copy(alpha = 0.035f),
+                        topLeft = Offset(x = neutralInset, y = neutralOffsetY),
+                        size = Size(width = size.width - neutralInset * 2, height = size.height),
+                        cornerRadius = cornerRadius,
+                    )
+                    drawRoundRect(
+                        color = colors.accent.copy(alpha = 0.025f),
+                        topLeft = Offset(x = warmInset, y = warmOffsetY),
+                        size = Size(width = size.width - warmInset * 2, height = size.height),
+                        cornerRadius = cornerRadius,
+                    )
+                }
+                .background(
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.78f),
+                            Color.White.copy(alpha = 0.68f),
+                            Color.White.copy(alpha = 0.60f),
+                        ),
+                    ),
+                    shape = cardShape,
+                )
+                .border(
+                    width = 1.dp,
+                    brush = Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = 0.75f),
+                            Color.White.copy(alpha = 0.28f),
+                            Color.White.copy(alpha = 0.12f),
+                        ),
+                    ),
+                    shape = cardShape,
+                )
+                .clip(cardShape)
+                .clickable {
+                    appHaptics.tap()
+                    onClick()
+                },
+        ) {
+            cardContent()
+        }
+    } else {
+        Card(
+            onClick = {
+                appHaptics.tap()
+                onClick()
+            },
+            modifier = modifier,
+            shape = cardShape,
+            colors = CardDefaults.cardColors(containerColor = outerSurface),
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = 0.dp,
+                pressedElevation = 0.dp,
+            ),
+        ) {
+            cardContent()
         }
     }
 }
