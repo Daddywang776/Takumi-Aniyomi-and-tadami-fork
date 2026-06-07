@@ -141,16 +141,7 @@ import eu.kanade.tachiyomi.ui.reader.novel.NovelSelectedTextSelection
 import eu.kanade.tachiyomi.ui.reader.novel.encodeNativeScrollProgress
 import eu.kanade.tachiyomi.ui.reader.novel.encodePageReaderProgress
 import eu.kanade.tachiyomi.ui.reader.novel.encodeWebScrollProgressPercent
-import eu.kanade.tachiyomi.ui.reader.novel.setting.GeminiPromptMode
-import eu.kanade.tachiyomi.ui.reader.novel.setting.NovelPageTransitionStyle
-import eu.kanade.tachiyomi.ui.reader.novel.setting.NovelReaderAppearanceMode
-import eu.kanade.tachiyomi.ui.reader.novel.setting.NovelReaderBackgroundSource
-import eu.kanade.tachiyomi.ui.reader.novel.setting.NovelReaderBackgroundTexture
-import eu.kanade.tachiyomi.ui.reader.novel.setting.NovelReaderPreferences
-import eu.kanade.tachiyomi.ui.reader.novel.setting.NovelReaderSettings
-import eu.kanade.tachiyomi.ui.reader.novel.setting.NovelReaderTheme
-import eu.kanade.tachiyomi.ui.reader.novel.setting.NovelTranslationProvider
-import eu.kanade.tachiyomi.ui.reader.novel.setting.NovelTranslationStylePreset
+import eu.kanade.tachiyomi.ui.reader.novel.setting.*
 import eu.kanade.tachiyomi.ui.reader.novel.tts.NativeScrollTtsNavigationAdapter
 import eu.kanade.tachiyomi.ui.reader.novel.tts.NativeScrollTtsNavigator
 import eu.kanade.tachiyomi.ui.reader.novel.tts.NovelTtsNavigationAnchor
@@ -182,11 +173,12 @@ import java.io.File
 import kotlin.coroutines.resume
 import kotlin.math.roundToInt
 
+@Suppress("UNNECESSARY_SAFE_CALL", "USELESS_ELVIS")
 internal fun resolveNovelReaderBackdropColor(
     settings: NovelReaderSettings,
     isSystemDark: Boolean,
 ): Color {
-    val theme = settings.theme
+    val theme = safeEnum(settings.theme, NovelReaderTheme.SYSTEM)
     val themeFallback = when (theme) {
         NovelReaderTheme.SYSTEM -> if (isSystemDark) Color(0xFF121212) else Color.White
         NovelReaderTheme.LIGHT -> Color.White
@@ -196,13 +188,13 @@ internal fun resolveNovelReaderBackdropColor(
         .takeIf { settings.backgroundColor?.isNotBlank() == true }
         ?: themeFallback
 
-    val appearanceMode = settings.appearanceMode
+    val appearanceMode = safeEnum(settings.appearanceMode, NovelReaderAppearanceMode.THEME)
     return when (appearanceMode) {
         NovelReaderAppearanceMode.THEME -> themeBackground
         NovelReaderAppearanceMode.BACKGROUND -> {
             resolveReaderBackgroundBackdropColor(
                 resolveReaderBackgroundSelection(
-                    backgroundSource = settings.backgroundSource,
+                    backgroundSource = safeEnum(settings.backgroundSource, NovelReaderBackgroundSource.PRESET),
                     backgroundPresetId = settings.backgroundPresetId,
                     customBackgroundId = settings.customBackgroundId,
                     customBackgroundItems = emptyList(),
@@ -233,7 +225,7 @@ fun createNovelReaderWebView(context: Context): WebView {
     }
 }
 
-@Suppress("ktlint:standard:max-line-length")
+@Suppress("ktlint:standard:max-line-length", "UNNECESSARY_SAFE_CALL", "USELESS_ELVIS")
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun NovelReaderScreen(
@@ -327,6 +319,32 @@ fun NovelReaderScreen(
     onRetrySelectedTextTranslation: () -> Unit = onTranslateSelectedText,
     onDismissSelectedTextTranslation: () -> Unit = {},
 ) {
+    val sanitizedSettings = remember(state.readerSettings) {
+        state.readerSettings.copy(
+            theme = safeEnum(state.readerSettings.theme, NovelReaderTheme.SYSTEM),
+            appearanceMode = safeEnum(state.readerSettings.appearanceMode, NovelReaderAppearanceMode.THEME),
+            backgroundSource = safeEnum(state.readerSettings.backgroundSource, NovelReaderBackgroundSource.PRESET),
+            backgroundTexture = safeEnum(state.readerSettings.backgroundTexture, NovelReaderBackgroundTexture.NONE),
+            textAlign = safeEnum(state.readerSettings.textAlign, TextAlign.SOURCE),
+            pageTransitionStyle = safeEnum(state.readerSettings.pageTransitionStyle, NovelPageTransitionStyle.SLIDE),
+            bookFlipAnimationSpeed = safeEnum(state.readerSettings.bookFlipAnimationSpeed, NovelBookFlipAnimationSpeed.SLOW),
+            pageTurnSpeed = safeEnum(state.readerSettings.pageTurnSpeed, NovelPageTurnSpeed.NORMAL),
+            pageTurnIntensity = safeEnum(state.readerSettings.pageTurnIntensity, NovelPageTurnIntensity.MEDIUM),
+            pageTurnShadowIntensity = safeEnum(state.readerSettings.pageTurnShadowIntensity, NovelPageTurnShadowIntensity.MEDIUM),
+            pageTurnActivationZone = safeEnum(state.readerSettings.pageTurnActivationZone, NovelPageTurnActivationZone.WIDE),
+            translationProvider = safeEnum(state.readerSettings.translationProvider, NovelTranslationProvider.GEMINI),
+            geminiPromptMode = safeEnum(state.readerSettings.geminiPromptMode, GeminiPromptMode.ADULT_18),
+            geminiStylePreset = safeEnum(state.readerSettings.geminiStylePreset, NovelTranslationStylePreset.PROFESSIONAL),
+            ttsHighlightMode = safeEnum(state.readerSettings.ttsHighlightMode, NovelTtsHighlightMode.AUTO),
+        )
+    }
+    val state = remember(state, sanitizedSettings) {
+        state.copy(readerSettings = sanitizedSettings)
+    }
+    if (System.currentTimeMillis() == 0L) {
+        preventR8Optimization()
+    }
+
     // Sub-object selectors: derivedStateOf prevents recomposition of translation/gemini
     // panels when unrelated state (scroll progress) changes.
     val readerSettings by remember(state) { derivedStateOf { state.readerSettings } }
@@ -605,19 +623,19 @@ fun NovelReaderScreen(
         resolveReaderBackgroundIdentity(backgroundSelection)
     }
     val isEInkMode = AuroraTheme.colors.isEInk
-    val appearanceMode = state.readerSettings.appearanceMode
+    val appearanceMode = state.readerSettings.appearanceMode ?: NovelReaderAppearanceMode.THEME
     val isBackgroundMode = appearanceMode == NovelReaderAppearanceMode.BACKGROUND
     val activeBackgroundTexture = if (isBackgroundMode || isEInkMode) {
         NovelReaderBackgroundTexture.NONE
     } else {
-        state.readerSettings.backgroundTexture
+        state.readerSettings.backgroundTexture ?: NovelReaderBackgroundTexture.NONE
     }
     val activeOledEdgeGradient = if (isBackgroundMode || isEInkMode) {
         false
     } else {
         state.readerSettings.oledEdgeGradient == true
     }
-    val theme = state.readerSettings.theme
+    val theme = state.readerSettings.theme ?: NovelReaderTheme.SYSTEM
     val isDarkTheme = when {
         isEInkMode -> AuroraTheme.colors.isDark
         else -> when (theme) {
@@ -662,7 +680,7 @@ fun NovelReaderScreen(
         NovelReaderBackdropSession.update(textBackground)
     }
 
-    val backgroundSource = state.readerSettings.backgroundSource
+    val backgroundSource = state.readerSettings.backgroundSource ?: NovelReaderBackgroundSource.PRESET
     LaunchedEffect(
         isBackgroundMode,
         isEInkMode,
@@ -1105,6 +1123,7 @@ fun NovelReaderScreen(
         webViewTtsNavigationAdapter.hashCode()
     }
     LaunchedEffect(
+        state.chapter.id,
         pageReaderRendererRoute,
         pageReaderItemsCount,
         composePagerHasPreviousChapter,
@@ -1146,6 +1165,8 @@ fun NovelReaderScreen(
             )
         }
     }
+    val latestPageReaderProgressPageIndex by rememberUpdatedState(pageReaderProgressPageIndex)
+    val latestPageReaderItemsCount by rememberUpdatedState(pageReaderItemsCount)
     val pageReaderTtsPosition = remember(
         usePageReader,
         useRichPageReader,
@@ -1809,14 +1830,16 @@ fun NovelReaderScreen(
                                 flashDisplay = true,
                             )
                         }
-                        DisposableEffect(pagerState, pageReaderItemsCount) {
+                        DisposableEffect(pagerState, state.chapter.id) {
                             onDispose {
+                                val latestIndex = latestPageReaderProgressPageIndex
+                                val latestTotal = latestPageReaderItemsCount.coerceAtLeast(1)
                                 reportReadingProgress(
-                                    pageReaderProgressPageIndex,
-                                    pageReaderItemsCount,
+                                    latestIndex,
+                                    latestTotal,
                                     encodePageReaderProgress(
-                                        index = pageReaderProgressPageIndex,
-                                        totalItems = pageReaderItemsCount,
+                                        index = latestIndex,
+                                        totalItems = latestTotal,
                                     ),
                                 )
                             }
@@ -1917,6 +1940,7 @@ fun NovelReaderScreen(
                     } else if (pageReaderRendererRoute == NovelPageReaderRendererRoute.PAGE_TURN_RENDERER) {
                         PageTurnPageRenderer(
                             pagerState = pagerState,
+                            chapterId = state.chapter.id,
                             contentPages = pageReaderContentPages,
                             transitionStyle = activePageTransitionStyle,
                             readerSettings = state.readerSettings,
@@ -3981,4 +4005,32 @@ private fun rememberCurrentTimeText(context: Context): State<String> {
     }
 
     return timeState
+}
+
+@Suppress("UNCHECKED_CAST")
+internal fun <T : Any> safeEnum(value: Any?, fallback: T): T {
+    if (value == null) return fallback
+    return try {
+        value as T
+    } catch (e: Exception) {
+        fallback
+    }
+}
+
+private fun preventR8Optimization() {
+    safeEnum(null, NovelReaderTheme.SYSTEM)
+    safeEnum(null, NovelReaderAppearanceMode.THEME)
+    safeEnum(null, NovelReaderBackgroundSource.PRESET)
+    safeEnum(null, NovelReaderBackgroundTexture.NONE)
+    safeEnum(null, TextAlign.SOURCE)
+    safeEnum(null, NovelPageTransitionStyle.SLIDE)
+    safeEnum(null, NovelBookFlipAnimationSpeed.SLOW)
+    safeEnum(null, NovelPageTurnSpeed.NORMAL)
+    safeEnum(null, NovelPageTurnIntensity.MEDIUM)
+    safeEnum(null, NovelPageTurnShadowIntensity.MEDIUM)
+    safeEnum(null, NovelPageTurnActivationZone.WIDE)
+    safeEnum(null, NovelTranslationProvider.GEMINI)
+    safeEnum(null, GeminiPromptMode.ADULT_18)
+    safeEnum(null, NovelTranslationStylePreset.PROFESSIONAL)
+    safeEnum(null, NovelTtsHighlightMode.AUTO)
 }

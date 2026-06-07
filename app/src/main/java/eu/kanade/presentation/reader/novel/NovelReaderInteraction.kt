@@ -546,6 +546,7 @@ internal fun shouldShowNovelAtmosphereBackground(
 }
 
 internal enum class NovelPageReaderRendererRoute {
+    NONE,
     COMPOSE_PAGER,
     PAGE_TURN_RENDERER,
 }
@@ -553,8 +554,8 @@ internal enum class NovelPageReaderRendererRoute {
 internal fun resolvePageReaderRendererRoute(
     usePageReader: Boolean,
     activeStyle: NovelPageTransitionStyle,
-): NovelPageReaderRendererRoute? {
-    if (!usePageReader) return null
+): NovelPageReaderRendererRoute {
+    if (!usePageReader) return NovelPageReaderRendererRoute.NONE
     return when (resolvePageTransitionEngine(activeStyle)) {
         NovelPageTransitionEngine.COMPOSE_PAGER -> NovelPageReaderRendererRoute.COMPOSE_PAGER
         NovelPageTransitionEngine.PAGE_TURN_RENDERER -> NovelPageReaderRendererRoute.PAGE_TURN_RENDERER
@@ -562,7 +563,7 @@ internal fun resolvePageReaderRendererRoute(
 }
 
 internal fun resolvePageReaderCurrentPage(
-    pageReaderRendererRoute: NovelPageReaderRendererRoute?,
+    pageReaderRendererRoute: NovelPageReaderRendererRoute,
     pagerCurrentPage: Int,
     pageTurnCurrentPage: Int,
     composePagerContentPageCount: Int,
@@ -571,6 +572,8 @@ internal fun resolvePageReaderCurrentPage(
     pageTurnHasPreviousChapter: Boolean = composePagerHasPreviousChapter,
 ): Int {
     return when (pageReaderRendererRoute) {
+        NovelPageReaderRendererRoute.NONE ->
+            pagerCurrentPage.coerceAtLeast(0)
         NovelPageReaderRendererRoute.PAGE_TURN_RENDERER ->
             resolvePageTurnRendererProgressPageIndex(
                 currentPage = pageTurnCurrentPage,
@@ -583,7 +586,6 @@ internal fun resolvePageReaderCurrentPage(
                 contentPageCount = composePagerContentPageCount,
                 hasPreviousChapter = composePagerHasPreviousChapter,
             )
-        null -> pagerCurrentPage.coerceAtLeast(0)
     }
 }
 
@@ -591,7 +593,7 @@ internal fun resolveReaderVerticalSeekbarValue(
     showWebView: Boolean,
     webProgressPercent: Int,
     usePageReader: Boolean,
-    pageReaderRendererRoute: NovelPageReaderRendererRoute?,
+    pageReaderRendererRoute: NovelPageReaderRendererRoute,
     pagerCurrentPage: Int,
     pageTurnCurrentPage: Int,
     composePagerContentPageCount: Int,
