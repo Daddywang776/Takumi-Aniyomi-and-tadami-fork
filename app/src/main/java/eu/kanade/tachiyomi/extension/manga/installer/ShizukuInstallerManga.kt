@@ -50,7 +50,9 @@ class ShizukuInstallerManga(private val service: Service) : InstallerManga(servi
             var sessionId: String? = null
             try {
                 val size = service.getUriSize(entry.uri) ?: throw IllegalStateException()
-                val inputStream = service.contentResolver.openInputStream(entry.uri) ?: throw IllegalStateException("Unable to open APK input stream")
+                val inputStream =
+                    service.contentResolver.openInputStream(entry.uri)
+                        ?: throw IllegalStateException("Unable to open APK input stream")
                 inputStream.use {
                     val createCommand = "pm install-create -r -i ${service.packageName} -S $size"
                     val createResult = exec(createCommand)
@@ -59,12 +61,16 @@ class ShizukuInstallerManga(private val service: Service) : InstallerManga(servi
 
                     val writeResult = exec("pm install-write -S $size $sessionId base -", it)
                     if (writeResult.resultCode != 0) {
-                        throw RuntimeException("Failed to write APK to session $sessionId: ${writeResult.combinedOutput}")
+                        throw RuntimeException(
+                            "Failed to write APK to session $sessionId: ${writeResult.combinedOutput}",
+                        )
                     }
 
                     val commitResult = exec("pm install-commit $sessionId")
                     if (commitResult.resultCode != 0) {
-                        throw RuntimeException("Failed to commit install session $sessionId: ${commitResult.combinedOutput}")
+                        throw RuntimeException(
+                            "Failed to commit install session $sessionId: ${commitResult.combinedOutput}",
+                        )
                     }
 
                     continueQueue(InstallStep.Installed)

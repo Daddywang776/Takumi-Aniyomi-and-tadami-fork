@@ -131,9 +131,8 @@ class CrybabyRule(
         }
         if (genres == null) return RuleResult.NoChange
 
-        val isTragedyOrDrama = genres.any {
-            it.equals("Tragedy", ignoreCase = true) ||
-                it.equals("Drama", ignoreCase = true)
+        val isTragedyOrDrama = genres.any { g ->
+            GenreAliases.genreMatches(g, listOf("Tragedy", "Drama"))
         }
         return if (isTragedyOrDrama) RuleResult.Update(1) else RuleResult.NoChange
     }
@@ -142,7 +141,7 @@ class CrybabyRule(
         val completedManga = mangaRepository.getLibraryManga()
             .filter { it.manga.status == SManga.COMPLETED.toLong() }
         if (completedManga.any {
-                it.manga.genre?.any { g -> g.equals("Tragedy", true) || g.equals("Drama", true) } ==
+                it.manga.genre?.any { g -> GenreAliases.genreMatches(g, listOf("Tragedy", "Drama")) } ==
                     true
             }
         ) {
@@ -151,7 +150,7 @@ class CrybabyRule(
         val completedAnime = animeRepository.getLibraryAnime()
             .filter { it.anime.status == SAnime.COMPLETED.toLong() }
         if (completedAnime.any {
-                it.anime.genre?.any { g -> g.equals("Tragedy", true) || g.equals("Drama", true) } ==
+                it.anime.genre?.any { g -> GenreAliases.genreMatches(g, listOf("Tragedy", "Drama")) } ==
                     true
             }
         ) {
@@ -160,7 +159,7 @@ class CrybabyRule(
         val completedNovel = novelRepository.getLibraryNovel()
             .filter { it.novel.status == SManga.COMPLETED.toLong() }
         if (completedNovel.any {
-                it.novel.genre?.any { g -> g.equals("Tragedy", true) || g.equals("Drama", true) } ==
+                it.novel.genre?.any { g -> GenreAliases.genreMatches(g, listOf("Tragedy", "Drama")) } ==
                     true
             }
         ) {
@@ -221,24 +220,36 @@ class DekuRule(
         }
         if (genres == null) return RuleResult.NoChange
 
-        val isSuperPower = genres.any { it.equals("Super Power", ignoreCase = true) }
+        val isSuperPower = genres.any { g -> GenreAliases.genreMatches(g, listOf("Super Power")) }
         return if (isSuperPower) RuleResult.Update(1) else RuleResult.NoChange
     }
 
     override suspend fun evaluateFull(context: RuleContext): Int {
         val completedAnime = animeRepository.getLibraryAnime()
             .filter { it.anime.status == SAnime.COMPLETED.toLong() }
-        if (completedAnime.any { it.anime.genre?.any { g -> g.equals("Super Power", true) } == true }) {
+        if (completedAnime.any {
+                it.anime.genre?.any { g -> GenreAliases.genreMatches(g, listOf("Super Power")) } ==
+                    true
+            }
+        ) {
             return 1
         }
         val completedManga = mangaRepository.getLibraryManga()
             .filter { it.manga.status == SManga.COMPLETED.toLong() }
-        if (completedManga.any { it.manga.genre?.any { g -> g.equals("Super Power", true) } == true }) {
+        if (completedManga.any {
+                it.manga.genre?.any { g -> GenreAliases.genreMatches(g, listOf("Super Power")) } ==
+                    true
+            }
+        ) {
             return 1
         }
         val completedNovel = novelRepository.getLibraryNovel()
             .filter { it.novel.status == SManga.COMPLETED.toLong() }
-        if (completedNovel.any { it.novel.genre?.any { g -> g.equals("Super Power", true) } == true }) {
+        if (completedNovel.any {
+                it.novel.genre?.any { g -> GenreAliases.genreMatches(g, listOf("Super Power")) } ==
+                    true
+            }
+        ) {
             return 1
         }
         return 0
@@ -271,24 +282,33 @@ class ErenRule(
         }
         if (genres == null) return RuleResult.NoChange
 
-        val isMilitary = genres.any { it.equals("Military", ignoreCase = true) }
+        val isMilitary = genres.any { g -> GenreAliases.genreMatches(g, listOf("Military")) }
         return if (isMilitary) RuleResult.Update(1) else RuleResult.NoChange
     }
 
     override suspend fun evaluateFull(context: RuleContext): Int {
         val completedNovel = novelRepository.getLibraryNovel()
             .filter { it.novel.status == SManga.COMPLETED.toLong() }
-        if (completedNovel.any { it.novel.genre?.any { g -> g.equals("Military", true) } == true }) {
+        if (completedNovel.any {
+                it.novel.genre?.any { g -> GenreAliases.genreMatches(g, listOf("Military")) } == true
+            }
+        ) {
             return 1
         }
         val completedManga = mangaRepository.getLibraryManga()
             .filter { it.manga.status == SManga.COMPLETED.toLong() }
-        if (completedManga.any { it.manga.genre?.any { g -> g.equals("Military", true) } == true }) {
+        if (completedManga.any {
+                it.manga.genre?.any { g -> GenreAliases.genreMatches(g, listOf("Military")) } == true
+            }
+        ) {
             return 1
         }
         val completedAnime = animeRepository.getLibraryAnime()
             .filter { it.anime.status == SAnime.COMPLETED.toLong() }
-        if (completedAnime.any { it.anime.genre?.any { g -> g.equals("Military", true) } == true }) {
+        if (completedAnime.any {
+                it.anime.genre?.any { g -> GenreAliases.genreMatches(g, listOf("Military")) } == true
+            }
+        ) {
             return 1
         }
         return 0
@@ -321,24 +341,36 @@ class LelouchRule(
         }
         if (genres == null) return RuleResult.NoChange
 
-        val isPsychological = genres.any { it.equals("Psychological", ignoreCase = true) }
+        val isPsychological = genres.any { g -> GenreAliases.genreMatches(g, listOf("Psychological")) }
         return if (isPsychological) RuleResult.Update(1) else RuleResult.NoChange
     }
 
     override suspend fun evaluateFull(context: RuleContext): Int {
         val completedManga = mangaRepository.getLibraryManga()
             .filter { it.manga.status == SManga.COMPLETED.toLong() }
-        if (completedManga.any { it.manga.genre?.any { g -> g.equals("Psychological", true) } == true }) {
+        if (completedManga.any {
+                it.manga.genre?.any { g -> GenreAliases.genreMatches(g, listOf("Psychological")) } ==
+                    true
+            }
+        ) {
             return 1
         }
         val completedAnime = animeRepository.getLibraryAnime()
             .filter { it.anime.status == SAnime.COMPLETED.toLong() }
-        if (completedAnime.any { it.anime.genre?.any { g -> g.equals("Psychological", true) } == true }) {
+        if (completedAnime.any {
+                it.anime.genre?.any { g -> GenreAliases.genreMatches(g, listOf("Psychological")) } ==
+                    true
+            }
+        ) {
             return 1
         }
         val completedNovel = novelRepository.getLibraryNovel()
             .filter { it.novel.status == SManga.COMPLETED.toLong() }
-        if (completedNovel.any { it.novel.genre?.any { g -> g.equals("Psychological", true) } == true }) {
+        if (completedNovel.any {
+                it.novel.genre?.any { g -> GenreAliases.genreMatches(g, listOf("Psychological")) } ==
+                    true
+            }
+        ) {
             return 1
         }
         return 0

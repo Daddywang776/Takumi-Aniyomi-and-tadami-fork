@@ -49,7 +49,9 @@ class PackageInstallerInstallerAnime(private val service: Service) : InstallerAn
                 }
                 PackageInstaller.STATUS_SUCCESS -> continueQueue(InstallStep.Installed)
                 else -> {
-                    logcat(LogPriority.ERROR) { "Package install failed: status=$status legacy=$legacyStatus message=$statusMessage" }
+                    logcat(LogPriority.ERROR) {
+                        "Package install failed: status=$status legacy=$legacyStatus message=$statusMessage"
+                    }
                     continueQueue(InstallStep.Error)
                 }
             }
