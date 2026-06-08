@@ -32,6 +32,23 @@ class SyncPreferences(
         defaultValue = "",
     )
 
+
+    /**
+     * Temporary PKCE code verifier used while a Google Drive OAuth request is in flight.
+     */
+    fun googleDriveOAuthCodeVerifier(): Preference<String> = preferenceStore.getString(
+        key = Preference.appStateKey("google_drive_oauth_code_verifier"),
+        defaultValue = "",
+    )
+
+    /**
+     * Temporary OAuth state used to reject forged Google Drive OAuth callbacks.
+     */
+    fun googleDriveOAuthState(): Preference<String> = preferenceStore.getString(
+        key = Preference.appStateKey("google_drive_oauth_state"),
+        defaultValue = "",
+    )
+
     /**
      * The email associated with the logged in Google Drive account.
      */
@@ -127,5 +144,14 @@ class SyncPreferences(
         googleDriveAccessToken().set("")
         googleDriveRefreshToken().set("")
         googleDriveEmail().set("")
+        clearGoogleDriveOAuthState()
+    }
+
+    /**
+     * Clears temporary Google Drive OAuth request state.
+     */
+    fun clearGoogleDriveOAuthState() {
+        googleDriveOAuthCodeVerifier().set("")
+        googleDriveOAuthState().set("")
     }
 }

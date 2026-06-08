@@ -11,6 +11,8 @@ import eu.kanade.tachiyomi.data.backup.restore.BackupRestorer
 import eu.kanade.tachiyomi.data.backup.restore.RestoreOptions
 import eu.kanade.tachiyomi.data.sync.service.GoogleDriveSyncService
 import eu.kanade.tachiyomi.util.system.createFileInCacheDir
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.protobuf.ProtoBuf
 import logcat.LogPriority
 import okio.buffer
@@ -20,6 +22,7 @@ import tachiyomi.core.common.util.system.logcat
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.util.Date
+import java.util.UUID
 
 /**
  * Manager class for handling synchronization tasks between local database and sync services.
@@ -51,10 +54,10 @@ class SyncManager(
     /**
      * Syncs data with the configured sync service.
      */
-    suspend fun syncData() {
+    suspend fun syncData() = syncMutex.withLock {
         logcat { "Starting sync" }
 
-        // Handle sync based on the selected service
+        // Handle sync based on the selected service.
         val syncService = when (SyncService.fromInt(syncPreferences.syncService().get())) {
             SyncService.GOOGLE_DRIVE -> {
                 GoogleDriveSyncService(context)
@@ -62,7 +65,7 @@ class SyncManager(
             SyncService.NONE -> {
                 logcat { "No sync service configured" }
                 notifier.showSyncError("No sync service configured")
-                return
+                return@withLock
             }
         }
 
@@ -70,7 +73,7 @@ class SyncManager(
             val localBackup = createLocalBackup()
             if (localBackup == null) {
                 notifier.showSyncError("Failed to create local backup for sync")
-                return
+                return@withLock
             }
 
             val syncData = SyncData(
@@ -83,7 +86,7 @@ class SyncManager(
             if (syncedBackup == null) {
                 logcat { "Sync failed - skipping restore" }
                 notifier.showSyncError("Sync failed. Check your connection and try again.")
-                return
+                return@withLock
             }
 
             if (syncedBackup != localBackup) {
@@ -92,7 +95,7 @@ class SyncManager(
 
             logcat { "Sync completed successfully" }
 
-            // Update sync timestamp
+            // Update sync timestamp.
             syncPreferences.lastSyncTimestamp().set(Date().time)
             notifier.showSyncSuccess("Sync completed successfully")
         } catch (e: Exception) {
@@ -123,7 +126,7 @@ class SyncManager(
     }
 
     private suspend fun createLocalBackup(): Backup? {
-        val backupFile = context.createFileInCacheDir("cloud_sync_local.tachibk")
+        val backupFile = context.createFileInCacheDir("cloud_sync_local_${UUID.randomUUID()}.tachibk")
         return try {
             val options = syncPreferences.getCloudSyncOptions()
             backupCreator.backup(backupFile.toUri(), options)
@@ -137,7 +140,7 @@ class SyncManager(
     }
 
     private suspend fun restoreMergedBackup(backup: Backup) {
-        val backupFile = context.createFileInCacheDir("cloud_sync_merged.tachibk")
+        val backupFile = context.createFileInCacheDir("cloud_sync_merged_${UUID.randomUUID()}.tachibk")
         try {
             val backupBytes = protoBuf.encodeToByteArray(Backup.serializer(), backup)
             backupFile.sink().gzip().buffer().use { sink ->
@@ -151,5 +154,6 @@ class SyncManager(
 
     companion object {
         private const val TAG = "SyncManager"
+        private val syncMutex = Mutex()
     }
 }
