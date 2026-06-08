@@ -32,7 +32,6 @@ class SyncPreferences(
         defaultValue = "",
     )
 
-
     /**
      * Temporary PKCE code verifier used while a Google Drive OAuth request is in flight.
      */

@@ -401,7 +401,8 @@ private fun NovelReaderSettings.translationPromptFamily(): NovelTranslationPromp
         NovelTranslationProvider.DEEPSEEK,
         NovelTranslationProvider.MISTRAL,
         NovelTranslationProvider.NVIDIA,
-        NovelTranslationProvider.OLLAMA_CLOUD ->
+        NovelTranslationProvider.OLLAMA_CLOUD,
+        ->
             resolveNovelTranslationPromptFamily(geminiTargetLang)
     }
 }

@@ -34,10 +34,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.more.auroraPrimaryMenuTitleTextStyle
 import eu.kanade.presentation.more.resolveAuroraMoreCardBorderColor
 import eu.kanade.presentation.more.resolveAuroraMoreCardContainerColor
-import eu.kanade.presentation.more.settings.AURORA_SETTINGS_CARD_HORIZONTAL_INSET
 import eu.kanade.presentation.more.settings.AURORA_SETTINGS_CARD_SHAPE
 import eu.kanade.presentation.more.settings.AURORA_SETTINGS_CARD_VERTICAL_PADDING
 import eu.kanade.presentation.more.settings.LocalPreferenceHighlighted
@@ -48,9 +48,7 @@ import eu.kanade.presentation.more.settings.auroraCardStyle
 import eu.kanade.presentation.more.settings.settingsTitleColor
 import eu.kanade.presentation.theme.AuroraTheme
 import eu.kanade.presentation.theme.LocalIsDefaultAppUiFont
-import eu.kanade.domain.ui.UiPreferences
 import kotlinx.coroutines.delay
-import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.LocalAppHaptics
 import tachiyomi.presentation.core.util.collectAsState
 import uy.kohesive.injekt.Injekt

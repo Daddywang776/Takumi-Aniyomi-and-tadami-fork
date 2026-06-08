@@ -159,7 +159,9 @@ class GoogleDriveService(private val context: Context) {
                 syncPreferences.clearGoogleDriveTokens()
                 syncPreferences.syncService().set(SyncPreferences.SYNC_SERVICE_NONE)
                 syncPreferences.cloudSyncEnabled().set(false)
-                this.logcat(LogPriority.ERROR, e) { "Refresh token invalid; Google Drive sign-in and sync state were cleared" }
+                this.logcat(LogPriority.ERROR, e) {
+                    "Refresh token invalid; Google Drive sign-in and sync state were cleared"
+                }
                 throw Exception("Refresh token invalid. Please sign in again.", e)
             } else {
                 this.logcat(LogPriority.ERROR, e) { "Failed to refresh access token" }
@@ -209,7 +211,9 @@ class GoogleDriveService(private val context: Context) {
                 val expectedState = syncPreferences.googleDriveOAuthState().get()
                 val codeVerifier = syncPreferences.googleDriveOAuthCodeVerifier().get()
 
-                if (expectedState.isBlank() || authorizationState.isNullOrBlank() || authorizationState != expectedState) {
+                if (expectedState.isBlank() || authorizationState.isNullOrBlank() ||
+                    authorizationState != expectedState
+                ) {
                     throw SecurityException("Invalid Google Drive OAuth state. Please try signing in again.")
                 }
                 if (codeVerifier.isBlank()) {

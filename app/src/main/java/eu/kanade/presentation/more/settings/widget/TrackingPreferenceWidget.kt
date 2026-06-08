@@ -87,7 +87,12 @@ fun TrackingPreferenceWidget(
         }
     }
     if (isAurora) {
-        AuroraSettingsCard(modifier = modifier, onClick = onClick, content = content, darkRimLightEnabled = darkRimLightEnabled)
+        AuroraSettingsCard(
+            modifier = modifier,
+            onClick = onClick,
+            content = content,
+            darkRimLightEnabled = darkRimLightEnabled,
+        )
     } else {
         Box(modifier = modifier) {
             content()

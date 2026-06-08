@@ -49,8 +49,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tadami.aurora.BuildConfig
-import eu.kanade.domain.ui.model.NavStyle
 import eu.kanade.domain.ui.UiPreferences
+import eu.kanade.domain.ui.model.NavStyle
 import eu.kanade.presentation.components.AuroraBackground
 import eu.kanade.presentation.components.LocalHostScaffoldContentPadding
 import eu.kanade.presentation.more.resolveAuroraMoreSwitchColors

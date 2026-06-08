@@ -335,11 +335,11 @@ object AboutScreen : Screen() {
                     item {
                         val footerSections = remember { buildAboutFooterSections() }
                         val dividerColor = settingsAccentColor().copy(alpha = 0.3f)
-                    if (uiStyle == SettingsUiStyle.Aurora) {
-                        AuroraSettingsCard(
-                            modifier = itemModifier,
-                            darkRimLightEnabled = darkRimLightEnabled,
-                        ) {
+                        if (uiStyle == SettingsUiStyle.Aurora) {
+                            AuroraSettingsCard(
+                                modifier = itemModifier,
+                                darkRimLightEnabled = darkRimLightEnabled,
+                            ) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()

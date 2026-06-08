@@ -183,7 +183,8 @@ class GoogleDriveSyncService(context: Context) : SyncService(
         } else {
             val matchingLatestFile = latestFiles.firstOrNull { it.id == expectedRemote.file.id }
                 ?: throw RemoteChangedException()
-            val latestTimestamp = matchingLatestFile.appProperties?.get(APP_PROPERTY_SYNC_TIMESTAMP)?.toLongOrNull() ?: 0L
+            val latestTimestamp =
+                matchingLatestFile.appProperties?.get(APP_PROPERTY_SYNC_TIMESTAMP)?.toLongOrNull() ?: 0L
             val latestHash = matchingLatestFile.appProperties?.get(APP_PROPERTY_CONTENT_HASH).orEmpty()
             if (latestTimestamp != expectedRemote.syncTimestamp || latestHash != expectedRemote.contentHash) {
                 throw RemoteChangedException()
