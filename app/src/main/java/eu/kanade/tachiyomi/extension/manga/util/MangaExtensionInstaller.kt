@@ -134,11 +134,16 @@ internal class MangaExtensionInstaller(private val context: Context) {
             emit(it)
             // Stop when the application is installed or errors
             !it.isCompleted()
-        }.onCompletion {
-            // Always notify on main thread
-            withUIContext {
-                // Always remove the download when unsubscribed
-                deleteDownload(pkgName)
+        }.onCompletion { cause ->
+            // Do not cancel the underlying DownloadManager request when the UI collection is
+            // cancelled, for example when the screen model is destroyed by navigation or OEM
+            // background restrictions. Explicit user cancellation still goes through
+            // cancelInstall(), which removes the DownloadManager request.
+            if (cause == null) {
+                // Always notify on main thread
+                withUIContext {
+                    deleteDownload(pkgName)
+                }
             }
         }
     }
