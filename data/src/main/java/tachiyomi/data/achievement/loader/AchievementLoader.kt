@@ -14,6 +14,7 @@ import tachiyomi.data.achievement.model.AchievementDefinitions
 import tachiyomi.data.achievement.model.AchievementJson
 import tachiyomi.domain.achievement.model.Achievement
 import tachiyomi.domain.achievement.model.AchievementCategory
+import tachiyomi.domain.achievement.model.AchievementRarity
 import tachiyomi.domain.achievement.model.AchievementType
 import tachiyomi.domain.achievement.repository.AchievementRepository
 import java.util.Locale
@@ -200,6 +201,13 @@ class AchievementLoader(
             version = 1,
             createdAt = 0L,
             rewards = rewards,
+            rarity = AchievementRarity.fromString(rarity),
+            tags = tags,
+            hint = hint,
+            season = season,
+            tierGroup = tierGroup,
+            tierLevel = tierLevel,
+            rewardSet = rewardSet,
         )
     }
 }

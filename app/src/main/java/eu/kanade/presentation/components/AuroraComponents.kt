@@ -435,7 +435,11 @@ private fun AuroraSpecialBackgroundCanvas(
     }
 
     Canvas(modifier = Modifier.fillMaxSize()) {
-        if (styleKey == "neon_orbit") {
+        if (styleKey == "neon_orbit" ||
+            styleKey == "trinity_constellation" ||
+            styleKey == "deep_space_archive" ||
+            styleKey == "shadow_realm"
+        ) {
             FLOATING_STARS.forEach { star ->
                 val alpha =
                     0.04f + 0.06f * kotlin.math.abs(kotlin.math.sin(elapsedSeconds * star.pulseSpeed + star.phase))
@@ -488,6 +492,384 @@ private fun AuroraSpecialBackgroundCanvas(
                         )
                     }
                 }
+            }
+            "trinity_constellation" -> {
+                val center = Offset(size.width * 0.5f, size.height * 0.42f)
+                val nodeColors = listOf(Color(0xFF64E8FF), Color(0xFF9C7CFF), Color(0xFFFFD36E))
+
+                // 2. Rotating Astrolabe Grid & Constellation
+                val rotationAngle = orbitSpin * 0.4f // very slow, elegant rotation
+                withTransform({
+                    rotate(rotationAngle, pivot = center)
+                }) {
+                    // Draw Astrolabe / Celestial Coordinates Grid
+                    val gridAlpha = 0.015f // extremely subtle
+                    val strokeDash = PathEffect.dashPathEffect(floatArrayOf(8f, 16f), 0f)
+
+                    // Concentric rings
+                    drawCircle(
+                        color = Color.White.copy(alpha = gridAlpha),
+                        radius = size.minDimension * 0.22f,
+                        style = Stroke(width = 0.8.dp.toPx()),
+                    )
+                    drawCircle(
+                        color = Color.White.copy(alpha = gridAlpha),
+                        radius = size.minDimension * 0.38f,
+                        style = Stroke(width = 0.8.dp.toPx(), pathEffect = strokeDash),
+                    )
+                    drawCircle(
+                        color = Color.White.copy(alpha = gridAlpha * 0.7f),
+                        radius = size.minDimension * 0.54f,
+                        style = Stroke(width = 0.6.dp.toPx()),
+                    )
+
+                    // Faint radial coordinate ticks / lines
+                    repeat(8) { j ->
+                        val angleRad = Math.toRadians((j * 45.0)).toFloat()
+                        val cos = kotlin.math.cos(angleRad)
+                        val sin = kotlin.math.sin(angleRad)
+                        val startRadius = size.minDimension * 0.15f
+                        val endRadius = size.minDimension * 0.58f
+                        drawLine(
+                            color = Color.White.copy(alpha = gridAlpha * 0.5f),
+                            start = Offset(center.x + cos * startRadius, center.y + sin * startRadius),
+                            end = Offset(center.x + cos * endRadius, center.y + sin * endRadius),
+                            strokeWidth = 0.6.dp.toPx(),
+                        )
+                    }
+
+                    val numStars = 12
+                    // Draw connecting lines and traveling stardust (zero allocation)
+                    repeat(numStars) { i ->
+                        val star = FLOATING_STARS[i]
+                        val nextStar = FLOATING_STARS[(i + 3) % numStars]
+                        val color = nodeColors[i % nodeColors.size]
+
+                        val startX = star.xFraction * size.width
+                        val startY = star.yFraction * size.height
+                        val endX = nextStar.xFraction * size.width
+                        val endY = nextStar.yFraction * size.height
+
+                        val lineAlpha = 0.02f + 0.02f * kotlin.math.abs(kotlin.math.sin(elapsedSeconds * 1.5f + i))
+
+                        drawLine(
+                            color = color.copy(alpha = lineAlpha),
+                            start = Offset(startX, startY),
+                            end = Offset(endX, endY),
+                            strokeWidth = 0.8.dp.toPx(),
+                        )
+
+                        // Traveling stardust particle along the line
+                        val travelProgress = (elapsedSeconds * 0.08f + i * 0.15f) % 1.0f
+                        val pX = startX + (endX - startX) * travelProgress
+                        val pY = startY + (endY - startY) * travelProgress
+                        drawCircle(
+                            color = Color.White.copy(alpha = 0.14f),
+                            radius = 1.2.dp.toPx(),
+                            center = Offset(pX, pY),
+                        )
+                    }
+
+                    // Draw star nodes (with twinkle effect)
+                    repeat(numStars) { i ->
+                        val star = FLOATING_STARS[i]
+                        val color = nodeColors[i % nodeColors.size]
+                        val startX = star.xFraction * size.width
+                        val startY = star.yFraction * size.height
+
+                        val twinkle = 0.5f + 0.5f * kotlin.math.sin(elapsedSeconds * 2.5f + i)
+                        val outerRadius = (2.2f + (i % 3) * 0.6f + twinkle * 0.8f).dp.toPx()
+
+                        drawCircle(
+                            color = color.copy(alpha = 0.08f * twinkle),
+                            radius = outerRadius * 1.6f,
+                            center = Offset(startX, startY),
+                        )
+                        drawCircle(
+                            color = Color.White.copy(alpha = 0.15f + 0.10f * twinkle),
+                            radius = 1.0.dp.toPx(),
+                            center = Offset(startX, startY),
+                        )
+                    }
+                }
+
+                // 3. Subtle shooting stars (not rotated, they dash across the screen naturally)
+                fun drawSubtleComet(
+                    progress: Float,
+                    start: Offset,
+                    end: Offset,
+                    color: Color,
+                ) {
+                    val visibility = when {
+                        progress < 0.08f -> progress / 0.08f
+                        progress < 0.18f -> 1f - ((progress - 0.08f) / 0.10f)
+                        else -> 0f
+                    }
+                    if (visibility <= 0f) return
+
+                    val head = Offset(
+                        x = start.x + ((end.x - start.x) * progress),
+                        y = start.y + ((end.y - start.y) * progress),
+                    )
+                    val tailLength = size.minDimension * (0.12f + (0.03f * progress))
+                    val tailDirection = Offset(
+                        x = -(end.x - start.x),
+                        y = -(end.y - start.y),
+                    )
+                    val magnitude = kotlin.math.sqrt(
+                        (tailDirection.x * tailDirection.x) + (tailDirection.y * tailDirection.y),
+                    ).coerceAtLeast(1f)
+                    val tailUnit = Offset(
+                        x = tailDirection.x / magnitude,
+                        y = tailDirection.y / magnitude,
+                    )
+                    val tail = Offset(
+                        x = head.x + (tailUnit.x * tailLength),
+                        y = head.y + (tailUnit.y * tailLength),
+                    )
+
+                    drawLine(
+                        color = color.copy(alpha = 0.015f * visibility),
+                        start = tail,
+                        end = head,
+                        strokeWidth = 1.2.dp.toPx(),
+                        cap = StrokeCap.Round,
+                    )
+                    drawCircle(
+                        color = Color.White.copy(alpha = 0.025f * visibility),
+                        radius = 1.2.dp.toPx(),
+                        center = head,
+                    )
+                }
+
+                drawSubtleComet(
+                    progress = cometProgressOne,
+                    start = Offset(-size.width * 0.1f, size.height * 0.15f),
+                    end = Offset(size.width * 1.1f, size.height * 0.75f),
+                    color = Color(0xFFBDFBFF),
+                )
+                drawSubtleComet(
+                    progress = cometProgressTwo,
+                    start = Offset(-size.width * 0.05f, size.height * 0.8f),
+                    end = Offset(size.width * 1.05f, size.height * 0.2f),
+                    color = Color(0xFF9B8CFF),
+                )
+            }
+            "deep_space_archive" -> {
+                // 1. Classical Temple Arch & Columns (Vector outlines from Concept 3)
+                // Left and right column anchor X positions
+                val xLeft = size.width * 0.15f
+                val xRight = size.width * 0.85f
+                val columnAlpha = 0.012f
+                val columnColor = colors.accent.copy(alpha = columnAlpha)
+
+                // Left Column Fluting Lines
+                drawLine(
+                    columnColor,
+                    Offset(xLeft - 8.dp.toPx(), 0f),
+                    Offset(xLeft - 8.dp.toPx(), size.height),
+                    0.6.dp.toPx(),
+                )
+                drawLine(
+                    colors.glowEffect.copy(alpha = columnAlpha * 1.5f),
+                    Offset(xLeft, 0f),
+                    Offset(xLeft, size.height),
+                    1.0.dp.toPx(),
+                )
+                drawLine(
+                    columnColor,
+                    Offset(xLeft + 8.dp.toPx(), 0f),
+                    Offset(xLeft + 8.dp.toPx(), size.height),
+                    0.6.dp.toPx(),
+                )
+
+                // Right Column Fluting Lines
+                drawLine(
+                    columnColor,
+                    Offset(xRight - 8.dp.toPx(), 0f),
+                    Offset(xRight - 8.dp.toPx(), size.height),
+                    0.6.dp.toPx(),
+                )
+                drawLine(
+                    colors.glowEffect.copy(alpha = columnAlpha * 1.5f),
+                    Offset(xRight, 0f),
+                    Offset(xRight, size.height),
+                    1.0.dp.toPx(),
+                )
+                drawLine(
+                    columnColor,
+                    Offset(xRight + 8.dp.toPx(), 0f),
+                    Offset(xRight + 8.dp.toPx(), size.height),
+                    0.6.dp.toPx(),
+                )
+
+                // Classical Nested Arches linking the columns
+                repeat(2) { idx ->
+                    val offsetFactor = 12.dp.toPx() * idx
+                    val startY = size.height * 0.32f + offsetFactor
+                    val controlY = -size.height * 0.12f + offsetFactor
+                    val archPath = Path().apply {
+                        moveTo(xLeft - 10.dp.toPx(), startY)
+                        quadraticTo(size.width * 0.5f, controlY, xRight + 10.dp.toPx(), startY)
+                    }
+                    drawPath(
+                        path = archPath,
+                        color = colors.accent.copy(alpha = columnAlpha * (1.8f - idx * 0.6f)),
+                        style = Stroke(width = 0.8.dp.toPx()),
+                    )
+                }
+
+                // 2. Morphing Constellation Codex Particle System (Concept 4)
+                val center = Offset(size.width * 0.5f, size.height * 0.45f)
+
+                // Morph progress: 0.0 (random cosmic dust) to 1.0 (open book outline)
+                // Period is 16 seconds (smoothly gathers and dissolves)
+                val morphProgress = 0.5f + 0.5f * kotlin.math.sin(elapsedSeconds * 0.38f)
+
+                val numParticles = 24
+                repeat(numParticles) { i ->
+                    val star = FLOATING_STARS[i % FLOATING_STARS.size]
+
+                    // Cloud coordinate (ambient drift)
+                    val driftY = floatMod(star.yFraction - elapsedSeconds * 0.012f * (1f + (i % 3) * 0.3f), 1.0f)
+                    val cloudX = star.xFraction * size.width
+                    val cloudY = driftY * size.height
+
+                    // Book coordinate (parametric mapping)
+                    val u = (i % 4) / 3.0f
+                    val v = (i / 4) / 5.0f
+                    val isRight = (i % 2 == 0)
+
+                    val bookWidth = size.width * 0.22f
+                    val bookHeight = size.height * 0.12f
+                    val wave = kotlin.math.sin(u * Math.PI).toFloat() * 12.dp.toPx()
+
+                    val bookX = if (isRight) {
+                        center.x + (0.04f + u * 0.32f) * bookWidth
+                    } else {
+                        center.x - (0.04f + u * 0.32f) * bookWidth
+                    }
+                    val bookY = center.y - (bookHeight * 0.5f) + v * bookHeight - wave * (1f - v * 0.2f)
+
+                    // Interpolated coordinate
+                    val currentX = cloudX + (bookX - cloudX) * morphProgress
+                    val currentY = cloudY + (bookY - cloudY) * morphProgress
+
+                    // Colors tied strictly to active theme tokens (no hardcoding)
+                    val baseColor = if (i % 2 == 0) colors.accent else colors.glowEffect
+                    val alpha = (0.02f + 0.02f * (i % 3)) * (0.7f + 0.3f * kotlin.math.sin(elapsedSeconds * 3.5f + i))
+
+                    // Draw particle core
+                    drawCircle(
+                        color = baseColor.copy(alpha = alpha * 1.5f),
+                        radius = (1.2f + (i % 3) * 0.4f).dp.toPx(),
+                        center = Offset(currentX, currentY),
+                    )
+
+                    // Subtle glowing halo
+                    drawCircle(
+                        color = baseColor.copy(alpha = alpha * 0.4f),
+                        radius = (3.5f + (i % 3) * 0.8f).dp.toPx(),
+                        center = Offset(currentX, currentY),
+                    )
+                }
+            }
+            "shadow_realm" -> {
+                val center = Offset(size.width * 0.5f, size.height * 0.42f)
+
+                // 1. Abyss/Warp background distortion (expanding and contracting)
+                val warpRadius = size.maxDimension * (0.6f + 0.08f * kotlin.math.sin(elapsedSeconds * 0.8f))
+                drawRect(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            colors.gradientPurple.copy(alpha = 0.16f * pulse),
+                            colors.accent.copy(alpha = 0.05f),
+                            Color.Transparent,
+                        ),
+                        center = center,
+                        radius = warpRadius,
+                    ),
+                )
+
+                // 2. Logarithmic spirals wrapping into the center
+                val numSpirals = 3
+                val startAngle = orbitSpin * 0.3f
+                repeat(numSpirals) { spiralIdx ->
+                    val angleOffset = spiralIdx * (2f * Math.PI.toFloat() / numSpirals)
+                    var prevX = 0f
+                    var prevY = 0f
+                    val numSegments = 32
+                    repeat(numSegments) { step ->
+                        val t = step.toFloat() / (numSegments - 1)
+                        val r = size.minDimension * 0.52f * Math.pow(t.toDouble(), 1.5).toFloat()
+                        val theta = startAngle + angleOffset + t * 4f * Math.PI.toFloat()
+                        val px = center.x + r * kotlin.math.cos(theta)
+                        val py = center.y + r * kotlin.math.sin(theta)
+
+                        if (step > 0) {
+                            val alphaFactor = (4f * t * (1f - t)).coerceIn(0f, 1f)
+                            val spiralColor = colors.accent.copy(alpha = 0.08f * alphaFactor)
+                            drawLine(
+                                color = spiralColor,
+                                start = Offset(prevX, prevY),
+                                end = Offset(px, py),
+                                strokeWidth = (1f + (1f - t) * 1.5f).dp.toPx(),
+                            )
+                        }
+                        prevX = px
+                        prevY = py
+                    }
+                }
+
+                // 3. Swirling dark particles spiraling inward
+                val numSwirlingParticles = 12
+                repeat(numSwirlingParticles) { i ->
+                    val t = floatMod(i * 0.083f - elapsedSeconds * 0.04f, 1.0f)
+                    val r = size.minDimension * 0.52f * Math.pow(t.toDouble(), 1.5).toFloat()
+                    val theta = startAngle + (i * 1.7f) + t * 4f * Math.PI.toFloat()
+                    val px = center.x + r * kotlin.math.cos(theta)
+                    val py = center.y + r * kotlin.math.sin(theta)
+
+                    val alpha = 0.18f * kotlin.math.sin(t * Math.PI.toFloat()).coerceIn(0f, 1f)
+                    val radius = (1f + (1f - t) * 1.6f).dp.toPx()
+
+                    drawCircle(
+                        color = colors.glowEffect.copy(alpha = alpha),
+                        radius = radius,
+                        center = Offset(px, py),
+                    )
+                }
+
+                // 4. Rare and smooth radial shockwaves/ripples
+                val ripplePeriod = 4.5f
+                val rippleTime = elapsedSeconds % ripplePeriod
+                val rippleProgress = rippleTime / ripplePeriod
+                if (rippleProgress < 0.6f) {
+                    val visibility = kotlin.math.sin((rippleProgress / 0.6f) * Math.PI.toFloat())
+                    val rippleRadius = size.minDimension * 0.6f * rippleProgress
+                    drawCircle(
+                        color = colors.gradientPurple.copy(alpha = 0.04f * visibility),
+                        radius = rippleRadius,
+                        center = center,
+                        style = Stroke(width = (1.5f + (1f - rippleProgress) * 2f).dp.toPx()),
+                    )
+                }
+
+                // 5. Vector-based glowing singularity core in the center of the vortex
+                val singularityRadius = size.minDimension * 0.05f * pulse
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            colors.glowEffect.copy(alpha = 0.28f * pulse),
+                            colors.gradientPurple.copy(alpha = 0.12f),
+                            Color.Transparent,
+                        ),
+                        center = center,
+                        radius = singularityRadius * 2.8f,
+                    ),
+                    radius = singularityRadius * 2.8f,
+                    center = center,
+                )
             }
             "neon_orbit" -> {
                 val ringColors = listOf(

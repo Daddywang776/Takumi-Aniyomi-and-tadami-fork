@@ -1420,4 +1420,8 @@
     <string name="unlockable_home_badge_shuriken">Эффект главного экрана «Сюрикен»</string>
     <string name="unlockable_special_background_petal_storm">Фон «Шторм лепестков»</string>
     <string name="unlockable_special_background_neon_orbit">Фон «Неоновая орбита»</string>
+    <string name="unlockable_aura_trinity_orbit">Аура «Орбита Триединства»</string>
+    <string name="unlockable_aura_deep_focus">Аура «Глубокий фокус»</string>
+    <string name="unlockable_aura_shadow_monarch">Аура «Теневой монарх»</string>
+    <string name="unlockable_aura_ascendant_gold">Аура «Восходящее золото»</string>
 </resources>

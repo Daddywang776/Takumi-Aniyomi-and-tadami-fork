@@ -214,6 +214,124 @@ internal fun achievementTextResourceRefs(achievementId: String): AchievementText
             AYMR.strings.achievement_secret_not_even_my_final_form_desc,
         )
 
+        "reading_immersion_bronze" -> text(
+            AYMR.strings.achievement_reading_immersion_bronze_title,
+            AYMR.strings.achievement_reading_immersion_bronze_desc,
+        )
+        "reading_immersion_silver" -> text(
+            AYMR.strings.achievement_reading_immersion_silver_title,
+            AYMR.strings.achievement_reading_immersion_silver_desc,
+        )
+        "reading_immersion_gold" -> text(
+            AYMR.strings.achievement_reading_immersion_gold_title,
+            AYMR.strings.achievement_reading_immersion_gold_desc,
+        )
+        "reading_immersion_platinum" -> text(
+            AYMR.strings.achievement_reading_immersion_platinum_title,
+            AYMR.strings.achievement_reading_immersion_platinum_desc,
+        )
+        "anime_novel_hybrid_bronze" -> text(
+            AYMR.strings.achievement_anime_novel_hybrid_bronze_title,
+            AYMR.strings.achievement_anime_novel_hybrid_bronze_desc,
+        )
+        "anime_novel_hybrid_silver" -> text(
+            AYMR.strings.achievement_anime_novel_hybrid_silver_title,
+            AYMR.strings.achievement_anime_novel_hybrid_silver_desc,
+        )
+        "anime_novel_hybrid_gold" -> text(
+            AYMR.strings.achievement_anime_novel_hybrid_gold_title,
+            AYMR.strings.achievement_anime_novel_hybrid_gold_desc,
+        )
+        "rank_up_1" -> text(
+            AYMR.strings.achievement_rank_up_1_title,
+            AYMR.strings.achievement_rank_up_1_desc,
+        )
+        "rank_up_2" -> text(
+            AYMR.strings.achievement_rank_up_2_title,
+            AYMR.strings.achievement_rank_up_2_desc,
+        )
+        "rank_up_3" -> text(
+            AYMR.strings.achievement_rank_up_3_title,
+            AYMR.strings.achievement_rank_up_3_desc,
+        )
+        "rank_up_4" -> text(
+            AYMR.strings.achievement_rank_up_4_title,
+            AYMR.strings.achievement_rank_up_4_desc,
+        )
+        "rank_up_5" -> text(
+            AYMR.strings.achievement_rank_up_5_title,
+            AYMR.strings.achievement_rank_up_5_desc,
+        )
+        "rank_up_6" -> text(
+            AYMR.strings.achievement_rank_up_6_title,
+            AYMR.strings.achievement_rank_up_6_desc,
+        )
+        "rank_up_7" -> text(
+            AYMR.strings.achievement_rank_up_7_title,
+            AYMR.strings.achievement_rank_up_7_desc,
+        )
+        "rank_up_8" -> text(
+            AYMR.strings.achievement_rank_up_8_title,
+            AYMR.strings.achievement_rank_up_8_desc,
+        )
+        "rank_up_9" -> text(
+            AYMR.strings.achievement_rank_up_9_title,
+            AYMR.strings.achievement_rank_up_9_desc,
+        )
+        "rank_up_10" -> text(
+            AYMR.strings.achievement_rank_up_10_title,
+            AYMR.strings.achievement_rank_up_10_desc,
+        )
+
+        "trinity_initiate" -> text(
+            AYMR.strings.achievement_trinity_initiate_title,
+            AYMR.strings.achievement_trinity_initiate_desc,
+        )
+        "trinity_master" -> text(
+            AYMR.strings.achievement_trinity_master_title,
+            AYMR.strings.achievement_trinity_master_desc,
+        )
+        "trinity_legend" -> text(
+            AYMR.strings.achievement_trinity_legend_title,
+            AYMR.strings.achievement_trinity_legend_desc,
+        )
+        "three_realms_collector" -> text(
+            AYMR.strings.achievement_three_realms_collector_title,
+            AYMR.strings.achievement_three_realms_collector_desc,
+        )
+        "the_finisher" -> text(
+            AYMR.strings.achievement_the_finisher_title,
+            AYMR.strings.achievement_the_finisher_desc,
+        )
+        "the_closer" -> text(
+            AYMR.strings.achievement_the_closer_title,
+            AYMR.strings.achievement_the_closer_desc,
+        )
+        "romance_devotee" -> text(
+            AYMR.strings.achievement_romance_devotee_title,
+            AYMR.strings.achievement_romance_devotee_desc,
+        )
+        "horror_aficionado" -> text(
+            AYMR.strings.achievement_horror_aficionado_title,
+            AYMR.strings.achievement_horror_aficionado_desc,
+        )
+        "isekai_addict" -> text(
+            AYMR.strings.achievement_isekai_addict_title,
+            AYMR.strings.achievement_isekai_addict_desc,
+        )
+        "slice_of_life_zen" -> text(
+            AYMR.strings.achievement_slice_of_life_zen_title,
+            AYMR.strings.achievement_slice_of_life_zen_desc,
+        )
+        "secret_shadow_monarch" -> text(
+            AYMR.strings.achievement_secret_shadow_monarch_title,
+            AYMR.strings.achievement_secret_shadow_monarch_desc,
+        )
+        "secret_weeb_awakening" -> text(
+            AYMR.strings.achievement_secret_weeb_awakening_title,
+            AYMR.strings.achievement_secret_weeb_awakening_desc,
+        )
+
         else -> AchievementTextResourceRefs(
             title = null,
             description = null,

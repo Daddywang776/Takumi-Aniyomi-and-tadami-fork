@@ -34,6 +34,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shader
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -71,7 +72,10 @@ import kotlin.math.sin
 internal fun NicknameEffectPreset.isTreasury(): Boolean =
     this == NicknameEffectPreset.AuroraCrown ||
         this == NicknameEffectPreset.GlitchRune ||
-        this == NicknameEffectPreset.Cipher
+        this == NicknameEffectPreset.Cipher ||
+        this == NicknameEffectPreset.TrinityPrism ||
+        this == NicknameEffectPreset.ShadowCrown ||
+        this == NicknameEffectPreset.RankSigils
 
 private fun Color.shiftHue(degrees: Float): Color {
     val hsv = FloatArray(3)
@@ -114,6 +118,9 @@ internal fun AnimatedNicknameOverlay(
         NicknameEffectPreset.GlitchRune -> GlitchRuneEffect(text, nicknameStyle, modifier)
         NicknameEffectPreset.Cipher -> CipherSigilEffect(text, nicknameStyle, modifier)
         NicknameEffectPreset.AuroraCrown -> AuroraCrownEffect(text, nicknameStyle, modifier)
+        NicknameEffectPreset.TrinityPrism -> TrinityPrismEffect(text, nicknameStyle, modifier)
+        NicknameEffectPreset.ShadowCrown -> ShadowCrownEffect(text, nicknameStyle, modifier)
+        NicknameEffectPreset.RankSigils -> RankSigilsEffect(text, nicknameStyle, modifier)
         else -> StaticNicknameText(text, nicknameStyle, modifier)
     }
 }
@@ -257,6 +264,9 @@ private fun applyNicknameEffect(text: String, effect: NicknameEffectPreset): Str
         NicknameEffectPreset.AuroraCrown -> text
         NicknameEffectPreset.GlitchRune -> text
         NicknameEffectPreset.Cipher -> text
+        NicknameEffectPreset.TrinityPrism -> text
+        NicknameEffectPreset.ShadowCrown -> text
+        NicknameEffectPreset.RankSigils -> text
     }
 }
 
@@ -735,6 +745,113 @@ private data class AuroraParticle(
     val phase: Float,
 )
 
+@Composable
+private fun TrinityPrismEffect(
+    text: String,
+    nicknameStyle: NicknameStyle,
+    modifier: Modifier = Modifier,
+) {
+    val transition = rememberInfiniteTransition(label = "trinity_prism")
+    val shimmer by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(9000, easing = LinearEasing), RepeatMode.Reverse),
+        label = "trinity_prism_shimmer",
+    )
+    val baseStyle = MaterialTheme.typography.headlineSmall.copy(
+        fontFamily = nicknameStyle.font.fontRes?.let { FontFamily(Font(it)) },
+        fontWeight = FontWeight.Black,
+        fontSize = nicknameStyle.fontSize.coerceIn(14, 36).sp,
+        lineHeight = (nicknameStyle.fontSize.coerceIn(14, 36) + 2).sp,
+    )
+    val brush = Brush.linearGradient(
+        colors = listOf(Color(0xFF64E8FF), Color(0xFF9C7CFF), Color(0xFFFFD36E)),
+        start = Offset(120f * shimmer, 0f),
+        end = Offset(420f + 120f * shimmer, 120f),
+    )
+    Text(
+        text = text,
+        modifier = modifier,
+        style = baseStyle.copy(
+            brush = brush,
+            shadow = Shadow(Color(0xFF9C7CFF).copy(alpha = 0.65f), blurRadius = 18f),
+        ),
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
+
+@Composable
+private fun ShadowCrownEffect(
+    text: String,
+    nicknameStyle: NicknameStyle,
+    modifier: Modifier = Modifier,
+) {
+    val transition = rememberInfiniteTransition(label = "shadow_crown")
+    val pulse by transition.animateFloat(
+        initialValue = 0.55f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(2600, easing = LinearEasing), RepeatMode.Reverse),
+        label = "shadow_crown_pulse",
+    )
+    val baseStyle = MaterialTheme.typography.headlineSmall.copy(
+        fontFamily = nicknameStyle.font.fontRes?.let { FontFamily(Font(it)) },
+        fontWeight = FontWeight.Black,
+        fontSize = nicknameStyle.fontSize.coerceIn(14, 36).sp,
+        lineHeight = (nicknameStyle.fontSize.coerceIn(14, 36) + 2).sp,
+    )
+    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = "♛",
+            style = baseStyle.copy(
+                color = Color(0xFFB36BFF),
+                shadow = Shadow(Color(0xFF5D2A9D).copy(alpha = pulse), blurRadius = 22f),
+            ),
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(
+            text = text,
+            style = baseStyle.copy(
+                color = Color(0xFFE7D7FF),
+                shadow = Shadow(Color(0xFFB36BFF).copy(alpha = pulse), blurRadius = 18f),
+            ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun RankSigilsEffect(
+    text: String,
+    nicknameStyle: NicknameStyle,
+    modifier: Modifier = Modifier,
+) {
+    val transition = rememberInfiniteTransition(label = "rank_sigils")
+    val glow by transition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 0.9f,
+        animationSpec = infiniteRepeatable(tween(1800, easing = LinearEasing), RepeatMode.Reverse),
+        label = "rank_sigil_glow",
+    )
+    val baseStyle = MaterialTheme.typography.headlineSmall.copy(
+        fontFamily = nicknameStyle.font.fontRes?.let { FontFamily(Font(it)) },
+        fontWeight = FontWeight.Black,
+        fontSize = nicknameStyle.fontSize.coerceIn(14, 36).sp,
+        lineHeight = (nicknameStyle.fontSize.coerceIn(14, 36) + 2).sp,
+    )
+    Text(
+        text = "◆ $text ◆",
+        modifier = modifier,
+        style = baseStyle.copy(
+            color = Color(0xFFFFE08A),
+            shadow = Shadow(Color(0xFFFFD36E).copy(alpha = glow), blurRadius = 16f),
+        ),
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
+
 private fun toRunic(text: String): String {
     val runeMap = mapOf(
         // English
@@ -774,6 +891,32 @@ internal fun NicknameBadgeDecorator(
         return
     }
 
+    val imageResId = when (badgeStyleKey) {
+        "trinity" -> R.drawable.ic_reward_badge_trinity
+        "finisher" -> R.drawable.ic_reward_badge_finisher
+        "immersion" -> R.drawable.ic_reward_badge_immersion
+        "ascendant" -> R.drawable.ic_reward_nickname_rank_sigils
+        else -> null
+    }
+
+    if (imageResId != null) {
+        Row(
+            modifier = modifier,
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
+        ) {
+            Icon(
+                painter = painterResource(id = imageResId),
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = Color.Unspecified,
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            content()
+        }
+        return
+    }
+
     val transition = rememberInfiniteTransition(label = "nickname_badge")
     val time by transition.animateFloat(
         initialValue = 0f,
@@ -785,7 +928,15 @@ internal fun NicknameBadgeDecorator(
         label = "badge_time",
     )
 
-    when (badgeStyleKey) {
+    val effectiveBadgeStyleKey = when (badgeStyleKey) {
+        "trinity" -> "orbit"
+        "finisher" -> "crown"
+        "immersion" -> "orbit"
+        "ascendant" -> "crown"
+        else -> badgeStyleKey
+    }
+
+    when (effectiveBadgeStyleKey) {
         "orbit" -> {
             // Intersecting 3D atomic orbits with comets (lead nodes + trails) running along them
             Box(
@@ -1136,6 +1287,257 @@ internal fun AvatarFrameDecorations(
             .fillMaxSize(),
     ) {
         when (styleKey) {
+            "trinity_orbit" -> {
+                // Three-media orbital relic frame: cyan / violet / gold arcs with travelling nodes.
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .drawWithContent {
+                            drawContent()
+
+                            val center = Offset(size.width / 2f, size.height / 2f)
+                            val radius = size.minDimension / 2f - 0.75.dp.toPx()
+                            val orbitColors = listOf(
+                                Color(0xFF64E8FF),
+                                Color(0xFF9C7CFF),
+                                Color(0xFFFFD36E),
+                            )
+                            val tilts = listOf(-22f, 22f, 90f)
+
+                            orbitColors.forEachIndexed { index, orbitColor ->
+                                val orbitRadius = radius * (1f - index * 0.035f)
+                                val angle = spin + index * 120f
+                                rotate(tilts[index], pivot = center) {
+                                    drawCircle(
+                                        color = orbitColor.copy(alpha = 0.24f * pulse),
+                                        radius = orbitRadius,
+                                        center = center,
+                                        style = Stroke(width = (1.55f + index * 0.25f).dp.toPx()),
+                                    )
+                                }
+
+                                val rad = Math.toRadians(angle.toDouble())
+                                val node = Offset(
+                                    x = center.x + kotlin.math.cos(rad).toFloat() * orbitRadius,
+                                    y = center.y + kotlin.math.sin(rad).toFloat() * orbitRadius,
+                                )
+                                drawCircle(
+                                    color = orbitColor.copy(alpha = 0.34f * pulse),
+                                    radius = 5.5.dp.toPx(),
+                                    center = node,
+                                )
+                                drawCircle(
+                                    color = Color.White.copy(alpha = 0.86f),
+                                    radius = 2.25.dp.toPx(),
+                                    center = node,
+                                )
+                            }
+
+                            drawCircle(
+                                brush = Brush.radialGradient(
+                                    colors = listOf(
+                                        Color(0xFF9C7CFF).copy(alpha = 0.12f * pulse),
+                                        Color.Transparent,
+                                    ),
+                                    center = center,
+                                    radius = radius * 1.5f,
+                                ),
+                                radius = radius * 1.5f,
+                                center = center,
+                            )
+                        },
+                )
+            }
+            "deep_archive" -> {
+                // Archive-grade frame: quiet blue-gold illuminated manuscript ring.
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .drawWithContent {
+                            drawContent()
+
+                            val center = Offset(size.width / 2f, size.height / 2f)
+                            val radius = size.minDimension / 2f - 2.dp.toPx()
+                            val teal = Color(0xFF5DE7D8)
+                            val archiveGold = Color(0xFFFFD36E)
+                            val ink = Color(0xFF0B1028)
+
+                            drawCircle(
+                                color = ink.copy(alpha = 0.18f),
+                                radius = radius + 1.5.dp.toPx(),
+                                center = center,
+                                style = Stroke(width = 5.dp.toPx()),
+                            )
+                            drawCircle(
+                                color = teal.copy(alpha = 0.30f * pulse),
+                                radius = radius,
+                                center = center,
+                                style = Stroke(width = 2.4.dp.toPx()),
+                            )
+                            drawCircle(
+                                color = archiveGold.copy(alpha = 0.40f),
+                                radius = radius - 5.dp.toPx(),
+                                center = center,
+                                style = Stroke(width = 1.dp.toPx()),
+                            )
+
+                            repeat(12) { i ->
+                                val angle = Math.toRadians((i * 30f).toDouble())
+                                val inner = radius - 8.dp.toPx()
+                                val outer = radius - 2.dp.toPx()
+                                val start = Offset(
+                                    center.x + kotlin.math.cos(angle).toFloat() * inner,
+                                    center.y + kotlin.math.sin(angle).toFloat() * inner,
+                                )
+                                val end = Offset(
+                                    center.x + kotlin.math.cos(angle).toFloat() * outer,
+                                    center.y + kotlin.math.sin(angle).toFloat() * outer,
+                                )
+                                drawLine(
+                                    color = if (i % 3 ==
+                                        0
+                                    ) {
+                                        archiveGold.copy(alpha = 0.42f)
+                                    } else {
+                                        teal.copy(alpha = 0.28f)
+                                    },
+                                    start = start,
+                                    end = end,
+                                    strokeWidth = 1.dp.toPx(),
+                                    cap = StrokeCap.Round,
+                                )
+                            }
+                        },
+                )
+            }
+            "hybrid_scroll" -> {
+                // Synchronized hybrid frame: left digital arc + right manuscript arc, deliberately separated.
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .drawWithContent {
+                            drawContent()
+
+                            val center = Offset(size.width / 2f, size.height / 2f)
+                            val radius = size.minDimension / 2f - 1.5.dp.toPx()
+                            val animeBlue = Color(0xFF40C4FF)
+                            val scrollGold = Color(0xFFFFB86B)
+                            val violet = Color(0xFFB388FF)
+                            val rotation = spin // full 0..360 cycle; seamless at loop boundary
+
+                            rotate(rotation, pivot = center) {
+                                // Left / digital half. Kept away from the right half with a clear top/bottom gap.
+                                drawArc(
+                                    color = animeBlue.copy(alpha = 0.58f * pulse),
+                                    startAngle = 128f,
+                                    sweepAngle = 104f,
+                                    useCenter = false,
+                                    topLeft = Offset(center.x - radius, center.y - radius),
+                                    size = androidx.compose.ui.geometry.Size(radius * 2f, radius * 2f),
+                                    style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round),
+                                )
+                                // Right / manuscript half, synchronized to the same transform so it never drifts into the other half.
+                                drawArc(
+                                    color = scrollGold.copy(alpha = 0.68f),
+                                    startAngle = -52f,
+                                    sweepAngle = 104f,
+                                    useCenter = false,
+                                    topLeft = Offset(center.x - radius, center.y - radius),
+                                    size = androidx.compose.ui.geometry.Size(radius * 2f, radius * 2f),
+                                    style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round),
+                                )
+                            }
+
+                            drawCircle(
+                                color = violet.copy(alpha = 0.18f),
+                                radius = radius - 6.dp.toPx(),
+                                center = center,
+                                style = Stroke(width = 1.dp.toPx()),
+                            )
+
+                            // Manuscript strokes on the right side only.
+                            repeat(4) { i ->
+                                val y = center.y - radius * 0.48f + i * radius * 0.32f
+                                drawLine(
+                                    color = scrollGold.copy(alpha = 0.20f),
+                                    start = Offset(center.x + radius * 0.24f, y),
+                                    end = Offset(center.x + radius * 0.66f, y),
+                                    strokeWidth = 1.dp.toPx(),
+                                    cap = StrokeCap.Round,
+                                )
+                            }
+                            // Digital scan marks on the left side only.
+                            repeat(4) { i ->
+                                val y = center.y - radius * 0.48f + i * radius * 0.32f
+                                drawLine(
+                                    color = animeBlue.copy(alpha = 0.22f),
+                                    start = Offset(center.x - radius * 0.66f, y),
+                                    end = Offset(center.x - radius * 0.24f, y),
+                                    strokeWidth = 1.dp.toPx(),
+                                    cap = StrokeCap.Round,
+                                )
+                            }
+                        },
+                )
+            }
+            "ascendant" -> {
+                // Mythic prestige halo: white-gold compass rays and slow crown ticks.
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .drawWithContent {
+                            drawContent()
+
+                            val center = Offset(size.width / 2f, size.height / 2f)
+                            val radius = size.minDimension / 2f - 2.dp.toPx()
+                            val whiteGold = Color(0xFFFFF8D6)
+                            val gold = Color(0xFFFFD36E)
+                            val amber = Color(0xFFFFA726)
+
+                            drawCircle(
+                                brush = Brush.radialGradient(
+                                    colors = listOf(gold.copy(alpha = 0.18f * pulse), Color.Transparent),
+                                    center = center,
+                                    radius = radius * 1.7f,
+                                ),
+                                radius = radius * 1.7f,
+                                center = center,
+                            )
+                            drawCircle(
+                                color = whiteGold.copy(alpha = 0.72f),
+                                radius = radius,
+                                center = center,
+                                style = Stroke(width = 2.dp.toPx()),
+                            )
+                            drawCircle(
+                                color = amber.copy(alpha = 0.48f * pulse),
+                                radius = radius - 5.dp.toPx(),
+                                center = center,
+                                style = Stroke(width = 1.dp.toPx()),
+                            )
+
+                            repeat(16) { i ->
+                                val angle = Math.toRadians((i * 22.5f + spin).toDouble())
+                                val longTick = i % 4 == 0
+                                val inner = radius - if (longTick) 10.dp.toPx() else 6.dp.toPx()
+                                val outer = radius + if (longTick) 4.dp.toPx() else 1.dp.toPx()
+                                drawLine(
+                                    color = if (longTick) whiteGold.copy(alpha = 0.82f) else gold.copy(alpha = 0.50f),
+                                    start = Offset(
+                                        center.x + kotlin.math.cos(angle).toFloat() * inner,
+                                        center.y + kotlin.math.sin(angle).toFloat() * inner,
+                                    ),
+                                    end = Offset(
+                                        center.x + kotlin.math.cos(angle).toFloat() * outer,
+                                        center.y + kotlin.math.sin(angle).toFloat() * outer,
+                                    ),
+                                    strokeWidth = if (longTick) 1.5.dp.toPx() else 1.dp.toPx(),
+                                    cap = StrokeCap.Round,
+                                )
+                            }
+                        },
+                )
+            }
             "neon" -> {
                 // Intense glowing neon light tube that shifts colors with a chasing light effect
                 val baseNeonColor = remember(accentColor, neonHueShift) {

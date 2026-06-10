@@ -107,6 +107,10 @@ class UnlockableManager(
                 logcat(LogPriority.INFO) { "Aura unlocked: $unlockableId" }
             }
 
+            unlockableId.startsWith("title_") -> {
+                logcat(LogPriority.INFO) { "Profile title unlocked: $unlockableId" }
+            }
+
             unlockableId.startsWith("display_") -> {
                 logcat(LogPriority.INFO) { "Display preference unlocked: $unlockableId" }
             }
@@ -217,6 +221,10 @@ class UnlockableManager(
             "aura_harem" -> MR.strings.unlockable_aura_harem
             "aura_level_up" -> MR.strings.unlockable_aura_level_up
             "aura_matrix" -> MR.strings.unlockable_aura_matrix
+            "aura_trinity_orbit" -> MR.strings.unlockable_aura_trinity_orbit
+            "aura_deep_focus" -> MR.strings.unlockable_aura_deep_focus
+            "aura_shadow_monarch" -> MR.strings.unlockable_aura_shadow_monarch
+            "aura_ascendant_gold" -> MR.strings.unlockable_aura_ascendant_gold
 
             // Profile presets
             "profile_nickname_effect_aurora_crown" -> MR.strings.unlockable_profile_nickname_effect_aurora_crown
@@ -248,7 +256,12 @@ class UnlockableManager(
         return unlockableId
             .removePrefix("theme_")
             .removePrefix("aura_")
+            .removePrefix("title_")
+            .removePrefix("special_background_")
             .removePrefix("special_")
+            .removePrefix("profile_nickname_effect_")
+            .removePrefix("avatar_frame_")
+            .removePrefix("home_badge_")
             .replace("_", " ")
             .capitalize()
     }
@@ -260,6 +273,7 @@ class UnlockableManager(
         return when {
             unlockableId.startsWith("theme_") -> UnlockableType.THEME
             unlockableId.startsWith("aura_") -> UnlockableType.AURA
+            unlockableId.startsWith("title_") -> UnlockableType.TITLE
             unlockableId.startsWith("badge_") -> UnlockableType.BADGE
             unlockableId.startsWith("display_") -> UnlockableType.DISPLAY
             unlockableId.startsWith("profile_") -> UnlockableType.PROFILE
@@ -343,6 +357,7 @@ class UnlockableManager(
 enum class UnlockableType {
     THEME,
     AURA,
+    TITLE,
     BADGE,
     DISPLAY,
     PROFILE,

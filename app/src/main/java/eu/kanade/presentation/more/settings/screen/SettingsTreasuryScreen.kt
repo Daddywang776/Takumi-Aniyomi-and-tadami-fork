@@ -40,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -94,6 +95,7 @@ object SettingsTreasuryScreen : SearchableSettings {
         val nicknameEffectKey by userProfilePreferences.nicknameEffect().collectAsStateWithLifecycle()
         val avatarFrameStyleKey by userProfilePreferences.avatarFrameStyle().collectAsStateWithLifecycle()
         val homeBadgeStyleKey by userProfilePreferences.homeBadgeStyle().collectAsStateWithLifecycle()
+        val profileTitleKey by userProfilePreferences.profileTitle().collectAsStateWithLifecycle()
         val specialBackgroundStyleKey by uiPreferences.specialBackgroundStyle().collectAsStateWithLifecycle()
 
         val unlockedUnlockables = visibleUnlockablesForTreasuryPreview(
@@ -118,6 +120,54 @@ object SettingsTreasuryScreen : SearchableSettings {
             }
             map
         }
+
+        val titlePresets = listOf(
+            TreasuryPreset(
+                unlockableId = "title_trinity_initiate",
+                title = stringResource(AYMR.strings.treasury_title_trinity_initiate_title),
+                description = stringResource(AYMR.strings.treasury_title_trinity_initiate_desc),
+                accentColor = Color(0xFF9C7CFF),
+                isActive = { profileTitleKey == "title_trinity_initiate" },
+                onApply = { userProfilePreferences.profileTitle().set("title_trinity_initiate") },
+                onDeactivate = { userProfilePreferences.profileTitle().set("none") },
+            ),
+            TreasuryPreset(
+                unlockableId = "title_finisher",
+                title = stringResource(AYMR.strings.treasury_title_finisher_title),
+                description = stringResource(AYMR.strings.treasury_title_finisher_desc),
+                accentColor = Color(0xFFFFD36E),
+                isActive = { profileTitleKey == "title_finisher" },
+                onApply = { userProfilePreferences.profileTitle().set("title_finisher") },
+                onDeactivate = { userProfilePreferences.profileTitle().set("none") },
+            ),
+            TreasuryPreset(
+                unlockableId = "title_closer",
+                title = stringResource(AYMR.strings.treasury_title_closer_title),
+                description = stringResource(AYMR.strings.treasury_title_closer_desc),
+                accentColor = Color(0xFFFFB86B),
+                isActive = { profileTitleKey == "title_closer" },
+                onApply = { userProfilePreferences.profileTitle().set("title_closer") },
+                onDeactivate = { userProfilePreferences.profileTitle().set("none") },
+            ),
+            TreasuryPreset(
+                unlockableId = "title_deep_reader",
+                title = stringResource(AYMR.strings.treasury_title_deep_reader_title),
+                description = stringResource(AYMR.strings.treasury_title_deep_reader_desc),
+                accentColor = Color(0xFF5DE7D8),
+                isActive = { profileTitleKey == "title_deep_reader" },
+                onApply = { userProfilePreferences.profileTitle().set("title_deep_reader") },
+                onDeactivate = { userProfilePreferences.profileTitle().set("none") },
+            ),
+            TreasuryPreset(
+                unlockableId = "title_rank_4",
+                title = stringResource(AYMR.strings.treasury_title_rank_4_title),
+                description = stringResource(AYMR.strings.treasury_title_rank_4_desc),
+                accentColor = Color(0xFFFFE08A),
+                isActive = { profileTitleKey == "title_rank_4" },
+                onApply = { userProfilePreferences.profileTitle().set("title_rank_4") },
+                onDeactivate = { userProfilePreferences.profileTitle().set("none") },
+            ),
+        )
 
         val profileEffectPresets = listOf(
             TreasuryPreset(
@@ -169,6 +219,33 @@ object SettingsTreasuryScreen : SearchableSettings {
                     userProfilePreferences.nicknameEffect().set("none")
                 },
             ),
+            TreasuryPreset(
+                unlockableId = "profile_nickname_effect_trinity_prism",
+                title = stringResource(AYMR.strings.treasury_nickname_trinity_prism_title),
+                description = stringResource(AYMR.strings.treasury_nickname_trinity_prism_desc),
+                accentColor = Color(0xFF9C7CFF),
+                isActive = { nicknameEffectKey == "trinity_prism" },
+                onApply = { userProfilePreferences.nicknameEffect().set("trinity_prism") },
+                onDeactivate = { userProfilePreferences.nicknameEffect().set("none") },
+            ),
+            TreasuryPreset(
+                unlockableId = "profile_nickname_effect_shadow_crown",
+                title = stringResource(AYMR.strings.treasury_nickname_shadow_crown_title),
+                description = stringResource(AYMR.strings.treasury_nickname_shadow_crown_desc),
+                accentColor = Color(0xFFB36BFF),
+                isActive = { nicknameEffectKey == "shadow_crown" },
+                onApply = { userProfilePreferences.nicknameEffect().set("shadow_crown") },
+                onDeactivate = { userProfilePreferences.nicknameEffect().set("none") },
+            ),
+            TreasuryPreset(
+                unlockableId = "profile_nickname_effect_rank_sigils",
+                title = stringResource(AYMR.strings.treasury_nickname_rank_sigils_title),
+                description = stringResource(AYMR.strings.treasury_nickname_rank_sigils_desc),
+                accentColor = Color(0xFFFFE08A),
+                isActive = { nicknameEffectKey == "rank_sigils" },
+                onApply = { userProfilePreferences.nicknameEffect().set("rank_sigils") },
+                onDeactivate = { userProfilePreferences.nicknameEffect().set("none") },
+            ),
         )
 
         val avatarFramePresets = listOf(
@@ -213,6 +290,42 @@ object SettingsTreasuryScreen : SearchableSettings {
                 onDeactivate = {
                     userProfilePreferences.avatarFrameStyle().set("none")
                 },
+            ),
+            TreasuryPreset(
+                unlockableId = "avatar_frame_trinity_orbit",
+                title = stringResource(AYMR.strings.treasury_frame_trinity_orbit_title),
+                description = stringResource(AYMR.strings.treasury_frame_trinity_orbit_desc),
+                accentColor = Color(0xFF9C7CFF),
+                isActive = { avatarFrameStyleKey == "trinity_orbit" },
+                onApply = { userProfilePreferences.avatarFrameStyle().set("trinity_orbit") },
+                onDeactivate = { userProfilePreferences.avatarFrameStyle().set("none") },
+            ),
+            TreasuryPreset(
+                unlockableId = "avatar_frame_deep_archive",
+                title = stringResource(AYMR.strings.treasury_frame_deep_archive_title),
+                description = stringResource(AYMR.strings.treasury_frame_deep_archive_desc),
+                accentColor = Color(0xFF5DE7D8),
+                isActive = { avatarFrameStyleKey == "deep_archive" },
+                onApply = { userProfilePreferences.avatarFrameStyle().set("deep_archive") },
+                onDeactivate = { userProfilePreferences.avatarFrameStyle().set("none") },
+            ),
+            TreasuryPreset(
+                unlockableId = "avatar_frame_hybrid_scroll",
+                title = stringResource(AYMR.strings.treasury_frame_hybrid_scroll_title),
+                description = stringResource(AYMR.strings.treasury_frame_hybrid_scroll_desc),
+                accentColor = Color(0xFFFFB86B),
+                isActive = { avatarFrameStyleKey == "hybrid_scroll" },
+                onApply = { userProfilePreferences.avatarFrameStyle().set("hybrid_scroll") },
+                onDeactivate = { userProfilePreferences.avatarFrameStyle().set("none") },
+            ),
+            TreasuryPreset(
+                unlockableId = "avatar_frame_ascendant",
+                title = stringResource(AYMR.strings.treasury_frame_ascendant_title),
+                description = stringResource(AYMR.strings.treasury_frame_ascendant_desc),
+                accentColor = Color(0xFFFFE08A),
+                isActive = { avatarFrameStyleKey == "ascendant" },
+                onApply = { userProfilePreferences.avatarFrameStyle().set("ascendant") },
+                onDeactivate = { userProfilePreferences.avatarFrameStyle().set("none") },
             ),
         )
 
@@ -259,6 +372,42 @@ object SettingsTreasuryScreen : SearchableSettings {
                     userProfilePreferences.homeBadgeStyle().set("none")
                 },
             ),
+            TreasuryPreset(
+                unlockableId = "home_badge_trinity",
+                title = stringResource(AYMR.strings.treasury_badge_trinity_title),
+                description = stringResource(AYMR.strings.treasury_badge_trinity_desc),
+                accentColor = Color(0xFF9C7CFF),
+                isActive = { homeBadgeStyleKey == "trinity" },
+                onApply = { userProfilePreferences.homeBadgeStyle().set("trinity") },
+                onDeactivate = { userProfilePreferences.homeBadgeStyle().set("none") },
+            ),
+            TreasuryPreset(
+                unlockableId = "home_badge_finisher",
+                title = stringResource(AYMR.strings.treasury_badge_finisher_title),
+                description = stringResource(AYMR.strings.treasury_badge_finisher_desc),
+                accentColor = Color(0xFFFFD36E),
+                isActive = { homeBadgeStyleKey == "finisher" },
+                onApply = { userProfilePreferences.homeBadgeStyle().set("finisher") },
+                onDeactivate = { userProfilePreferences.homeBadgeStyle().set("none") },
+            ),
+            TreasuryPreset(
+                unlockableId = "home_badge_immersion",
+                title = stringResource(AYMR.strings.treasury_badge_immersion_title),
+                description = stringResource(AYMR.strings.treasury_badge_immersion_desc),
+                accentColor = Color(0xFF5DE7D8),
+                isActive = { homeBadgeStyleKey == "immersion" },
+                onApply = { userProfilePreferences.homeBadgeStyle().set("immersion") },
+                onDeactivate = { userProfilePreferences.homeBadgeStyle().set("none") },
+            ),
+            TreasuryPreset(
+                unlockableId = "home_badge_ascendant",
+                title = stringResource(AYMR.strings.treasury_badge_ascendant_title),
+                description = stringResource(AYMR.strings.treasury_badge_ascendant_desc),
+                accentColor = Color(0xFFFFE08A),
+                isActive = { homeBadgeStyleKey == "ascendant" },
+                onApply = { userProfilePreferences.homeBadgeStyle().set("ascendant") },
+                onDeactivate = { userProfilePreferences.homeBadgeStyle().set("none") },
+            ),
         )
 
         val specialBackgroundPresets = listOf(
@@ -291,6 +440,33 @@ object SettingsTreasuryScreen : SearchableSettings {
                 onDeactivate = {
                     uiPreferences.specialBackgroundStyle().set("none")
                 },
+            ),
+            TreasuryPreset(
+                unlockableId = "special_background_trinity_constellation",
+                title = stringResource(AYMR.strings.treasury_bg_trinity_constellation_title),
+                description = stringResource(AYMR.strings.treasury_bg_trinity_constellation_desc),
+                accentColor = Color(0xFF9C7CFF),
+                isActive = { specialBackgroundStyleKey == "trinity_constellation" },
+                onApply = { uiPreferences.specialBackgroundStyle().set("trinity_constellation") },
+                onDeactivate = { uiPreferences.specialBackgroundStyle().set("none") },
+            ),
+            TreasuryPreset(
+                unlockableId = "special_background_deep_space_archive",
+                title = stringResource(AYMR.strings.treasury_bg_deep_space_archive_title),
+                description = stringResource(AYMR.strings.treasury_bg_deep_space_archive_desc),
+                accentColor = Color(0xFF5DE7D8),
+                isActive = { specialBackgroundStyleKey == "deep_space_archive" },
+                onApply = { uiPreferences.specialBackgroundStyle().set("deep_space_archive") },
+                onDeactivate = { uiPreferences.specialBackgroundStyle().set("none") },
+            ),
+            TreasuryPreset(
+                unlockableId = "special_background_shadow_realm",
+                title = stringResource(AYMR.strings.treasury_bg_shadow_realm_title),
+                description = stringResource(AYMR.strings.treasury_bg_shadow_realm_desc),
+                accentColor = Color(0xFFB36BFF),
+                isActive = { specialBackgroundStyleKey == "shadow_realm" },
+                onApply = { uiPreferences.specialBackgroundStyle().set("shadow_realm") },
+                onDeactivate = { uiPreferences.specialBackgroundStyle().set("none") },
             ),
         )
 
@@ -336,10 +512,13 @@ object SettingsTreasuryScreen : SearchableSettings {
             Preference.PreferenceGroup(
                 title = stringResource(AYMR.strings.aurora_nickname_preview),
                 preferenceItems = listOf(
-                    Preference.PreferenceItem.CustomPreference(title = "Nickname Preview") {
+                    Preference.PreferenceItem.CustomPreference(
+                        title = stringResource(AYMR.strings.treasury_nickname_preview),
+                    ) {
                         val colors = AuroraTheme.colors
-                        val decoratedName = remember(name) {
-                            name.trim().ifEmpty { "User Name" }
+                        val defaultUserName = stringResource(AYMR.strings.treasury_default_user_name)
+                        val decoratedName = remember(name, defaultUserName) {
+                            name.trim().ifEmpty { defaultUserName }
                         }
 
                         val cardBgColor = if (colors.isDark) {
@@ -412,18 +591,61 @@ object SettingsTreasuryScreen : SearchableSettings {
                                     )
                                 }
 
-                                Box(
+                                Column(
                                     modifier = Modifier.weight(1f),
-                                    contentAlignment = Alignment.CenterStart,
+                                    verticalArrangement = Arrangement.spacedBy(4.dp),
                                 ) {
                                     eu.kanade.tachiyomi.ui.home.StyledNicknameText(
                                         text = decoratedName,
                                         nicknameStyle = activeNicknameStyle,
                                         badgeStyleKey = homeBadgeStyleKey,
                                     )
+                                    if (profileTitleKey != "none") {
+                                        Text(
+                                            text = profileTitleDisplayName(profileTitleKey),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Black,
+                                            color = colors.accent,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis,
+                                        )
+                                    }
                                 }
                             }
                         }
+                    },
+                ).toImmutableList(),
+            ),
+        )
+
+        val totalTreasuryRewards = remember(
+            titlePresets,
+            profileEffectPresets,
+            avatarFramePresets,
+            homePresets,
+            specialBackgroundPresets,
+        ) {
+            titlePresets.size + profileEffectPresets.size + avatarFramePresets.size + homePresets.size +
+                specialBackgroundPresets.size + allAuraPalettes().size + AppTheme.entries.count(AppTheme::isHidden)
+        }
+        val unlockedTreasuryRewards = unlockedUnlockables.size.coerceAtMost(totalTreasuryRewards)
+
+        preferences.add(
+            Preference.PreferenceGroup(
+                title = stringResource(AYMR.strings.treasury_vault_group_title),
+                preferenceItems = listOf(
+                    Preference.PreferenceItem.CustomPreference(
+                        title = stringResource(AYMR.strings.treasury_vault_group_title),
+                    ) {
+                        TreasuryVaultHero(
+                            unlocked = unlockedTreasuryRewards,
+                            total = totalTreasuryRewards,
+                            activeTheme = uiPreferences.appTheme().get().name.replace("_", " "),
+                            activeAura = uiPreferences.enabledAuras().get().firstOrNull()
+                                ?.removePrefix("aura_")
+                                ?.replace("_", " ")
+                                ?: "none",
+                        )
                     },
                 ).toImmutableList(),
             ),
@@ -497,6 +719,15 @@ object SettingsTreasuryScreen : SearchableSettings {
                 title = stringResource(AYMR.strings.treasury_profile_and_avatar),
                 preferenceItems = listOf(
                     Preference.PreferenceItem.CustomPreference(
+                        title = stringResource(AYMR.strings.treasury_profile_titles),
+                    ) {
+                        TreasuryToggleSelector(
+                            presets = titlePresets,
+                            unlockedUnlockables = unlockedUnlockables,
+                            rewardToAchievementMap = rewardToAchievementMap,
+                        )
+                    },
+                    Preference.PreferenceItem.CustomPreference(
                         title = stringResource(AYMR.strings.treasury_profile_effects),
                     ) {
                         TreasuryToggleSelector(
@@ -536,6 +767,179 @@ object SettingsTreasuryScreen : SearchableSettings {
         )
 
         return preferences
+    }
+}
+
+@Composable
+private fun profileTitleDisplayName(titleId: String): String {
+    return when (titleId) {
+        "title_trinity_initiate" -> stringResource(AYMR.strings.treasury_title_trinity_initiate_title)
+        "title_finisher" -> stringResource(AYMR.strings.treasury_title_finisher_title)
+        "title_closer" -> stringResource(AYMR.strings.treasury_title_closer_title)
+        "title_deep_reader" -> stringResource(AYMR.strings.treasury_title_deep_reader_title)
+        "title_rank_4" -> stringResource(AYMR.strings.treasury_title_rank_4_title)
+        else -> titleId.removePrefix("title_").replace("_", " ").replaceFirstChar {
+            if (it.isLowerCase()) it.titlecase() else it.toString()
+        }
+    }
+}
+
+@Composable
+private fun TreasuryVaultHero(
+    unlocked: Int,
+    total: Int,
+    activeTheme: String,
+    activeAura: String,
+) {
+    val colors = AuroraTheme.colors
+    val percent = if (total == 0) 0 else (unlocked * 100 / total)
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (colors.isDark) Color.White.copy(alpha = 0.06f) else Color.White,
+        ),
+        border = BorderStroke(1.dp, Color(0xFF9C7CFF).copy(alpha = 0.42f)),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            Color(0xFF101326).copy(alpha = if (colors.isDark) 0.72f else 0.10f),
+                            Color(0xFF3B245F).copy(alpha = if (colors.isDark) 0.38f else 0.08f),
+                            Color(0xFFFFD36E).copy(alpha = if (colors.isDark) 0.16f else 0.08f),
+                        ),
+                    ),
+                )
+                .padding(20.dp),
+        ) {
+            Text(
+                text = stringResource(AYMR.strings.treasury_vault_header),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 2.sp,
+                color = Color(0xFFFFD36E),
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(AYMR.strings.treasury_vault_headline),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Black,
+                color = settingsTitleColor(),
+            )
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = stringResource(AYMR.strings.treasury_vault_progress, unlocked, total, percent),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(14.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                TreasuryVaultPill(stringResource(AYMR.strings.treasury_vault_pill_theme), activeTheme)
+                TreasuryVaultPill(stringResource(AYMR.strings.treasury_vault_pill_aura), activeAura)
+            }
+        }
+    }
+}
+
+@Composable
+private fun TreasuryVaultPill(
+    label: String,
+    value: String,
+) {
+    Column(
+        modifier = Modifier
+            .background(Color.White.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
+            .border(1.dp, Color.White.copy(alpha = 0.12f), RoundedCornerShape(16.dp))
+            .padding(horizontal = 12.dp, vertical = 9.dp),
+    ) {
+        Text(
+            text = label.uppercase(),
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Black,
+            color = Color(0xFF9C7CFF),
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.SemiBold,
+            color = settingsTitleColor(),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+@Composable
+private fun TreasuryRewardPaths() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        TreasuryPathCard(
+            stringResource(AYMR.strings.treasury_path_trinity_title),
+            stringResource(AYMR.strings.treasury_path_trinity_subtitle),
+            Color(0xFF9C7CFF),
+        )
+        TreasuryPathCard(
+            stringResource(AYMR.strings.treasury_path_immersion_title),
+            stringResource(AYMR.strings.treasury_path_immersion_subtitle),
+            Color(0xFF5DE7D8),
+        )
+        TreasuryPathCard(
+            stringResource(AYMR.strings.treasury_path_ascension_title),
+            stringResource(AYMR.strings.treasury_path_ascension_subtitle),
+            Color(0xFFFFE08A),
+        )
+    }
+}
+
+@Composable
+private fun TreasuryPathCard(
+    title: String,
+    subtitle: String,
+    accent: Color,
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (AuroraTheme.colors.isDark) Color.White.copy(alpha = 0.045f) else Color.White,
+        ),
+        border = BorderStroke(1.dp, accent.copy(alpha = 0.34f)),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .background(accent, CircleShape),
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Black,
+                    color = settingsTitleColor(),
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
     }
 }
 
@@ -598,7 +1002,8 @@ private fun TreasuryThemeSelector(
             val theme = spec.theme
             val rewardId = "theme_${theme.name}"
             val isUnlocked = isThemePreviewUnlocked(theme, unlockedUnlockables)
-            val achievementTitle = rewardToAchievementMap[rewardId]?.title ?: "Achievement"
+            val achievementTitle =
+                rewardToAchievementMap[rewardId]?.title ?: stringResource(AYMR.strings.treasury_fallback_achievement)
             val isSelected = appTheme == theme
 
             Card(
@@ -671,7 +1076,7 @@ private fun TreasuryThemeSelector(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Lock,
-                                    contentDescription = "Locked",
+                                    contentDescription = stringResource(AYMR.strings.treasury_cd_locked),
                                     tint = Color.White,
                                     modifier = Modifier.size(36.dp),
                                 )
@@ -750,7 +1155,8 @@ private fun TreasuryAuraSelector(
         auraPalettes.forEach { aura ->
             val isUnlocked = unlockedUnlockables.contains(aura.id)
             val isEnabled = enabledAuras.contains(aura.id)
-            val achievementTitle = rewardToAchievementMap[aura.id]?.title ?: "Achievement"
+            val achievementTitle =
+                rewardToAchievementMap[aura.id]?.title ?: stringResource(AYMR.strings.treasury_fallback_achievement)
             val rewardIconResId = remember(aura.id) {
                 getRewardIconResourceId(aura.id, context)
             }
@@ -814,7 +1220,7 @@ private fun TreasuryAuraSelector(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.CheckCircle,
-                                        contentDescription = "Active",
+                                        contentDescription = stringResource(AYMR.strings.treasury_cd_active),
                                         tint = aura.accentColor,
                                         modifier = Modifier
                                             .size(16.dp)
@@ -835,7 +1241,7 @@ private fun TreasuryAuraSelector(
                                 )
                                 Icon(
                                     imageVector = Icons.Default.Lock,
-                                    contentDescription = "Locked",
+                                    contentDescription = stringResource(AYMR.strings.treasury_cd_locked),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(20.dp),
                                 )
@@ -908,7 +1314,9 @@ private fun TreasuryToggleSelector(
         presets.forEach { preset ->
             val isUnlocked = unlockedUnlockables.contains(preset.unlockableId)
             val isActive = isUnlocked && preset.isActive()
-            val achievementTitle = rewardToAchievementMap[preset.unlockableId]?.title ?: "Achievement"
+            val achievementTitle =
+                rewardToAchievementMap[preset.unlockableId]?.title
+                    ?: stringResource(AYMR.strings.treasury_fallback_achievement)
             val rewardIconResId = remember(preset.unlockableId) {
                 getRewardIconResourceId(preset.unlockableId, context)
             }
@@ -970,7 +1378,7 @@ private fun TreasuryToggleSelector(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.CheckCircle,
-                                        contentDescription = "Active",
+                                        contentDescription = stringResource(AYMR.strings.treasury_cd_active),
                                         tint = preset.accentColor,
                                         modifier = Modifier
                                             .size(16.dp)
@@ -991,7 +1399,7 @@ private fun TreasuryToggleSelector(
                                 )
                                 Icon(
                                     imageVector = Icons.Default.Lock,
-                                    contentDescription = "Locked",
+                                    contentDescription = stringResource(AYMR.strings.treasury_cd_locked),
                                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(18.dp),
                                 )
@@ -1054,15 +1462,34 @@ private fun getRewardIconResourceId(rewardId: String, context: android.content.C
     val formattedId = when (rewardId) {
         "special_background_petal_storm" -> "ic_reward_background_petal_storm"
         "special_background_neon_orbit" -> "ic_reward_background_neon_orbit"
+        "title_trinity_initiate" -> "ic_reward_nickname_rank_sigils"
+        "title_finisher" -> "ic_reward_badge_finisher"
+        "title_closer" -> "ic_reward_badge_finisher"
+        "title_deep_reader" -> "ic_reward_badge_immersion"
+        "title_rank_4" -> "ic_reward_nickname_rank_sigils"
         "profile_nickname_effect_aurora_crown" -> "ic_reward_nickname_aurora_crown"
         "profile_nickname_effect_glitch_rune" -> "ic_reward_nickname_glitch_rune"
         "profile_nickname_effect_cipher" -> "ic_reward_nickname_cipher"
+        "profile_nickname_effect_trinity_prism" -> "ic_reward_nickname_trinity_prism"
+        "profile_nickname_effect_shadow_crown" -> "ic_reward_nickname_shadow_crown"
+        "profile_nickname_effect_rank_sigils" -> "ic_reward_nickname_rank_sigils"
         "avatar_frame_neon" -> "ic_reward_frame_neon"
         "avatar_frame_hologram" -> "ic_reward_frame_hologram"
         "avatar_frame_prismatic" -> "ic_reward_frame_prismatic"
         "home_badge_orbit" -> "ic_reward_badge_orbit"
         "home_badge_crown" -> "ic_reward_badge_crown"
         "home_badge_shuriken" -> "ic_reward_badge_shuriken"
+        "home_badge_trinity" -> "ic_reward_badge_trinity"
+        "home_badge_finisher" -> "ic_reward_badge_finisher"
+        "home_badge_immersion" -> "ic_reward_badge_immersion"
+        "home_badge_ascendant" -> "ic_reward_badge_ascendant"
+        "avatar_frame_trinity_orbit" -> "ic_reward_frame_trinity_orbit"
+        "avatar_frame_deep_archive" -> "ic_reward_frame_deep_archive"
+        "avatar_frame_hybrid_scroll" -> "ic_reward_frame_hybrid_scroll"
+        "avatar_frame_ascendant" -> "ic_reward_frame_ascendant"
+        "special_background_trinity_constellation" -> "ic_reward_background_trinity_constellation"
+        "special_background_deep_space_archive" -> "ic_reward_background_deep_space_archive"
+        "special_background_shadow_realm" -> "ic_reward_background_shadow_realm"
         else -> "ic_reward_$rewardId"
     }
 

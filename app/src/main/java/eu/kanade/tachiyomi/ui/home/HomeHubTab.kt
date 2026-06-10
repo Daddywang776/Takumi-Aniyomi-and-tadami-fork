@@ -588,6 +588,9 @@ internal enum class NicknameEffectPreset(val key: String) {
     AuroraCrown("aurora_crown"),
     GlitchRune("glitch_rune"),
     Cipher("cipher"),
+    TrinityPrism("trinity_prism"),
+    ShadowCrown("shadow_crown"),
+    RankSigils("rank_sigils"),
     ;
 
     companion object {
@@ -760,6 +763,7 @@ object HomeHubTab : Tab {
         val nicknameEffectKey by userProfilePreferences.nicknameEffect().collectAsStateWithLifecycle()
         val avatarFrameStyleKey by userProfilePreferences.avatarFrameStyle().collectAsStateWithLifecycle()
         val homeBadgeStyleKey by userProfilePreferences.homeBadgeStyle().collectAsStateWithLifecycle()
+        val profileTitleKey by userProfilePreferences.profileTitle().collectAsStateWithLifecycle()
         val nicknameStyle = NicknameStyle(
             font = NicknameFontPreset.fromKey(nicknameFontKey),
             fontSize = nicknameFontSize.coerceIn(14, 36),
@@ -1018,6 +1022,7 @@ object HomeHubTab : Tab {
                     userAvatar = headerUserAvatar,
                     avatarFrameStyleKey = avatarFrameStyleKey,
                     homeBadgeStyleKey = homeBadgeStyleKey,
+                    profileTitleKey = profileTitleKey,
                     nicknameStyle = nicknameStyle,
                     greetingStyle = greetingStyle,
                     showGreeting = showHomeGreeting && headerGreetingReady,
@@ -1128,6 +1133,9 @@ private fun applyNicknameEffect(text: String, effect: NicknameEffectPreset): Str
         NicknameEffectPreset.AuroraCrown -> text
         NicknameEffectPreset.GlitchRune -> text
         NicknameEffectPreset.Cipher -> text
+        NicknameEffectPreset.TrinityPrism -> text
+        NicknameEffectPreset.ShadowCrown -> text
+        NicknameEffectPreset.RankSigils -> text
     }
 }
 
@@ -1171,6 +1179,9 @@ private fun NicknameEffectPreset.label(): String {
         NicknameEffectPreset.AuroraCrown -> "Aurora Crown (Treasury)"
         NicknameEffectPreset.GlitchRune -> "Glitch Rune (Treasury)"
         NicknameEffectPreset.Cipher -> "Cipher Sigil (Treasury)"
+        NicknameEffectPreset.TrinityPrism -> "Trinity Prism (Treasury)"
+        NicknameEffectPreset.ShadowCrown -> "Shadow Crown (Treasury)"
+        NicknameEffectPreset.RankSigils -> "Rank Sigils (Treasury)"
     }
 }
 
@@ -1190,6 +1201,9 @@ private fun nicknameEffectPickerPresets(): List<NicknameEffectPreset> {
         NicknameEffectPreset.AuroraCrown,
         NicknameEffectPreset.GlitchRune,
         NicknameEffectPreset.Cipher,
+        NicknameEffectPreset.TrinityPrism,
+        NicknameEffectPreset.ShadowCrown,
+        NicknameEffectPreset.RankSigils,
     )
 }
 

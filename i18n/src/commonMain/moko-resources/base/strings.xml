@@ -1558,6 +1558,10 @@
     <string name="unlockable_home_badge_shuriken">Shuriken Home Hub Effect</string>
     <string name="unlockable_special_background_petal_storm">Petal Storm Background</string>
     <string name="unlockable_special_background_neon_orbit">Neon Orbit Background</string>
+    <string name="unlockable_aura_trinity_orbit">Trinity Orbit Aura</string>
+    <string name="unlockable_aura_deep_focus">Deep Focus Aura</string>
+    <string name="unlockable_aura_shadow_monarch">Shadow Monarch Aura</string>
+    <string name="unlockable_aura_ascendant_gold">Ascendant Gold Aura</string>
 
     <!-- Download engine -->
     <string name="download_engine_title">Download Engine</string>

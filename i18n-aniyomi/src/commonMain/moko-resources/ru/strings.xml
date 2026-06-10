@@ -1848,6 +1848,96 @@
     <string name="achievement_secret_king_of_pirates_desc">1000+ глав манги (отсылка к One Piece)</string>
     <string name="achievement_secret_not_even_my_final_form_desc">9000+ очков достижений (отсылка к Dragon Ball, OVER 9000!)</string>
 
+    <!-- Achievement Titles - READING IMMERSION -->
+    <string name="achievement_reading_immersion_bronze_title">Бронзовое погружение</string>
+    <string name="achievement_reading_immersion_silver_title">Серебряное погружение</string>
+    <string name="achievement_reading_immersion_gold_title">Золотое погружение</string>
+    <string name="achievement_reading_immersion_platinum_title">Платиновое погружение</string>
+
+    <!-- Achievement Descriptions - READING IMMERSION -->
+    <string name="achievement_reading_immersion_bronze_desc">Читать в течение целого часа за один сеанс</string>
+    <string name="achievement_reading_immersion_silver_desc">Читать в течение 2 часов за один сеанс</string>
+    <string name="achievement_reading_immersion_gold_desc">Читать в течение 5 часов за один сеанс</string>
+    <string name="achievement_reading_immersion_platinum_desc">Читать более 10 часов за один сеанс</string>
+
+    <!-- Achievement Titles - ANIME-NOVEL HYBRID -->
+    <string name="achievement_anime_novel_hybrid_bronze_title">Гибрид: аниме и новеллы</string>
+    <string name="achievement_anime_novel_hybrid_silver_title">Знаток аниме и новелл</string>
+    <string name="achievement_anime_novel_hybrid_gold_title">Мастер аниме и новелл</string>
+
+    <!-- Achievement Descriptions - ANIME-NOVEL HYBRID -->
+    <string name="achievement_anime_novel_hybrid_bronze_desc">Посмотреть 25 серий и прочитать 25 глав новеллы</string>
+    <string name="achievement_anime_novel_hybrid_silver_desc">Посмотреть 100 серий и прочитать 100 глав новеллы</string>
+    <string name="achievement_anime_novel_hybrid_gold_desc">Посмотреть 500 серий и прочитать 500 глав новеллы</string>
+
+    <!-- Achievement Titles - RANK UP -->
+    <string name="achievement_rank_up_1_title">Ранг I: Ученик</string>
+    <string name="achievement_rank_up_2_title">Ранг II: Посвященный</string>
+    <string name="achievement_rank_up_3_title">Ранг III: Адепт</string>
+    <string name="achievement_rank_up_4_title">Ранг IV: Ветеран</string>
+    <string name="achievement_rank_up_5_title">Ранг V: Эксперт</string>
+    <string name="achievement_rank_up_6_title">Ранг VI: Мастер</string>
+    <string name="achievement_rank_up_7_title">Ранг VII: Чемпион</string>
+    <string name="achievement_rank_up_8_title">Ранг VIII: Легенда</string>
+
+    <!-- Achievement Descriptions - RANK UP -->
+    <string name="achievement_rank_up_1_desc">Заработать 100 очков достижений</string>
+    <string name="achievement_rank_up_2_desc">Заработать 500 очков достижений</string>
+    <string name="achievement_rank_up_3_desc">Заработать 1 000 очков достижений</string>
+    <string name="achievement_rank_up_4_desc">Заработать 2 500 очков достижений</string>
+    <string name="achievement_rank_up_5_desc">Заработать 5 000 очков достижений</string>
+    <string name="achievement_rank_up_6_desc">Заработать 10 000 очков достижений</string>
+    <string name="achievement_rank_up_7_desc">Заработать 25 000 очков достижений</string>
+    <string name="achievement_rank_up_8_desc">Заработать 50 000 очков достижений</string>
+    <string name="achievement_rank_up_9_title">Ранг IX: Мифический</string>
+    <string name="achievement_rank_up_9_desc">Заработать 100 000 очков достижений</string>
+    <string name="achievement_rank_up_10_title">Ранг X: Трансцендентный</string>
+    <string name="achievement_rank_up_10_desc">Заработать 250 000 очков достижений</string>
+
+    <!-- Achievement Titles - TRINITY -->
+    <string name="achievement_trinity_initiate_title">Посвященный Триединства</string>
+    <string name="achievement_trinity_master_title">Мастер Триединства</string>
+    <string name="achievement_trinity_legend_title">Легенда Триединства</string>
+
+    <!-- Achievement Descriptions - TRINITY -->
+    <string name="achievement_trinity_initiate_desc">Прочитать или посмотреть 25 глав/серий манги, аниме и новелл</string>
+    <string name="achievement_trinity_master_desc">Достичь отметки в 200 глав/серий суммарно во всех трех категориях</string>
+    <string name="achievement_trinity_legend_desc">Достичь отметки в 1 000 глав/серий суммарно во всех трех категориях</string>
+
+    <!-- Achievement Titles - THREE REALMS COLLECTOR -->
+    <string name="achievement_three_realms_collector_title">Коллекционер Трех Миров</string>
+
+    <!-- Achievement Descriptions - THREE REALMS COLLECTOR -->
+    <string name="achievement_three_realms_collector_desc">Собрать библиотеку, включающую мангу, аниме и новеллы</string>
+
+    <!-- Achievement Titles - COMPLETION RATIO -->
+    <string name="achievement_the_finisher_title">Финишер</string>
+    <string name="achievement_the_closer_title">Завершитель</string>
+
+    <!-- Achievement Descriptions - COMPLETION RATIO -->
+    <string name="achievement_the_finisher_desc">Завершить 50% начатых тайтлов</string>
+    <string name="achievement_the_closer_desc">Завершить 90% начатых тайтлов</string>
+
+    <!-- Achievement Titles - GENRE DEPTH -->
+    <string name="achievement_romance_devotee_title">Адепт романтики</string>
+    <string name="achievement_horror_aficionado_title">Ценитель хорроров</string>
+    <string name="achievement_isekai_addict_title">Исекай-зависимый</string>
+    <string name="achievement_slice_of_life_zen_title">Дзен повседневности</string>
+
+    <!-- Achievement Descriptions - GENRE DEPTH -->
+    <string name="achievement_romance_devotee_desc">Собрать в своей библиотеке 15 тайтлов в жанре романтика</string>
+    <string name="achievement_horror_aficionado_desc">Собрать в своей библиотеке 15 тайтлов в жанре хоррор</string>
+    <string name="achievement_isekai_addict_desc">Собрать в своей библиотеке 20 тайтлов в жанре исекай</string>
+    <string name="achievement_slice_of_life_zen_desc">Собрать в своей библиотеке 15 тайтлов в жанре повседневность</string>
+
+    <!-- Achievement Titles - SECRET (new) -->
+    <string name="achievement_secret_shadow_monarch_title">Повелитель теней</string>
+    <string name="achievement_secret_weeb_awakening_title">Пробуждение виабу</string>
+
+    <!-- Achievement Descriptions - SECRET (new) -->
+    <string name="achievement_secret_shadow_monarch_desc">Восстань — открыто скрытое достижение</string>
+    <string name="achievement_secret_weeb_awakening_desc">Твоя истинная сила пробуждается — скрытое достижение</string>
+
     <!-- Backup Options -->
     <string name="achievements">Достижения</string>
     <string name="stats">Статистика</string>
@@ -2127,6 +2217,70 @@
     <string name="treasury_tagline_onyx_gold">Чёрно-бриллиантовые поверхности с королевским золотом и рубиновым акцентом</string>
     <string name="treasury_tagline_sakura_noir">Полуночный неон сакуры, сливовые тона и нефритовое свечение</string>
     <string name="treasury_tagline_nebula_tide">Бездонная космическая синева с плазменным цианом, фиолетовой гравитацией и лаймовыми искрами</string>
+    <!-- Treasury Vault hero -->
+    <string name="treasury_vault_group_title">Хранилище Авроры</string>
+    <string name="treasury_vault_header">СОКРОВИЩНИЦА АВРОРЫ</string>
+    <string name="treasury_vault_headline">Хранилище заслуженных реликвий</string>
+    <string name="treasury_vault_progress">%1$d / %2$d наград получено · %3$d%% сила коллекции</string>
+    <string name="treasury_vault_pill_theme">Тема</string>
+    <string name="treasury_vault_pill_aura">Аура</string>
+    <string name="treasury_vault_reward_paths">Пути наград</string>
+    <string name="treasury_path_trinity_title">Путь Тринити</string>
+    <string name="treasury_path_trinity_subtitle">Послушник → Мастер → Легенда</string>
+    <string name="treasury_path_immersion_title">Путь Погружения</string>
+    <string name="treasury_path_immersion_subtitle">Бронза → Серебро → Золото → Платина</string>
+    <string name="treasury_path_ascension_title">Путь Восхождения</string>
+    <string name="treasury_path_ascension_subtitle">Ранг I → Ранг X</string>
+    <!-- Treasury new nickname effects -->
+    <string name="treasury_nickname_trinity_prism_title">Эффект ника «Призма Тринити»</string>
+    <string name="treasury_nickname_trinity_prism_desc">Призматическое мерцание трёх миров для никнейма в Home Hub</string>
+    <string name="treasury_nickname_shadow_crown_title">Эффект ника «Теневая Корона»</string>
+    <string name="treasury_nickname_shadow_crown_desc">Тёмная монаршая корона — подпись для секретных наград</string>
+    <string name="treasury_nickname_rank_sigils_title">Эффект ника «Ранговые Сигилы»</string>
+    <string name="treasury_nickname_rank_sigils_desc">Престижные сигилы для пути восхождения</string>
+    <!-- Treasury profile titles -->
+    <string name="treasury_profile_titles">Титулы профиля</string>
+    <string name="treasury_title_trinity_initiate_title">Посвящённый Тринити</string>
+    <string name="treasury_title_trinity_initiate_desc">Показывать титул пути трёх миров под никнеймом</string>
+    <string name="treasury_title_finisher_title">Финишер</string>
+    <string name="treasury_title_finisher_desc">Показывать титул завершения под никнеймом</string>
+    <string name="treasury_title_closer_title">Завершитель</string>
+    <string name="treasury_title_closer_desc">Показывать легендарный титул завершения под никнеймом</string>
+    <string name="treasury_title_deep_reader_title">Глубокий читатель</string>
+    <string name="treasury_title_deep_reader_desc">Показывать титул долгих читательских сессий под никнеймом</string>
+    <string name="treasury_title_rank_4_title">Ранг IV: Ветеран</string>
+    <string name="treasury_title_rank_4_desc">Показывать титул ранга «Ветеран» под никнеймом</string>
+    <!-- Treasury new avatar frames -->
+    <string name="treasury_frame_trinity_orbit_title">Рамка «Орбита Тринити»</string>
+    <string name="treasury_frame_trinity_orbit_desc">Три орбитальные дуги для легенд кросс-медиа</string>
+    <string name="treasury_frame_deep_archive_title">Рамка «Глубокий Архив»</string>
+    <string name="treasury_frame_deep_archive_desc">Сине-золотая архивная рамка для долгих сессий чтения</string>
+    <string name="treasury_frame_hybrid_scroll_title">Рамка «Гибридный Свиток»</string>
+    <string name="treasury_frame_hybrid_scroll_desc">Цифровая рукопись для мастеров аниме и новелл</string>
+    <string name="treasury_frame_ascendant_title">Рамка «Восходящий»</string>
+    <string name="treasury_frame_ascendant_desc">Бело-золотая рамка для высших рангов</string>
+    <!-- Treasury new home badges -->
+    <string name="treasury_badge_trinity_title">Значок «Тринити»</string>
+    <string name="treasury_badge_trinity_desc">Знак трёх миров для Home Hub</string>
+    <string name="treasury_badge_finisher_title">Печать «Завершатель»</string>
+    <string name="treasury_badge_finisher_desc">Печать завершения для тех, кто закрывает каждую историю</string>
+    <string name="treasury_badge_immersion_title">Значок «Погружение»</string>
+    <string name="treasury_badge_immersion_desc">Знак фокуса для глубокого чтения за одну сессию</string>
+    <string name="treasury_badge_ascendant_title">Значок «Восходящий»</string>
+    <string name="treasury_badge_ascendant_desc">Престижный знак для пути рангов</string>
+    <!-- Treasury new backgrounds -->
+    <string name="treasury_bg_trinity_constellation_title">Созвездие Тринити</string>
+    <string name="treasury_bg_trinity_constellation_desc">Премиальная карта созвездий для трёх медийных путей</string>
+    <string name="treasury_bg_deep_space_archive_title">Архив Глубокого Космоса</string>
+    <string name="treasury_bg_deep_space_archive_desc">Парящие страницы архива над тихим звёздным полем</string>
+    <string name="treasury_bg_shadow_realm_title">Царство Теней</string>
+    <string name="treasury_bg_shadow_realm_desc">Тёмно-фиолетовый туман для секретных мифических наград</string>
+    <!-- Treasury misc -->
+    <string name="treasury_nickname_preview">Предпросмотр ника</string>
+    <string name="treasury_default_user_name">Имя пользователя</string>
+    <string name="treasury_fallback_achievement">Достижение</string>
+    <string name="treasury_cd_locked">Заблокировано</string>
+    <string name="treasury_cd_active">Активно</string>
     <string name="pref_category_debug">Режим отладки</string>
     <string name="pref_debug_bypass_treasury_locks">Обойти блокировки для тестирования</string>
     <string name="pref_debug_bypass_treasury_locks_summary">Временно разблокирует все награды Сокровищницы для визуальной проверки</string>
