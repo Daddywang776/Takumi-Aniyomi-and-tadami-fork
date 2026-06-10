@@ -510,7 +510,9 @@ class NovelLibraryUpdateJob(
                 return false
             }
 
-            val inputData = workDataOf(KEY_CATEGORY to categoryId)
+            val inputData = categoryId
+                ?.let { workDataOf(KEY_CATEGORY to it) }
+                ?: workDataOf()
             val request = OneTimeWorkRequestBuilder<NovelLibraryUpdateJob>()
                 .addTag(TAG)
                 .addTag(WORK_NAME_MANUAL)

@@ -564,9 +564,9 @@ class AnimeLibraryUpdateJob(private val context: Context, workerParams: WorkerPa
                 return false
             }
 
-            val inputData = workDataOf(
-                KEY_CATEGORY to category?.id,
-            )
+            val inputData = category
+                ?.let { workDataOf(KEY_CATEGORY to it.id) }
+                ?: workDataOf()
             val request = OneTimeWorkRequestBuilder<AnimeLibraryUpdateJob>()
                 .addTag(TAG)
                 .addTag(WORK_NAME_MANUAL)
