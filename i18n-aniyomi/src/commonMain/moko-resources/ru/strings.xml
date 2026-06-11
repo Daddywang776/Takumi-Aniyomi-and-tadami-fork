@@ -1650,6 +1650,17 @@
     <string name="achievement_empty_description">В этой категории пока нет достижений</string>
     <string name="achievement_progress_label">ПРОГРЕСС</string>
     <string name="achievement_rewards_label">НАГРАДЫ</string>
+    <string name="achievement_bento_rank">РАНГ</string>
+    <string name="achievement_bento_level">LEVEL %d</string>
+    <string name="achievement_bento_xp_points">XP ОЧКИ</string>
+    <string name="achievement_bento_unlocked">ОТКРЫТО</string>
+    <string name="achievement_bento_streak">STREAK</string>
+    <string name="achievement_bento_days">%d ДНЕЙ</string>
+    <string name="achievement_rank_novice_reader">Начинающий</string>
+    <string name="achievement_rank_avid_reader">Любитель</string>
+    <string name="achievement_rank_ranobe_master">Мастер</string>
+    <string name="achievement_rank_grandmaster">Грандмастер</string>
+    <string name="achievement_rank_legendary_scholar">Мудрец</string>
     <string name="achievement_points">%d очков</string>
     <string name="achievement_points_reward">+%d очков</string>
     <string name="achievement_unlocked_at">Разблокировано: %s</string>

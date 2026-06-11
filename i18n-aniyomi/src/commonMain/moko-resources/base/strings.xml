@@ -1961,6 +1961,17 @@
     <string name="achievement_empty_description">There are no achievements in this category yet</string>
     <string name="achievement_progress_label">PROGRESS</string>
     <string name="achievement_rewards_label">REWARDS</string>
+    <string name="achievement_bento_rank">RANK</string>
+    <string name="achievement_bento_level">LEVEL %d</string>
+    <string name="achievement_bento_xp_points">XP POINTS</string>
+    <string name="achievement_bento_unlocked">UNLOCKED</string>
+    <string name="achievement_bento_streak">STREAK</string>
+    <string name="achievement_bento_days">%d DAYS</string>
+    <string name="achievement_rank_novice_reader">Novice Reader</string>
+    <string name="achievement_rank_avid_reader">Avid Reader</string>
+    <string name="achievement_rank_ranobe_master">Ranobe Master</string>
+    <string name="achievement_rank_grandmaster">Grandmaster</string>
+    <string name="achievement_rank_legendary_scholar">Legendary Scholar</string>
     <string name="achievement_points">%d points</string>
     <string name="achievement_points_reward">+%d points</string>
     <string name="achievement_unlocked_at">Unlocked: %s</string>
