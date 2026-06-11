@@ -45,6 +45,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import mihon.core.archive.epubReader
 import tachiyomi.core.common.preference.CheckboxState
 import tachiyomi.core.common.preference.TriState
 import tachiyomi.core.common.util.lang.compareToWithCollator
@@ -1228,11 +1229,49 @@ class NovelLibraryScreenModel(
                 }
             }
 
+            var epubTitle: String? = null
+            var epubAuthor: String? = null
+            var epubDescription: String? = null
+            try {
+                targetFile.epubReader(context).use { epub ->
+                    val ref = epub.getPackageHref()
+                    val doc = epub.getPackageDocument(ref)
+
+                    // Multiple title fallbacks
+                    var title = doc.getElementsByTag("dc:title").firstOrNull()?.text()
+                    if (title.isNullOrBlank()) {
+                        title = doc.select("docTitle").firstOrNull()?.text()
+                    }
+                    if (title.isNullOrBlank()) {
+                        title = doc.select("meta[name=title]").firstOrNull()?.attr("content")
+                    }
+
+                    // Collection name
+                    val collection = doc.select("meta[property=belongs-to-collection]").firstOrNull()?.text()
+
+                    epubTitle = collection.takeIf { !it.isNullOrBlank() } ?: title
+                    epubAuthor = doc.getElementsByTag("dc:creator").firstOrNull()?.text()
+
+                    var desc = doc.getElementsByTag("dc:description").firstOrNull()?.text()
+                    if (desc.isNullOrBlank()) {
+                        desc = doc.select("dc\\:description").firstOrNull()?.text()
+                    }
+                    epubDescription = desc
+                }
+            } catch (e: Exception) {
+                // Ignore parsing errors, fallback to file name
+            }
+
+            val finalTitle = epubTitle?.takeIf { it.isNotBlank() }
+                ?: sanitizedName.removeSuffix(".epub").removeSuffix(".EPUB")
+
             val addToLibrary = sourcePreferences.importEpubAddToLibrary().get()
             val novel = Novel.create().copy(
                 source = LocalNovelSource.ID,
                 url = sanitizedName,
-                title = sanitizedName.removeSuffix(".epub").removeSuffix(".EPUB"),
+                title = finalTitle,
+                author = epubAuthor,
+                description = epubDescription,
                 favorite = addToLibrary,
                 dateAdded = if (addToLibrary) System.currentTimeMillis() else 0L,
                 initialized = true,
