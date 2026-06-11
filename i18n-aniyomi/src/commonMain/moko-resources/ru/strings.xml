@@ -1915,7 +1915,17 @@
     <string name="achievement_trinity_master_desc">Достичь отметки в 200 глав/серий суммарно во всех трех категориях</string>
     <string name="achievement_trinity_legend_desc">Достичь отметки в 1 000 глав/серий суммарно во всех трех категориях</string>
 
-    <!-- Achievement Titles - THREE REALMS COLLECTOR -->
+    <!-- Achievement Titles - CROSS-MEDIA CHAMPION -->
+    <string name="achievement_cross_media_champion_bronze_title">Кросс-медиа новичок</string>
+    <string name="achievement_cross_media_champion_silver_title">Кросс-медиа энтузиаст</string>
+    <string name="achievement_cross_media_champion_gold_title">Кросс-медиа чемпион</string>
+
+    <!-- Achievement Descriptions - CROSS-MEDIA CHAMPION -->
+    <string name="achievement_cross_media_champion_bronze_desc">Достичь 50 глав/серий суммарно в манге, аниме и новеллах</string>
+    <string name="achievement_cross_media_champion_silver_desc">Достичь 500 глав/серий суммарно в манге, аниме и новеллах</string>
+    <string name="achievement_cross_media_champion_gold_desc">Достичь 2 000 глав/серий суммарно в манге, аниме и новеллах</string>
+
+
     <string name="achievement_three_realms_collector_title">Коллекционер Трех Миров</string>
 
     <!-- Achievement Descriptions - THREE REALMS COLLECTOR -->

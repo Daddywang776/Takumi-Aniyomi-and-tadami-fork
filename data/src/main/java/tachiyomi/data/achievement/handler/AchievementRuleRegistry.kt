@@ -108,6 +108,11 @@ class AchievementRuleRegistry(
             TrinityRule("trinity_master"),
             TrinityRule("trinity_legend"),
 
+            // Cross-media champion rules (total sum across all three media)
+            QuantityRule("cross_media_champion_bronze", AchievementCategory.BOTH),
+            QuantityRule("cross_media_champion_silver", AchievementCategory.BOTH),
+            QuantityRule("cross_media_champion_gold", AchievementCategory.BOTH),
+
             // Three Realms balanced library -- NEW
             ThreeRealmsRule("three_realms_collector"),
 

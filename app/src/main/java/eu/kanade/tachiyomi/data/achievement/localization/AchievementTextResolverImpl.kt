@@ -295,6 +295,18 @@ internal fun achievementTextResourceRefs(achievementId: String): AchievementText
             AYMR.strings.achievement_trinity_legend_title,
             AYMR.strings.achievement_trinity_legend_desc,
         )
+        "cross_media_champion_bronze" -> text(
+            AYMR.strings.achievement_cross_media_champion_bronze_title,
+            AYMR.strings.achievement_cross_media_champion_bronze_desc,
+        )
+        "cross_media_champion_silver" -> text(
+            AYMR.strings.achievement_cross_media_champion_silver_title,
+            AYMR.strings.achievement_cross_media_champion_silver_desc,
+        )
+        "cross_media_champion_gold" -> text(
+            AYMR.strings.achievement_cross_media_champion_gold_title,
+            AYMR.strings.achievement_cross_media_champion_gold_desc,
+        )
         "three_realms_collector" -> text(
             AYMR.strings.achievement_three_realms_collector_title,
             AYMR.strings.achievement_three_realms_collector_desc,

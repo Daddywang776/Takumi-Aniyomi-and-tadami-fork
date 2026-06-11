@@ -2180,6 +2180,12 @@
     <string name="achievement_trinity_master_desc">Reach 200 across all three media</string>
     <string name="achievement_trinity_legend_title">Trinity Legend</string>
     <string name="achievement_trinity_legend_desc">Reach 1,000 across all three media</string>
+    <string name="achievement_cross_media_champion_bronze_title">Cross-Media Beginner</string>
+    <string name="achievement_cross_media_champion_bronze_desc">Reach 50 chapters across manga, anime and novels</string>
+    <string name="achievement_cross_media_champion_silver_title">Cross-Media Enthusiast</string>
+    <string name="achievement_cross_media_champion_silver_desc">Reach 500 chapters across manga, anime and novels</string>
+    <string name="achievement_cross_media_champion_gold_title">Cross-Media Champion</string>
+    <string name="achievement_cross_media_champion_gold_desc">Reach 2,000 chapters across manga, anime and novels</string>
     <string name="achievement_three_realms_collector_title">Three Realms Collector</string>
     <string name="achievement_three_realms_collector_desc">Build a library spanning manga, anime and novels</string>
     <string name="achievement_the_finisher_title">The Finisher</string>
