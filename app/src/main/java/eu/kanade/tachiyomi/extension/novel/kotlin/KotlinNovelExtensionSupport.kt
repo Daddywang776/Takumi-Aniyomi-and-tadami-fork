@@ -17,6 +17,7 @@ import android.os.Build
 import android.provider.Settings
 import androidx.core.content.ContextCompat
 import androidx.core.content.pm.PackageInfoCompat
+import androidx.preference.PreferenceScreen
 import dalvik.system.PathClassLoader
 import eu.kanade.domain.extension.novel.interactor.TrustNovelExtension
 import eu.kanade.domain.source.service.SourcePreferences
@@ -36,13 +37,13 @@ import eu.kanade.tachiyomi.source.ConfigurableSource
 import eu.kanade.tachiyomi.source.MangaSource
 import eu.kanade.tachiyomi.source.SourceFactory
 import eu.kanade.tachiyomi.source.model.Filter
-import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
-import eu.kanade.tachiyomi.source.novel.NovelSiteSource
 import eu.kanade.tachiyomi.source.model.SManga
+import eu.kanade.tachiyomi.source.novel.NovelSiteSource
+import eu.kanade.tachiyomi.source.online.HttpSource
 import eu.kanade.tachiyomi.util.lang.Hash
 import eu.kanade.tachiyomi.util.storage.getUriCompat
 import eu.kanade.tachiyomi.util.system.ChildFirstPathClassLoader
@@ -54,7 +55,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import logcat.LogPriority
-import androidx.preference.PreferenceScreen
 import okhttp3.OkHttpClient
 import rx.Observable
 import tachiyomi.core.common.util.system.logcat
@@ -551,7 +551,9 @@ private open class KotlinCatalogueNovelSourceAdapter(
     @Deprecated("Use the non-RxJava API instead.")
     @Suppress("DEPRECATION")
     override fun fetchSearchNovels(page: Int, query: String, filters: NovelFilterList): Observable<NovelsPage> {
-        return catalogueSource.fetchSearchManga(page, query, filters.toMangaFilterList()).map { it.toNovelsPage(source) }
+        return catalogueSource.fetchSearchManga(page, query, filters.toMangaFilterList()).map {
+            it.toNovelsPage(source)
+        }
     }
 
     @Deprecated("Use the non-RxJava API instead.")

@@ -11,6 +11,7 @@ import androidx.compose.material.icons.outlined.GetApp
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.NewReleases
 import androidx.compose.material.icons.outlined.QueryStats
+import androidx.compose.material.icons.outlined.ReportProblem
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.VideoSettings
@@ -44,6 +45,7 @@ fun MoreScreen(
     onClickDownloadQueue: () -> Unit,
     onClickCategories: () -> Unit,
     onClickStats: () -> Unit,
+    onClickLibraryUpdateErrors: () -> Unit,
     onClickStorage: () -> Unit,
     onClickDataAndStorage: () -> Unit,
     onClickPlayerSettings: () -> Unit,
@@ -136,6 +138,13 @@ fun MoreScreen(
                     title = stringResource(MR.strings.label_stats),
                     icon = Icons.Outlined.QueryStats,
                     onPreferenceClick = onClickStats,
+                )
+            }
+            item {
+                TextPreferenceWidget(
+                    title = stringResource(AYMR.strings.option_label_library_update_errors),
+                    icon = Icons.Outlined.ReportProblem,
+                    onPreferenceClick = onClickLibraryUpdateErrors,
                 )
             }
             item {

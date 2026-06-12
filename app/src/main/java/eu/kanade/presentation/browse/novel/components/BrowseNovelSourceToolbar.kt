@@ -43,7 +43,10 @@ fun BrowseNovelSourceToolbar(
     scrollBehavior: TopAppBarScrollBehavior? = null,
 ) {
     val title = source?.name
-    val hasSourceSettings = source != null && (source is ConfigurableNovelSource || source.hasVisiblePluginSettingsByDiscovery()) && onSettingsClick != null
+    val hasSourceSettings =
+        source != null &&
+            (source is ConfigurableNovelSource || source.hasVisiblePluginSettingsByDiscovery()) &&
+            onSettingsClick != null
     var selectingDisplayMode by remember { mutableStateOf(false) }
     val isAurora = LocalIsAuroraTheme.current
 

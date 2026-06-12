@@ -21,6 +21,9 @@ import eu.kanade.tachiyomi.data.download.novel.NovelDownloadManager
 import eu.kanade.tachiyomi.data.library.LibraryUpdateFailure
 import eu.kanade.tachiyomi.data.library.LibraryUpdatePacingPolicy
 import eu.kanade.tachiyomi.data.library.shouldRetryLegacyAutoUpdateRun
+import eu.kanade.tachiyomi.data.library.updateerror.LibraryUpdateErrorMedia
+import eu.kanade.tachiyomi.data.library.updateerror.LibraryUpdateErrorRunType
+import eu.kanade.tachiyomi.data.library.updateerror.LibraryUpdateErrorStore
 import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.util.storage.getUriCompat
@@ -321,6 +324,10 @@ class NovelLibraryUpdateJob(
                                 ) {
                                     try {
                                         val newChapters = updateNovel(novel)
+                                        LibraryUpdateErrorStore.markResolved(
+                                            media = LibraryUpdateErrorMedia.Novel,
+                                            entryId = novel.id,
+                                        )
                                         if (newChapters.isNotEmpty()) {
                                             val chaptersToDownload = filterChaptersForDownload(
                                                 novel = novel,
@@ -345,12 +352,27 @@ class NovelLibraryUpdateJob(
                                                 context.stringResource(MR.strings.loader_not_implemented_error)
                                             else -> e.message
                                         }
+                                        val sourceName = sourceManager.getOrStub(novel.source).toString()
                                         failedUpdates.add(
                                             LibraryUpdateFailure(
                                                 title = novel.title,
-                                                sourceName = sourceManager.getOrStub(novel.source).toString(),
+                                                sourceName = sourceName,
                                                 reason = errorMessage,
                                             ),
+                                        )
+                                        LibraryUpdateErrorStore.upsert(
+                                            media = LibraryUpdateErrorMedia.Novel,
+                                            entryId = novel.id,
+                                            title = novel.title,
+                                            sourceId = novel.source,
+                                            sourceName = sourceName,
+                                            thumbnailUrl = novel.thumbnailUrl,
+                                            message = errorMessage ?: context.stringResource(MR.strings.unknown_error),
+                                            runType = if (isManualRun) {
+                                                LibraryUpdateErrorRunType.Manual
+                                            } else {
+                                                LibraryUpdateErrorRunType.Automatic
+                                            },
                                         )
                                         failedCount.incrementAndGet()
                                     }

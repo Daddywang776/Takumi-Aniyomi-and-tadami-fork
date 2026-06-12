@@ -22,6 +22,9 @@ import eu.kanade.tachiyomi.data.download.manga.MangaDownloadManager
 import eu.kanade.tachiyomi.data.library.LibraryUpdateFailure
 import eu.kanade.tachiyomi.data.library.LibraryUpdatePacingPolicy
 import eu.kanade.tachiyomi.data.library.shouldRetryLegacyAutoUpdateRun
+import eu.kanade.tachiyomi.data.library.updateerror.LibraryUpdateErrorMedia
+import eu.kanade.tachiyomi.data.library.updateerror.LibraryUpdateErrorRunType
+import eu.kanade.tachiyomi.data.library.updateerror.LibraryUpdateErrorStore
 import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.model.UpdateStrategy
@@ -353,6 +356,11 @@ class MangaLibraryUpdateJob(private val context: Context, workerParams: WorkerPa
                                         val newChapters = updateManga(manga, fetchWindow)
                                             .sortedByDescending { it.sourceOrder }
 
+                                        LibraryUpdateErrorStore.markResolved(
+                                            media = LibraryUpdateErrorMedia.Manga,
+                                            entryId = manga.id,
+                                        )
+
                                         if (newChapters.isNotEmpty()) {
                                             val chaptersToDownload = filterChaptersForDownload.await(manga, newChapters)
                                             if (chaptersToDownload.isNotEmpty()) {
@@ -377,12 +385,27 @@ class MangaLibraryUpdateJob(private val context: Context, workerParams: WorkerPa
                                             )
                                             else -> e.message
                                         }
+                                        val sourceName = sourceManager.getOrStub(manga.source).toString()
                                         failedUpdates.add(
                                             LibraryUpdateFailure(
                                                 title = manga.title,
-                                                sourceName = sourceManager.getOrStub(manga.source).toString(),
+                                                sourceName = sourceName,
                                                 reason = errorMessage,
                                             ),
+                                        )
+                                        LibraryUpdateErrorStore.upsert(
+                                            media = LibraryUpdateErrorMedia.Manga,
+                                            entryId = manga.id,
+                                            title = manga.title,
+                                            sourceId = manga.source,
+                                            sourceName = sourceName,
+                                            thumbnailUrl = manga.thumbnailUrl,
+                                            message = errorMessage ?: context.stringResource(MR.strings.unknown_error),
+                                            runType = if (isManualRun) {
+                                                LibraryUpdateErrorRunType.Manual
+                                            } else {
+                                                LibraryUpdateErrorRunType.Automatic
+                                            },
                                         )
                                     }
                                 }

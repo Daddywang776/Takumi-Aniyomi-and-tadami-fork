@@ -1,6 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Generic strings -->
+    <string name="option_label_library_update_errors">Library update errors</string>
+    <string name="label_library_update_errors">Library update errors</string>
+    <string name="info_empty_library_update_errors">No library update errors</string>
+    <string name="action_clear_update_errors">Clear errors</string>
+    <string name="library_update_error_manual">Manual</string>
+    <string name="library_update_error_automatic">Automatic</string>
+    <string name="library_update_error_tab_manga">Manga</string>
+    <string name="library_update_error_tab_anime">Anime</string>
+    <string name="library_update_error_tab_novel">Novels</string>
+
     <string name="confirm_exit">Enable Horizontal Seek</string>
     <string name="action_filter_started">Started</string>
     <string name="action_sort_airing_time">Airing time</string>

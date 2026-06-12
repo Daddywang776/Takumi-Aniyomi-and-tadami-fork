@@ -7,8 +7,8 @@ import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import kotlinx.coroutines.suspendCancellableCoroutine
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicInteger
 import kotlin.coroutines.resume
 
 class AndroidNovelTtsPlatformFactory(

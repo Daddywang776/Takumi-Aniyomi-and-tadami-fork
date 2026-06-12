@@ -26,6 +26,9 @@ import eu.kanade.tachiyomi.data.cache.AnimeCoverCache
 import eu.kanade.tachiyomi.data.download.anime.AnimeDownloadManager
 import eu.kanade.tachiyomi.data.library.LibraryUpdateFailure
 import eu.kanade.tachiyomi.data.library.LibraryUpdatePacingPolicy
+import eu.kanade.tachiyomi.data.library.updateerror.LibraryUpdateErrorMedia
+import eu.kanade.tachiyomi.data.library.updateerror.LibraryUpdateErrorRunType
+import eu.kanade.tachiyomi.data.library.updateerror.LibraryUpdateErrorStore
 import eu.kanade.tachiyomi.data.notification.Notifications
 import eu.kanade.tachiyomi.util.storage.getUriCompat
 import eu.kanade.tachiyomi.util.system.createFileInCacheDir
@@ -368,6 +371,11 @@ class AnimeLibraryUpdateJob(private val context: Context, workerParams: WorkerPa
                                         val newEpisodes = updateAnime(anime, fetchWindow)
                                             .sortedByDescending { it.sourceOrder }
 
+                                        LibraryUpdateErrorStore.markResolved(
+                                            media = LibraryUpdateErrorMedia.Anime,
+                                            entryId = anime.id,
+                                        )
+
                                         if (newEpisodes.isNotEmpty()) {
                                             val episodesToDownload = filterEpisodesForDownload.await(anime, newEpisodes)
 
@@ -393,12 +401,27 @@ class AnimeLibraryUpdateJob(private val context: Context, workerParams: WorkerPa
                                             )
                                             else -> e.message
                                         }
+                                        val sourceName = sourceManager.getOrStub(anime.source).toString()
                                         failedUpdates.add(
                                             LibraryUpdateFailure(
                                                 title = anime.title,
-                                                sourceName = sourceManager.getOrStub(anime.source).toString(),
+                                                sourceName = sourceName,
                                                 reason = errorMessage,
                                             ),
+                                        )
+                                        LibraryUpdateErrorStore.upsert(
+                                            media = LibraryUpdateErrorMedia.Anime,
+                                            entryId = anime.id,
+                                            title = anime.title,
+                                            sourceId = anime.source,
+                                            sourceName = sourceName,
+                                            thumbnailUrl = anime.thumbnailUrl,
+                                            message = errorMessage ?: context.stringResource(MR.strings.unknown_error),
+                                            runType = if (isManualRun) {
+                                                LibraryUpdateErrorRunType.Manual
+                                            } else {
+                                                LibraryUpdateErrorRunType.Automatic
+                                            },
                                         )
                                     }
                                 }

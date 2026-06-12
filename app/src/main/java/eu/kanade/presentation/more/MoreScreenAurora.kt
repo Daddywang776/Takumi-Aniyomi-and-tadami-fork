@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Book
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.NewReleases
+import androidx.compose.material.icons.outlined.ReportProblem
 import androidx.compose.material.icons.outlined.Storage
 import androidx.compose.material.icons.outlined.VideoSettings
 import androidx.compose.material.icons.outlined.VisibilityOff
@@ -86,6 +87,7 @@ fun MoreScreenAurora(
     onAboutClick: () -> Unit,
     onDebugAppUpdatePreviewClick: () -> Unit,
     onStatsClick: () -> Unit,
+    onLibraryUpdateErrorsClick: () -> Unit,
     onAchievementsClick: () -> Unit,
     onTreasuryClick: () -> Unit,
     onHelpClick: () -> Unit,
@@ -161,6 +163,13 @@ fun MoreScreenAurora(
                     title = stringResource(AYMR.strings.aurora_statistics),
                     icon = Icons.Filled.QueryStats,
                     onClick = onStatsClick,
+                    darkRimLightEnabled = darkRimLightEnabled,
+                )
+
+                AuroraSettingItem(
+                    title = stringResource(AYMR.strings.option_label_library_update_errors),
+                    icon = Icons.Outlined.ReportProblem,
+                    onClick = onLibraryUpdateErrorsClick,
                     darkRimLightEnabled = darkRimLightEnabled,
                 )
 

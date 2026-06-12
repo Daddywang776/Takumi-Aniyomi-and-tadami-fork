@@ -31,6 +31,7 @@ import eu.kanade.tachiyomi.data.download.anime.AnimeDownloadManager
 import eu.kanade.tachiyomi.data.download.manga.MangaDownloadManager
 import eu.kanade.tachiyomi.ui.category.CategoriesTab
 import eu.kanade.tachiyomi.ui.download.DownloadsTab
+import eu.kanade.tachiyomi.ui.libraryUpdateError.LibraryUpdateErrorScreen
 import eu.kanade.tachiyomi.ui.more.DebugAppUpdatePreviewScreen
 import eu.kanade.tachiyomi.ui.setting.PlayerSettingsScreen
 import eu.kanade.tachiyomi.ui.setting.SettingsScreen
@@ -102,6 +103,7 @@ data object MoreTab : Tab {
                 onHelpClick = { navigator.push(HelpScreen) },
                 onDebugAppUpdatePreviewClick = { navigator.push(DebugAppUpdatePreviewScreen()) },
                 onStatsClick = { navigator.push(StatsTab) },
+                onLibraryUpdateErrorsClick = { navigator.push(LibraryUpdateErrorScreen()) },
                 onAchievementsClick = { navigator.push(AchievementScreenVoyager) },
                 onTreasuryClick = { navigator.push(SettingsTreasuryScreen) },
             )
@@ -117,6 +119,7 @@ data object MoreTab : Tab {
                 onClickDownloadQueue = { navigator.push(DownloadsTab) },
                 onClickCategories = { navigator.push(CategoriesTab) },
                 onClickStats = { navigator.push(StatsTab) },
+                onClickLibraryUpdateErrors = { navigator.push(LibraryUpdateErrorScreen()) },
                 onClickStorage = { navigator.push(StorageTab) },
                 onClickDataAndStorage = { navigator.push(SettingsScreen(SettingsScreen.Destination.DataAndStorage)) },
                 onClickPlayerSettings = { navigator.push(PlayerSettingsScreen(mainSettings = false)) },

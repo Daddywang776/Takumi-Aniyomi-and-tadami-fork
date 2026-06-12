@@ -2336,7 +2336,6 @@ private fun TreasurySectionStage(
     }
 }
 
-
 internal data class TreasuryRewardProgress(
     val unlocked: Int,
     val total: Int,

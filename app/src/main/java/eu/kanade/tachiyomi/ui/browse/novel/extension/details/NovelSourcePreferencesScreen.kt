@@ -136,7 +136,12 @@ class NovelSourcePreferencesFragment : PreferenceFragmentCompat() {
         val sourceId = requireArguments().getLong(SOURCE_ID)
         val source = Injekt.get<NovelSourceManager>().getOrStub(sourceId)
         val sourceScreen = preferenceManager.createPreferenceScreen(requireContext())
-        if (source is ConfigurableNovelSource && (source.hasVisiblePluginSettingsByDiscovery() || source !is eu.kanade.tachiyomi.extension.novel.runtime.NovelConfigurableJsSource)) {
+        if (source is ConfigurableNovelSource &&
+            (
+                source.hasVisiblePluginSettingsByDiscovery() ||
+                    source !is eu.kanade.tachiyomi.extension.novel.runtime.NovelConfigurableJsSource
+                )
+        ) {
             val dataStore = SharedPreferencesDataStore(source.sourcePreferences())
             preferenceManager.preferenceDataStore = dataStore
 

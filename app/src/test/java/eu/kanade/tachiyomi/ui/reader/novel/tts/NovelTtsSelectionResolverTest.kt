@@ -85,6 +85,7 @@ class NovelTtsSelectionResolverTest {
         resolved.selectedLocaleTag shouldBe "ru-RU"
         resolved.showLocaleFallback shouldBe true
     }
+
     @Test
     fun `blank preferred voice keeps system default voice while preserving locale`() {
         val selection = resolveNovelTtsVoiceSelection(
@@ -106,5 +107,4 @@ class NovelTtsSelectionResolverTest {
         selection.selectedVoiceId shouldBe ""
         selection.selectedLocaleTag shouldBe "en-US"
     }
-
 }
