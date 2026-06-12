@@ -93,6 +93,34 @@ fun MoreScreen(
             }
 
             item {
+                TextPreferenceWidget(
+                    title = stringResource(AYMR.strings.general_categories),
+                    icon = Icons.AutoMirrored.Outlined.Label,
+                    onPreferenceClick = onClickCategories,
+                )
+            }
+            item {
+                TextPreferenceWidget(
+                    title = stringResource(MR.strings.label_stats),
+                    icon = Icons.Outlined.QueryStats,
+                    onPreferenceClick = onClickStats,
+                )
+            }
+            item {
+                TextPreferenceWidget(
+                    title = stringResource(MR.strings.label_data_storage),
+                    icon = Icons.Outlined.Storage,
+                    onPreferenceClick = onClickDataAndStorage,
+                )
+            }
+            item {
+                TextPreferenceWidget(
+                    title = stringResource(AYMR.strings.option_label_library_update_errors),
+                    icon = Icons.Outlined.ReportProblem,
+                    onPreferenceClick = onClickLibraryUpdateErrors,
+                )
+            }
+            item {
                 val downloadQueueState = downloadQueueStateProvider()
                 TextPreferenceWidget(
                     title = stringResource(MR.strings.label_download_queue),
@@ -124,34 +152,6 @@ fun MoreScreen(
                     },
                     icon = Icons.Outlined.GetApp,
                     onPreferenceClick = onClickDownloadQueue,
-                )
-            }
-            item {
-                TextPreferenceWidget(
-                    title = stringResource(AYMR.strings.general_categories),
-                    icon = Icons.AutoMirrored.Outlined.Label,
-                    onPreferenceClick = onClickCategories,
-                )
-            }
-            item {
-                TextPreferenceWidget(
-                    title = stringResource(MR.strings.label_stats),
-                    icon = Icons.Outlined.QueryStats,
-                    onPreferenceClick = onClickStats,
-                )
-            }
-            item {
-                TextPreferenceWidget(
-                    title = stringResource(AYMR.strings.option_label_library_update_errors),
-                    icon = Icons.Outlined.ReportProblem,
-                    onPreferenceClick = onClickLibraryUpdateErrors,
-                )
-            }
-            item {
-                TextPreferenceWidget(
-                    title = stringResource(MR.strings.label_data_storage),
-                    icon = Icons.Outlined.Storage,
-                    onPreferenceClick = onClickDataAndStorage,
                 )
             }
 

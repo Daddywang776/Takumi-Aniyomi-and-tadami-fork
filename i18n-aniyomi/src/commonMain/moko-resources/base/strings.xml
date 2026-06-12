@@ -9,7 +9,7 @@
     <string name="library_update_error_automatic">Automatic</string>
     <string name="library_update_error_tab_manga">Manga</string>
     <string name="library_update_error_tab_anime">Anime</string>
-    <string name="library_update_error_tab_novel">Novels</string>
+    <string name="library_update_error_tab_novel">Novel</string>
 
     <string name="confirm_exit">Enable Horizontal Seek</string>
     <string name="action_filter_started">Started</string>

@@ -167,13 +167,6 @@ fun MoreScreenAurora(
                 )
 
                 AuroraSettingItem(
-                    title = stringResource(AYMR.strings.option_label_library_update_errors),
-                    icon = Icons.Outlined.ReportProblem,
-                    onClick = onLibraryUpdateErrorsClick,
-                    darkRimLightEnabled = darkRimLightEnabled,
-                )
-
-                AuroraSettingItem(
                     title = stringResource(AYMR.strings.aurora_achievements),
                     icon = Icons.Filled.EmojiEvents,
                     onClick = onAchievementsClick,
@@ -191,6 +184,13 @@ fun MoreScreenAurora(
                     title = stringResource(AYMR.strings.aurora_data_storage),
                     icon = Icons.Outlined.Storage,
                     onClick = onDataStorageClick,
+                    darkRimLightEnabled = darkRimLightEnabled,
+                )
+
+                AuroraSettingItem(
+                    title = stringResource(AYMR.strings.option_label_library_update_errors),
+                    icon = Icons.Outlined.ReportProblem,
+                    onClick = onLibraryUpdateErrorsClick,
                     darkRimLightEnabled = darkRimLightEnabled,
                 )
 

@@ -8,7 +8,7 @@
     <string name="library_update_error_automatic">Автоматически</string>
     <string name="library_update_error_tab_manga">Манга</string>
     <string name="library_update_error_tab_anime">Аниме</string>
-    <string name="library_update_error_tab_novel">Новеллы</string>
+    <string name="library_update_error_tab_novel">Ранобэ</string>
     <string name="confirm_exit">Нажмите кнопку назад ещё раз, чтобы выйти</string>
     <string name="action_filter_started">Начато</string>
     <string name="action_sort_airing_time">По времени выпуска</string>
