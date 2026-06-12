@@ -128,13 +128,16 @@ internal class MangaHomeHubScreenModel(
             ) { name, avatar, categories, historyList, mangaList ->
                 LiveData(name, avatar, categories, historyList, mangaList)
             }.collectLatest { data ->
-                val hiddenCategoryIds = data.categories
-                    .filter { it.hiddenFromHomeHub }
-                    .map { it.id }
-                    .toSet()
-                val mangaCategoryIdsByMangaId = data.mangaList
-                    .groupBy { it.manga.id }
-                    .mapValues { (_, items) -> items.map { it.category } }
+                val hiddenCategoryIds = hiddenHomeHubCategoryIds(
+                    categories = data.categories,
+                    isHiddenFromHomeHub = { it.hiddenFromHomeHub },
+                    idSelector = { it.id },
+                )
+                val mangaCategoryIdsByMangaId = homeHubCategoryIdsByEntryId(
+                    items = data.mangaList,
+                    entryIdSelector = { it.manga.id },
+                    categoryIdSelector = { it.category },
+                )
 
                 val filteredHistory = filterHomeHubEntriesBy(
                     items = data.historyList,
@@ -143,12 +146,12 @@ internal class MangaHomeHubScreenModel(
                     hiddenCategoryIds = hiddenCategoryIds,
                 )
 
-                val filteredManga = filterHomeHubEntriesBy(
+                val filteredManga = filterHomeHubEntriesByDistinct(
                     items = data.mangaList,
                     keySelector = { it.manga.id },
                     entryCategoryIds = mangaCategoryIdsByMangaId,
                     hiddenCategoryIds = hiddenCategoryIds,
-                ).distinctBy { it.manga.id }
+                )
 
                 val hero = filteredHistory.firstOrNull()
                 val history = filteredHistory
