@@ -163,14 +163,14 @@ fun NovelLibraryAuroraContent(
     val showDownloadBadge by libraryPreferences.downloadBadge().collectAsStateWithLifecycle()
     val showUnreadBadge by libraryPreferences.unreadBadge().collectAsStateWithLifecycle()
     val showLanguageBadge by libraryPreferences.languageBadge().collectAsStateWithLifecycle()
-    val downloadCacheSignal by downloadCache.changes.collectAsStateWithLifecycle(initialValue = Unit)
-    val downloadedNovelIds = remember(items, showDownloadBadge, downloadCacheSignal) {
+    val downloadedIds by downloadCache.downloadedIds.collectAsStateWithLifecycle()
+    val downloadedNovelIds = remember(items, showDownloadBadge, downloadedIds) {
         if (!showDownloadBadge) return@remember emptySet()
 
         buildSet(capacity = items.size) {
             items.forEach { item ->
                 val novel = item.coverNovel ?: return@forEach
-                if (downloadCache.hasAnyDownloadedChapter(novel)) {
+                if (novel.id in downloadedIds) {
                     add(item.id)
                 }
             }
