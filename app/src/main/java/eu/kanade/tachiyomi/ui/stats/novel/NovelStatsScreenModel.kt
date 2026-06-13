@@ -39,7 +39,18 @@ class NovelStatsScreenModel(
             val overviewStatData = StatsData.NovelOverview(
                 libraryNovelCount = distinctLibraryNovels.size,
                 completedNovelCount = distinctLibraryNovels.count {
-                    StatsCalculations.isCompletedStatus(it.novel.status.toInt(), SManga.COMPLETED)
+                    StatsCalculations.isCompletedByUserConsumption(
+                        sourceStatus = it.novel.status.toInt(),
+                        customStatus = it.novel.customStatus?.toInt(),
+                        completedStatus = SManga.COMPLETED,
+                        terminalFallbackStatuses = setOf(
+                            SManga.PUBLISHING_FINISHED,
+                            SManga.CANCELLED,
+                            SManga.ON_HIATUS,
+                        ),
+                        consumedCount = it.readCount,
+                        totalCount = it.totalChapters,
+                    )
                 },
                 totalReadDuration = getTotalNovelReadDuration.await(),
             )

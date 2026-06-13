@@ -55,7 +55,18 @@ class AnimeStatsScreenModel(
             val overviewStatData = StatsData.AnimeOverview(
                 libraryAnimeCount = distinctLibraryAnime.size,
                 completedAnimeCount = distinctLibraryAnime.count {
-                    StatsCalculations.isCompletedStatus(it.anime.status.toInt(), SAnime.COMPLETED)
+                    StatsCalculations.isCompletedByUserConsumption(
+                        sourceStatus = it.anime.status.toInt(),
+                        customStatus = it.anime.customStatus?.toInt(),
+                        completedStatus = SAnime.COMPLETED,
+                        terminalFallbackStatuses = setOf(
+                            SAnime.PUBLISHING_FINISHED,
+                            SAnime.CANCELLED,
+                            SAnime.ON_HIATUS,
+                        ),
+                        consumedCount = it.seenCount,
+                        totalCount = it.totalCount,
+                    )
                 },
                 totalSeenDuration = getWatchTime(distinctLibraryAnime),
             )

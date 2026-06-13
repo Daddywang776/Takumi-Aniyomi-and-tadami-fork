@@ -12,6 +12,25 @@ object StatsCalculations {
         return status == completedStatus
     }
 
+    fun isCompletedByUserConsumption(
+        sourceStatus: Int,
+        customStatus: Int?,
+        completedStatus: Int,
+        terminalFallbackStatuses: Set<Int>,
+        consumedCount: Long,
+        totalCount: Long,
+    ): Boolean {
+        if (customStatus == completedStatus) return true
+
+        val effectiveStatus = customStatus ?: sourceStatus
+        val hasKnownContent = totalCount > 0L
+        val hasConsumedContent = consumedCount > 0L
+        val fullyConsumed = hasKnownContent && hasConsumedContent && consumedCount >= totalCount
+        if (!fullyConsumed) return false
+
+        return effectiveStatus == completedStatus || effectiveStatus in terminalFallbackStatuses
+    }
+
     fun progressFraction(done: Int, total: Int): Float {
         if (total <= 0 || done <= 0) return 0f
         return (done.toFloat() / total.toFloat()).coerceIn(0f, 1f)

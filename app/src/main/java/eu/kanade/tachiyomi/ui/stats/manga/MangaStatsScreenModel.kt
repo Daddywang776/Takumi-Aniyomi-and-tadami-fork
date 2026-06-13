@@ -54,7 +54,18 @@ class MangaStatsScreenModel(
             val overviewStatData = StatsData.MangaOverview(
                 libraryMangaCount = distinctLibraryManga.size,
                 completedMangaCount = distinctLibraryManga.count {
-                    StatsCalculations.isCompletedStatus(it.manga.status.toInt(), SManga.COMPLETED)
+                    StatsCalculations.isCompletedByUserConsumption(
+                        sourceStatus = it.manga.status.toInt(),
+                        customStatus = it.manga.customStatus?.toInt(),
+                        completedStatus = SManga.COMPLETED,
+                        terminalFallbackStatuses = setOf(
+                            SManga.PUBLISHING_FINISHED,
+                            SManga.CANCELLED,
+                            SManga.ON_HIATUS,
+                        ),
+                        consumedCount = it.readCount,
+                        totalCount = it.totalChapters,
+                    )
                 },
                 totalReadDuration = getTotalReadDuration.await(),
             )

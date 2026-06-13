@@ -244,7 +244,18 @@ class AchievementBackupCreator(
             MangaStatsData(
                 libraryCount = distinctManga.size,
                 completedCount = distinctManga.count {
-                    StatsCalculations.isCompletedStatus(it.manga.status.toInt(), SManga.COMPLETED)
+                    StatsCalculations.isCompletedByUserConsumption(
+                        sourceStatus = it.manga.status.toInt(),
+                        customStatus = it.manga.customStatus?.toInt(),
+                        completedStatus = SManga.COMPLETED,
+                        terminalFallbackStatuses = setOf(
+                            SManga.PUBLISHING_FINISHED,
+                            SManga.CANCELLED,
+                            SManga.ON_HIATUS,
+                        ),
+                        consumedCount = it.readCount,
+                        totalCount = it.totalChapters,
+                    )
                 },
                 totalReadDuration = getTotalReadDuration.await(),
                 startedCount = distinctManga.count { it.hasStarted },
@@ -303,7 +314,18 @@ class AchievementBackupCreator(
             AnimeStatsData(
                 libraryCount = distinctAnime.size,
                 completedCount = distinctAnime.count {
-                    StatsCalculations.isCompletedStatus(it.anime.status.toInt(), AnimeStatus.COMPLETED)
+                    StatsCalculations.isCompletedByUserConsumption(
+                        sourceStatus = it.anime.status.toInt(),
+                        customStatus = it.anime.customStatus?.toInt(),
+                        completedStatus = AnimeStatus.COMPLETED,
+                        terminalFallbackStatuses = setOf(
+                            AnimeStatus.PUBLISHING_FINISHED,
+                            AnimeStatus.CANCELLED,
+                            AnimeStatus.ON_HIATUS,
+                        ),
+                        consumedCount = it.seenCount,
+                        totalCount = it.totalCount,
+                    )
                 },
                 totalSeenDuration = totalWatchTime,
                 startedCount = distinctAnime.count { it.hasStarted },
