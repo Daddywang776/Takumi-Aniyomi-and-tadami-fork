@@ -260,7 +260,7 @@ private fun NovelExtensionContent(
                     NovelExtensionItemRow(
                         item = item,
                         onInstallExtension = onInstallExtension,
-                        )
+                    )
                 }
             }
         }
@@ -281,7 +281,9 @@ private fun NovelExtensionItemRow(
     val onItemClick: () -> Unit = {
         when (resolveNovelExtensionRowAction(item)) {
             NovelExtensionRowAction.None -> Unit
-            NovelExtensionRowAction.Install -> (plugin as? NovelPlugin.Available)?.let { onInstallExtension?.invoke(it) }
+            NovelExtensionRowAction.Install -> (plugin as? NovelPlugin.Available)?.let {
+                onInstallExtension?.invoke(it)
+            }
             NovelExtensionRowAction.Update -> (plugin as? NovelPlugin.Installed)?.let { onUpdateExtension?.invoke(it) }
             NovelExtensionRowAction.Reinstall -> (plugin as? NovelPlugin.Installed)?.let {
                 onReinstallExtension?.invoke(it)

@@ -50,5 +50,4 @@ internal object NovelPluginUpdateClassifier {
                 .distinct()
                 .singleOrNull()
     }
-
 }

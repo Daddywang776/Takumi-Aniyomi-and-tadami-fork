@@ -27,10 +27,10 @@ import tachiyomi.data.extension.novel.NovelPluginInstallerFacade
 import tachiyomi.domain.extension.novel.model.NovelPlugin
 import tachiyomi.domain.extension.novel.repository.NovelPluginRepository
 import tachiyomi.domain.source.novel.model.StubNovelSource
-import java.util.concurrent.ConcurrentHashMap
-import kotlin.time.Duration.Companion.seconds
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Duration.Companion.seconds
 
 internal fun removeNovelInstalledRepoEntries(
     entries: Set<String>,
@@ -223,7 +223,9 @@ class DefaultNovelExtensionManager(
         val normalizedJs = installedJsPluginsSnapshot
             .map { it.withNormalizedLang().withPendingSavedOrInferredRepo(availableById[it.id].orEmpty()) }
         val normalizedKotlin = installedKotlinExtensionsSnapshot
-            .map { it.plugin.withNormalizedLang().withPendingSavedOrInferredRepo(availableById[it.plugin.id].orEmpty()) }
+            .map {
+                it.plugin.withNormalizedLang().withPendingSavedOrInferredRepo(availableById[it.plugin.id].orEmpty())
+            }
         (normalizedJs + normalizedKotlin).forEach(::saveInstalledRepo)
         installedPlugins.value = normalizedJs + normalizedKotlin
         installedSources.value =
@@ -333,7 +335,6 @@ class DefaultNovelExtensionManager(
             best.versionCode > installed.versionCode
         }
     }
-
 
     private companion object {
         const val REPLACE_UNINSTALL_WAIT_SECONDS = 120

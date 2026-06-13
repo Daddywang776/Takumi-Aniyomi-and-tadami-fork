@@ -1,13 +1,21 @@
 package eu.kanade.presentation.more.stats
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,7 +28,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.CollectionsBookmark
 import androidx.compose.material.icons.outlined.Download
-import androidx.compose.material.icons.outlined.LocalLibrary
 import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Star
@@ -29,21 +36,22 @@ import androidx.compose.material.icons.outlined.Tv
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.luminance
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import eu.kanade.presentation.more.stats.components.StatsAuroraProgressData
@@ -73,31 +81,32 @@ fun MangaStatsAuroraContent(
             .toDurationString(context, fallback = none)
     }
 
+    val layoutDirection = LocalLayoutDirection.current
+    val lazyColumnContentPadding = remember(paddingValues, layoutDirection) {
+        PaddingValues(
+            start = paddingValues.calculateStartPadding(layoutDirection),
+            top = paddingValues.calculateTopPadding() + 16.dp,
+            end = paddingValues.calculateEndPadding(layoutDirection),
+            bottom = paddingValues.calculateBottomPadding(),
+        )
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize(),
     ) {
         LazyColumn(
-            contentPadding = paddingValues,
+            contentPadding = lazyColumnContentPadding,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 16.dp),
         ) {
             item {
-                Text(
-                    text = stringResource(AYMR.strings.aurora_statistics),
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = colors.textPrimary,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
-                )
-            }
-
-            item {
                 OverviewCardsSection(
                     libraryCount = state.overview.libraryMangaCount,
                     readDuration = readDurationString,
                     completedCount = state.overview.completedMangaCount,
+                    readDurationLabel = stringResource(MR.strings.label_read_duration),
                 )
             }
 
@@ -105,6 +114,7 @@ fun MangaStatsAuroraContent(
                 Spacer(modifier = Modifier.height(24.dp))
                 StatsSectionCard(
                     title = stringResource(AYMR.strings.aurora_titles),
+                    cardType = MangaStatsCardType.TITLES,
                     items = listOf(
                         StatsAuroraStatItem(
                             Icons.Outlined.Sync,
@@ -130,6 +140,7 @@ fun MangaStatsAuroraContent(
                 val accentColor = colors.accent
                 StatsSectionCard(
                     title = stringResource(AYMR.strings.aurora_chapters_header),
+                    cardType = MangaStatsCardType.EPISODES,
                     items = listOf(
                         StatsAuroraStatItem(
                             Icons.Outlined.PlayCircle,
@@ -181,6 +192,7 @@ fun MangaStatsAuroraContent(
                 }
                 StatsSectionCard(
                     title = stringResource(AYMR.strings.aurora_trackers),
+                    cardType = MangaStatsCardType.TRACKERS,
                     items = listOf(
                         StatsAuroraStatItem(
                             Icons.Outlined.CollectionsBookmark,
@@ -206,106 +218,239 @@ fun MangaStatsAuroraContent(
     }
 }
 
+private enum class MangaStatsCardType {
+    TITLES,
+    EPISODES,
+    TRACKERS,
+}
+
 @Composable
 private fun OverviewCardsSection(
     libraryCount: Int,
     readDuration: String,
     completedCount: Int,
+    readDurationLabel: String,
 ) {
-    Row(
+    val colors = AuroraTheme.colors
+    val dividerColor = if (colors.isDark) Color.White.copy(alpha = 0.08f) else Color.Black.copy(alpha = 0.05f)
+
+    DoubleBezelCard(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        OverviewCard(
-            icon = Icons.Outlined.CollectionsBookmark,
-            value = libraryCount.toString(),
-            label = stringResource(AYMR.strings.aurora_in_library),
-            modifier = Modifier.weight(1f),
+        Text(
+            text = stringResource(MR.strings.label_overview_section),
+            color = colors.accent,
+            fontWeight = FontWeight.Bold,
+            fontSize = 13.sp,
+            letterSpacing = 0.5.sp,
         )
-        OverviewCard(
-            icon = Icons.Outlined.Schedule,
-            value = readDuration,
-            label = stringResource(MR.strings.label_read_duration),
-            modifier = Modifier.weight(1f),
-        )
-        OverviewCard(
-            icon = Icons.Outlined.LocalLibrary,
-            value = completedCount.toString(),
-            label = stringResource(AYMR.strings.aurora_completed),
-            modifier = Modifier.weight(1f),
-        )
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceEvenly,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = libraryCount.toString(),
+                    color = colors.textPrimary,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = stringResource(AYMR.strings.aurora_in_library),
+                    color = colors.textSecondary,
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                )
+            }
+
+            Spacer(
+                modifier = Modifier
+                    .width(1.dp)
+                    .fillMaxHeight(0.6f)
+                    .background(dividerColor),
+            )
+
+            val isNoData = readDuration == "N/A" || readDuration.isBlank()
+            val readTimeText = if (isNoData) "0h" else readDuration
+            val readTimeColor = if (isNoData) colors.textSecondary else colors.textPrimary
+
+            Column(
+                modifier = Modifier.weight(1.2f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = readTimeText,
+                    color = readTimeColor,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = readDurationLabel,
+                    color = colors.textSecondary,
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                )
+            }
+
+            Spacer(
+                modifier = Modifier
+                    .width(1.dp)
+                    .fillMaxHeight(0.6f)
+                    .background(dividerColor),
+            )
+
+            Column(
+                modifier = Modifier.weight(1f),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    text = completedCount.toString(),
+                    color = colors.textPrimary,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = stringResource(AYMR.strings.aurora_completed),
+                    color = colors.textSecondary,
+                    fontSize = 11.sp,
+                    maxLines = 1,
+                )
+            }
+        }
     }
 }
 
 @Composable
-private fun OverviewCard(
-    icon: ImageVector,
-    value: String,
-    label: String,
+private fun DoubleBezelCard(
     modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     val colors = AuroraTheme.colors
-    val tabContainerColor = if (colors.background.luminance() < 0.5f) {
-        Color.White.copy(alpha = 0.05f)
-    } else {
-        Color.Black.copy(alpha = 0.03f)
-    }
+    val outerColor = if (colors.isDark) Color.White.copy(alpha = 0.03f) else Color.Black.copy(alpha = 0.02f)
+    val innerColor = if (colors.isDark) Color.Black.copy(alpha = 0.25f) else Color.White.copy(alpha = 0.45f)
+    val borderColor = colors.accent.copy(alpha = if (colors.isDark) 0.16f else 0.12f)
 
     Card(
-        modifier = modifier.height(120.dp),
-        shape = RoundedCornerShape(16.dp),
+        modifier = modifier,
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color.Transparent,
+            containerColor = outerColor,
         ),
         border = BorderStroke(
             width = 1.dp,
-            color = colors.accent.copy(alpha = if (colors.isDark) 0.20f else 0.16f),
+            color = borderColor,
         ),
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .padding(6.dp)
                 .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            colors.accent.copy(alpha = if (colors.isDark) 0.16f else 0.10f),
-                            tabContainerColor,
-                            colors.textPrimary.copy(alpha = if (colors.isDark) 0.04f else 0.03f),
-                        ),
-                    ),
+                    color = innerColor,
+                    shape = RoundedCornerShape(18.dp),
                 )
                 .padding(12.dp),
+        ) {
+            content()
+        }
+    }
+}
+
+@Composable
+private fun ConcentricProgressRings(
+    watchedFraction: Float,
+    downloadedFraction: Float,
+    watchedColor: Color,
+    downloadedColor: Color,
+    label: String,
+    modifier: Modifier = Modifier,
+) {
+    val colors = AuroraTheme.colors
+    var animationTriggered by remember { mutableStateOf(false) }
+
+    val animatedWatched by animateFloatAsState(
+        targetValue = if (animationTriggered) watchedFraction else 0f,
+        animationSpec = spring(
+            dampingRatio = 0.8f,
+            stiffness = 100f,
+        ),
+        label = "watched_progress",
+    )
+
+    val animatedDownloaded by animateFloatAsState(
+        targetValue = if (animationTriggered) downloadedFraction else 0f,
+        animationSpec = spring(
+            dampingRatio = 0.8f,
+            stiffness = 100f,
+        ),
+        label = "download_progress",
+    )
+
+    LaunchedEffect(watchedFraction, downloadedFraction) {
+        animationTriggered = true
+    }
+
+    Box(
+        modifier = modifier.size(72.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val strokeWidth = 5.dp.toPx()
+
+            drawCircle(
+                color = watchedColor.copy(alpha = 0.12f),
+                radius = size.minDimension / 2 - strokeWidth / 2,
+                style = Stroke(width = strokeWidth),
+            )
+            drawArc(
+                color = watchedColor,
+                startAngle = -90f,
+                sweepAngle = animatedWatched * 360f,
+                useCenter = false,
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+            )
+
+            val innerRingRadius = size.minDimension / 2 - strokeWidth * 2.2f
+            drawCircle(
+                color = downloadedColor.copy(alpha = 0.12f),
+                radius = innerRingRadius,
+                style = Stroke(width = strokeWidth),
+            )
+            drawArc(
+                color = downloadedColor,
+                startAngle = -90f,
+                sweepAngle = animatedDownloaded * 360f,
+                useCenter = false,
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round),
+            )
+        }
+
+        Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(colors.accent.copy(alpha = 0.15f), CircleShape),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = colors.accent,
-                    modifier = Modifier.size(22.dp),
-                )
-            }
-            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = value,
+                text = "${(animatedWatched * 100).toInt()}%",
                 color = colors.textPrimary,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
             )
-            Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = label,
+                text = label.lowercase(),
                 color = colors.textSecondary,
-                fontSize = 11.sp,
-                textAlign = TextAlign.Center,
+                fontSize = 8.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
@@ -314,110 +459,238 @@ private fun OverviewCard(
 @Composable
 private fun StatsSectionCard(
     title: String,
+    cardType: MangaStatsCardType,
     items: List<StatsAuroraStatItem>,
     progressBars: List<StatsAuroraProgressData> = emptyList(),
 ) {
     val colors = AuroraTheme.colors
-    val tabContainerColor = if (colors.background.luminance() < 0.5f) {
-        Color.White.copy(alpha = 0.05f)
-    } else {
-        Color.Black.copy(alpha = 0.03f)
-    }
-
-    Card(
+    DoubleBezelCard(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.Transparent,
-        ),
-        border = BorderStroke(
-            width = 1.dp,
-            color = colors.accent.copy(alpha = if (colors.isDark) 0.20f else 0.16f),
-        ),
     ) {
-        Column(
-            modifier = Modifier
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            colors.accent.copy(alpha = if (colors.isDark) 0.10f else 0.07f),
-                            tabContainerColor,
-                            colors.background.copy(alpha = 0.08f),
-                        ),
-                    ),
-                )
-                .padding(16.dp),
-        ) {
-            Text(
-                text = title,
-                color = colors.accent,
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
-                letterSpacing = 0.5.sp,
-            )
+        Text(
+            text = title,
+            color = colors.accent,
+            fontWeight = FontWeight.Bold,
+            fontSize = 13.sp,
+            letterSpacing = 0.5.sp,
+        )
 
-            Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-            ) {
-                items.forEach { item ->
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        Icon(
-                            imageVector = item.icon,
-                            contentDescription = null,
-                            tint = colors.accent.copy(alpha = 0.8f),
-                            modifier = Modifier.size(24.dp),
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = item.value,
-                            color = colors.textPrimary,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                            textAlign = TextAlign.Center,
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = item.label,
-                            color = colors.textSecondary,
-                            fontSize = 11.sp,
-                            textAlign = TextAlign.Center,
-                        )
+        when (cardType) {
+            MangaStatsCardType.TITLES -> {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    items.forEachIndexed { index, item ->
+                        val dotColor = when (index) {
+                            0 -> colors.accent.copy(alpha = 0.4f)
+                            1 -> colors.accent
+                            else -> colors.textSecondary
+                        }
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Text(
+                                text = item.value,
+                                color = colors.textPrimary,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .background(dotColor, CircleShape),
+                                )
+                                Text(
+                                    text = item.label,
+                                    color = colors.textSecondary,
+                                    fontSize = 11.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
                     }
                 }
             }
 
-            if (progressBars.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(16.dp))
+            MangaStatsCardType.EPISODES -> {
+                val total = items.getOrNull(0)?.value?.toIntOrNull() ?: 0
+                val watched = items.getOrNull(1)?.value?.toIntOrNull() ?: 0
+                val downloaded = items.getOrNull(2)?.value?.toIntOrNull() ?: 0
 
-                progressBars.forEach { progress ->
+                val watchedFraction = progressBars.getOrNull(0)?.fraction ?: 0f
+                val downloadedFraction = progressBars.getOrNull(1)?.fraction ?: 0f
+                val progressColor = progressBars.getOrNull(0)?.color ?: colors.accent
+                val downloadColor = progressBars.getOrNull(1)?.color ?: colors.textSecondary
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Column {
+                            Row(
+                                verticalAlignment = Alignment.Bottom,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                Text(
+                                    text = "$watched",
+                                    color = colors.textPrimary,
+                                    fontSize = 26.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                                Text(
+                                    text = "/ $total",
+                                    color = colors.textSecondary,
+                                    fontSize = 14.sp,
+                                    modifier = Modifier.padding(bottom = 2.dp),
+                                )
+                            }
+                            Text(
+                                text = items.getOrNull(1)?.label ?: "Read",
+                                color = colors.textSecondary,
+                                fontSize = 11.sp,
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Column {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Download,
+                                    contentDescription = null,
+                                    tint = downloadColor,
+                                    modifier = Modifier.size(14.dp),
+                                )
+                                Text(
+                                    text = "$downloaded",
+                                    color = colors.textPrimary,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
+                            Text(
+                                text = items.getOrNull(2)?.label ?: "Downloaded",
+                                color = colors.textSecondary,
+                                fontSize = 10.sp,
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(16.dp))
+
+                    ConcentricProgressRings(
+                        watchedFraction = watchedFraction,
+                        downloadedFraction = downloadedFraction,
+                        watchedColor = progressColor,
+                        downloadedColor = downloadColor,
+                        label = items.getOrNull(1)?.label ?: "Read",
+                    )
+                }
+            }
+
+            MangaStatsCardType.TRACKERS -> {
+                val trackedTitles = items.getOrNull(0)?.value ?: "0"
+                val meanScore = items.getOrNull(1)?.value ?: "N/A"
+                val trackersUsed = items.getOrNull(2)?.value ?: "0"
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(24.dp),
+                        modifier = Modifier.weight(1f),
                     ) {
-                        LinearProgressIndicator(
-                            progress = { progress.fraction },
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(6.dp),
-                            color = progress.color,
-                            trackColor = progress.color.copy(alpha = 0.15f),
-                            strokeCap = StrokeCap.Round,
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "${(progress.fraction * 100).toInt()}%",
-                            color = colors.textSecondary,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                        )
+                        Column {
+                            Text(
+                                text = trackedTitles,
+                                color = colors.textPrimary,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text(
+                                text = items.getOrNull(0)?.label ?: "Tracked Titles",
+                                color = colors.textSecondary,
+                                fontSize = 11.sp,
+                            )
+                        }
+                        Column {
+                            Text(
+                                text = trackersUsed,
+                                color = colors.textPrimary,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Text(
+                                text = items.getOrNull(2)?.label ?: "Trackers Used",
+                                color = colors.textSecondary,
+                                fontSize = 11.sp,
+                            )
+                        }
+                    }
+
+                    val isNoScore = meanScore == "N/A" || meanScore.isBlank()
+                    val locale = Locale.getDefault().language
+                    val scoreText = if (isNoScore) {
+                        if (locale == "ru") "Без оценки" else "No score"
+                    } else {
+                        meanScore
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                color = if (isNoScore) Color.Transparent else colors.accent.copy(alpha = 0.08f),
+                                shape = RoundedCornerShape(12.dp),
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = if (isNoScore) {
+                                    colors.textSecondary.copy(
+                                        alpha = 0.20f,
+                                    )
+                                } else {
+                                    colors.accent.copy(alpha = 0.15f)
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                            )
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            if (!isNoScore) {
+                                Icon(
+                                    imageVector = Icons.Outlined.Star,
+                                    contentDescription = null,
+                                    tint = colors.accent,
+                                    modifier = Modifier.size(14.dp),
+                                )
+                            }
+                            Text(
+                                text = scoreText,
+                                color = if (isNoScore) colors.textSecondary else colors.textPrimary,
+                                fontSize = 12.sp,
+                                fontWeight = if (isNoScore) FontWeight.Normal else FontWeight.Bold,
+                            )
+                        }
                     }
                 }
             }
