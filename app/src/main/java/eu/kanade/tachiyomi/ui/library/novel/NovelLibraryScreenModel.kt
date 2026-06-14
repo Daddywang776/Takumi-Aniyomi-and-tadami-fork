@@ -25,6 +25,7 @@ import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.ui.entries.novel.NovelDownloadAction
 import eu.kanade.tachiyomi.ui.entries.novel.NovelScreenModel
+import eu.kanade.tachiyomi.ui.library.resolveLibraryRangeSelectionAdditions
 import eu.kanade.tachiyomi.ui.library.sortPinnedSeriesFirst
 import eu.kanade.tachiyomi.ui.novel.resolveNovelResumeChapter
 import kotlinx.collections.immutable.ImmutableList
@@ -317,32 +318,12 @@ class NovelLibraryScreenModel(
     fun toggleRangeSelection(novel: NovelLibraryItem) {
         mutableState.update { current ->
             val mutable = current.selection.toMutableList()
-            val lastSelected = mutable.lastOrNull()
-            if (lastSelected?.category != novel.category) {
-                val existingIndex = mutable.indexOfFirst { it.id == novel.id }
-                if (existingIndex >= 0) {
-                    mutable.removeAt(existingIndex)
-                } else {
-                    mutable.add(novel)
-                }
-                return@update current.copy(selection = persistentListOf<NovelLibraryItem>().addAll(mutable))
-            }
-
-            val items = current.library.entries.firstNotNullOfOrNull { entry ->
-                entry.value.takeIf { entry.key.id == novel.category }
-            }.orEmpty()
-            val lastIndex = items.indexOfFirst { it.id == lastSelected.id }
-            val currentIndex = items.indexOfFirst { it.id == novel.id }
-            if (lastIndex < 0 || currentIndex < 0 || lastIndex == currentIndex) {
-                return@update current
-            }
-
-            val selectedIds = mutable.map { it.id }.toSet()
-            val start = minOf(lastIndex, currentIndex)
-            val end = maxOf(lastIndex, currentIndex)
-            val toAdd = items
-                .subList(start, end + 1)
-                .filterNot { it.id in selectedIds }
+            val toAdd = resolveLibraryRangeSelectionAdditions(
+                selectedItems = mutable,
+                targetItem = novel,
+                visibleGroups = current.library.values,
+                itemId = { it.id },
+            )
             mutable.addAll(toAdd)
             current.copy(selection = persistentListOf<NovelLibraryItem>().addAll(mutable))
         }

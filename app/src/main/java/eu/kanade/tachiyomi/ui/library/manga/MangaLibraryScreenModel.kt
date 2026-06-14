@@ -27,6 +27,7 @@ import eu.kanade.tachiyomi.data.download.manga.MangaDownloadManager
 import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.source.model.SManga
 import eu.kanade.tachiyomi.source.online.HttpSource
+import eu.kanade.tachiyomi.ui.library.resolveLibraryRangeSelectionAdditions
 import eu.kanade.tachiyomi.ui.library.sortPinnedSeriesFirst
 import eu.kanade.tachiyomi.util.chapter.getNextUnread
 import eu.kanade.tachiyomi.util.removeCovers
@@ -919,48 +920,25 @@ class MangaLibraryScreenModel(
     }
 
     /**
-     * Selects all mangas between and including the given manga and the last pressed manga from the
-     * same category as the given manga
+     * Selects all manga between and including the given manga and the last pressed manga from the
+     * same visible library group.
      */
     fun toggleRangeSelection(item: MangaLibraryItem) {
         if (item is MangaLibraryItem.Series) {
             toggleSelection(item)
             return
         }
-        val manga = item.libraryManga
         mutableState.update { state ->
             val newSelection = state.selection.mutate { list ->
-                val lastSelected = list.lastOrNull { it is MangaLibraryItem.Single } as? MangaLibraryItem.Single
-                if (lastSelected?.category != manga.category) {
-                    list.add(item)
-                    return@mutate
+                val visibleGroups = state.library.values.map { items ->
+                    items.filterIsInstance<MangaLibraryItem.Single>()
                 }
-
-                val items = state.getLibraryItemsByCategoryId(manga.category)
-                    ?.filterIsInstance<MangaLibraryItem.Single>()
-                    ?.fastMap { it.libraryManga }
-                    .orEmpty()
-                val lastMangaIndex = items.indexOf(lastSelected.libraryManga)
-                val curMangaIndex = items.indexOf(manga)
-
-                if (lastMangaIndex < 0 || curMangaIndex < 0) {
-                    list.add(item)
-                    return@mutate
-                }
-
-                val selectedIds = list.fastMap { it.id }
-                val selectionRange = when {
-                    lastMangaIndex < curMangaIndex -> IntRange(lastMangaIndex, curMangaIndex)
-                    curMangaIndex < lastMangaIndex -> IntRange(curMangaIndex, lastMangaIndex)
-                    // We shouldn't reach this point
-                    else -> return@mutate
-                }
-                val newSelections = selectionRange.mapNotNull { index ->
-                    MangaLibraryItem.Single(items[index], sourceManager = sourceManager).takeUnless {
-                        it.id in
-                            selectedIds
-                    }
-                }
+                val newSelections = resolveLibraryRangeSelectionAdditions(
+                    selectedItems = list.filterIsInstance<MangaLibraryItem.Single>(),
+                    targetItem = item,
+                    visibleGroups = visibleGroups,
+                    itemId = { it.id },
+                )
                 list.addAll(newSelections)
             }
             state.copy(selection = newSelection)
