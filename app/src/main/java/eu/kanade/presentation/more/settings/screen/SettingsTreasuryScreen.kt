@@ -48,13 +48,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -94,6 +97,7 @@ import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.collectAsStateWithLifecycle
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
+import androidx.compose.ui.graphics.drawscope.scale as drawScopeScale
 
 object SettingsTreasuryScreen : SearchableSettings {
 
@@ -944,6 +948,40 @@ private fun TreasuryVaultHero(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
+            .drawBehind {
+                if (!colors.isDark && !colors.isEInk) {
+                    val radius = 30.dp.toPx()
+                    val cornerRadius = androidx.compose.ui.geometry.CornerRadius(radius, radius)
+
+                    val neutralOffsetY = 3.dp.toPx()
+                    val warmOffsetY = 5.dp.toPx()
+
+                    val neutralInset = 1.dp.toPx()
+                    val warmInset = 3.dp.toPx()
+
+                    // 1. Neutral shadow
+                    drawRoundRect(
+                        color = Color.Black.copy(alpha = 0.035f),
+                        topLeft = Offset(x = neutralInset, y = neutralOffsetY),
+                        size = androidx.compose.ui.geometry.Size(
+                            width = size.width - neutralInset * 2,
+                            height = size.height,
+                        ),
+                        cornerRadius = cornerRadius,
+                    )
+
+                    // 2. Accent glow (colors.accent)
+                    drawRoundRect(
+                        color = colors.accent.copy(alpha = 0.025f),
+                        topLeft = Offset(x = warmInset, y = warmOffsetY),
+                        size = androidx.compose.ui.geometry.Size(
+                            width = size.width - warmInset * 2,
+                            height = size.height,
+                        ),
+                        cornerRadius = cornerRadius,
+                    )
+                }
+            }
             .background(
                 Brush.verticalGradient(
                     listOf(
@@ -1940,7 +1978,25 @@ private fun TreasuryAuraChannel(
         Color(0xFFF9F9FB)
     }
 
-    val bgBrush = if (isEnabled) {
+    val bgBrush = if (!colors.isDark && !colors.isEInk) {
+        if (isEnabled) {
+            Brush.verticalGradient(
+                listOf(
+                    accent.copy(alpha = 0.12f),
+                    Color.White.copy(alpha = 0.68f),
+                    Color.White.copy(alpha = 0.60f),
+                ),
+            )
+        } else {
+            Brush.verticalGradient(
+                listOf(
+                    Color.White.copy(alpha = 0.78f),
+                    Color.White.copy(alpha = 0.68f),
+                    Color.White.copy(alpha = 0.60f),
+                ),
+            )
+        }
+    } else if (isEnabled) {
         Brush.horizontalGradient(
             listOf(
                 accent.copy(alpha = if (colors.isDark) 0.08f else 0.04f),
@@ -1955,7 +2011,25 @@ private fun TreasuryAuraChannel(
             ),
         )
     }
-    val borderBrush = if (isEnabled) {
+    val borderBrush = if (!colors.isDark && !colors.isEInk) {
+        if (isEnabled) {
+            Brush.verticalGradient(
+                listOf(
+                    accent.copy(alpha = 0.60f),
+                    accent.copy(alpha = 0.30f),
+                    accent.copy(alpha = 0.15f),
+                ),
+            )
+        } else {
+            Brush.verticalGradient(
+                listOf(
+                    Color.White.copy(alpha = 0.75f),
+                    Color.White.copy(alpha = 0.28f),
+                    Color.White.copy(alpha = 0.12f),
+                ),
+            )
+        }
+    } else if (isEnabled) {
         Brush.linearGradient(
             listOf(
                 accent.copy(alpha = 0.40f),
@@ -2006,6 +2080,43 @@ private fun TreasuryAuraChannel(
                 alpha = if (isUnlocked) 1f else 0.50f
             }
             .springPress(enabled = isUnlocked, onClick = onToggle)
+            .drawBehind {
+                if (!colors.isDark && !colors.isEInk) {
+                    val outline = shape.createOutline(size, layoutDirection, this)
+
+                    val neutralOffsetY = 3.dp.toPx()
+                    val warmOffsetY = 5.dp.toPx()
+
+                    val neutralInset = 1.dp.toPx()
+                    val warmInset = 3.dp.toPx()
+
+                    val center = Offset(size.width / 2f, size.height / 2f)
+
+                    // 1. Neutral shadow
+                    val neutralScaleX = (size.width - neutralInset * 2) / size.width
+                    val neutralScaleY = (size.height - neutralInset * 2) / size.height
+                    drawScopeScale(scaleX = neutralScaleX, scaleY = neutralScaleY, pivot = center) {
+                        translate(left = 0f, top = neutralOffsetY) {
+                            drawOutline(
+                                outline = outline,
+                                color = Color.Black.copy(alpha = 0.035f),
+                            )
+                        }
+                    }
+
+                    // 2. Warm shadow (accent color)
+                    val warmScaleX = (size.width - warmInset * 2) / size.width
+                    val warmScaleY = (size.height - warmInset * 2) / size.height
+                    drawScopeScale(scaleX = warmScaleX, scaleY = warmScaleY, pivot = center) {
+                        translate(left = 0f, top = warmOffsetY) {
+                            drawOutline(
+                                outline = outline,
+                                color = accent.copy(alpha = 0.025f),
+                            )
+                        }
+                    }
+                }
+            }
             .background(bgBrush, shape)
             .border(borderWidth, borderBrush, shape)
             .clickable(enabled = isUnlocked, onClick = onToggle)
@@ -2211,7 +2322,25 @@ private fun TreasuryArtifactShard(
         Color(0xFFF9F9FB)
     }
 
-    val bgBrush = if (isActive) {
+    val bgBrush = if (!colors.isDark && !colors.isEInk) {
+        if (isActive) {
+            Brush.verticalGradient(
+                listOf(
+                    preset.accentColor.copy(alpha = 0.12f),
+                    Color.White.copy(alpha = 0.68f),
+                    Color.White.copy(alpha = 0.60f),
+                ),
+            )
+        } else {
+            Brush.verticalGradient(
+                listOf(
+                    Color.White.copy(alpha = 0.78f),
+                    Color.White.copy(alpha = 0.68f),
+                    Color.White.copy(alpha = 0.60f),
+                ),
+            )
+        }
+    } else if (isActive) {
         Brush.horizontalGradient(
             listOf(
                 preset.accentColor.copy(alpha = if (colors.isDark) 0.08f else 0.04f),
@@ -2226,7 +2355,25 @@ private fun TreasuryArtifactShard(
             ),
         )
     }
-    val borderBrush = if (isActive) {
+    val borderBrush = if (!colors.isDark && !colors.isEInk) {
+        if (isActive) {
+            Brush.verticalGradient(
+                listOf(
+                    preset.accentColor.copy(alpha = 0.60f),
+                    preset.accentColor.copy(alpha = 0.30f),
+                    preset.accentColor.copy(alpha = 0.15f),
+                ),
+            )
+        } else {
+            Brush.verticalGradient(
+                listOf(
+                    Color.White.copy(alpha = 0.75f),
+                    Color.White.copy(alpha = 0.28f),
+                    Color.White.copy(alpha = 0.12f),
+                ),
+            )
+        }
+    } else if (isActive) {
         Brush.linearGradient(
             listOf(
                 preset.accentColor.copy(alpha = 0.40f),
@@ -2280,6 +2427,43 @@ private fun TreasuryArtifactShard(
                 alpha = if (isUnlocked) 1f else 0.48f
             }
             .springPress(enabled = isUnlocked, onClick = onToggle)
+            .drawBehind {
+                if (!colors.isDark && !colors.isEInk) {
+                    val outline = shape.createOutline(size, layoutDirection, this)
+
+                    val neutralOffsetY = 3.dp.toPx()
+                    val warmOffsetY = 5.dp.toPx()
+
+                    val neutralInset = 1.dp.toPx()
+                    val warmInset = 3.dp.toPx()
+
+                    val center = Offset(size.width / 2f, size.height / 2f)
+
+                    // 1. Neutral shadow
+                    val neutralScaleX = (size.width - neutralInset * 2) / size.width
+                    val neutralScaleY = (size.height - neutralInset * 2) / size.height
+                    drawScopeScale(scaleX = neutralScaleX, scaleY = neutralScaleY, pivot = center) {
+                        translate(left = 0f, top = neutralOffsetY) {
+                            drawOutline(
+                                outline = outline,
+                                color = Color.Black.copy(alpha = 0.035f),
+                            )
+                        }
+                    }
+
+                    // 2. Warm shadow (accent color)
+                    val warmScaleX = (size.width - warmInset * 2) / size.width
+                    val warmScaleY = (size.height - warmInset * 2) / size.height
+                    drawScopeScale(scaleX = warmScaleX, scaleY = warmScaleY, pivot = center) {
+                        translate(left = 0f, top = warmOffsetY) {
+                            drawOutline(
+                                outline = outline,
+                                color = preset.accentColor.copy(alpha = 0.025f),
+                            )
+                        }
+                    }
+                }
+            }
             .background(bgBrush, shape)
             .border(borderWidth, borderBrush, shape)
             .clickable(enabled = isUnlocked, onClick = onToggle)
