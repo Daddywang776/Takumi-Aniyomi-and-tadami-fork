@@ -434,6 +434,16 @@ fun bindNativeApi(
     nativeObject.registerJavaMethod(
         object : JavaCallback {
             override fun invoke(receiver: V8Object, parameters: V8Array): Any? {
+                nativeApi.domSetAttr(parameters.intArg(0), parameters.stringArg(1), parameters.stringArg(2))
+                return receiver
+            }
+        },
+        "domSetAttr",
+    )
+
+    nativeObject.registerJavaMethod(
+        object : JavaCallback {
+            override fun invoke(receiver: V8Object, parameters: V8Array): Any? {
                 return nativeApi.domAttrs(parameters.intArg(0))
             }
         },

@@ -2846,12 +2846,29 @@ internal sealed interface NovelChapterDisplayRow {
         val chapter: NovelChapter,
         val displayNumber: Int,
     ) : NovelChapterDisplayRow
+
+    @Immutable
+    data class VolumeGroup(
+        val title: String,
+        val displayNumber: Int,
+        val chapters: List<NovelChapter>,
+    ) : NovelChapterDisplayRow {
+        val groupKey: Long = title.lowercase().hashCode().toLong()
+    }
+
+    @Immutable
+    data class VolumeChapter(
+        val chapter: NovelChapter,
+        val displayNumber: Int,
+        val title: String,
+    ) : NovelChapterDisplayRow
 }
 
 @Immutable
 internal data class NovelChapterDisplayData(
     val chapterGroups: List<NovelChapterDisplayRow.ChapterGroup>,
     val displayRows: List<NovelChapterDisplayRow>,
+    val volumeGroups: List<NovelChapterDisplayRow.VolumeGroup> = emptyList(),
 )
 
 internal fun resolveNovelBranchChapterRows(
@@ -2863,6 +2880,110 @@ internal fun resolveNovelBranchChapterRows(
             displayNumber = index + 1,
         )
     }
+}
+
+private data class NovelVolumeMatch(
+    val title: String,
+    val childTitle: String,
+)
+
+private val lnoriBookVolumePathRegex = Regex(
+    pattern = "(?:^|/)book/\\d+/[^#]*-vol-(\\d+)(?:[#/?].*)?",
+    option = RegexOption.IGNORE_CASE,
+)
+private val novelVolumeNameRegex = Regex(
+    pattern = "^(.+?\\bVol(?:ume)?\\.?\\s*(\\d+)\\b)\\s*-\\s*(.+)$",
+    option = RegexOption.IGNORE_CASE,
+)
+private val simpleVolumeNameRegex = Regex(
+    pattern = "^(Volume\\s+(\\d+)\\b)\\s*-\\s*(.+)$",
+    option = RegexOption.IGNORE_CASE,
+)
+
+internal fun shouldGroupNovelChaptersByVolume(chapters: List<NovelChapter>): Boolean {
+    if (chapters.size < 2) return false
+    val matches = chapters.mapNotNull(::matchNovelVolumeChapter)
+    if (matches.size < 2) return false
+    return matches.size == chapters.size &&
+        matches.map { it.title }.distinct().isNotEmpty()
+}
+
+internal fun resolveNovelVolumeChapterDisplayData(
+    chapters: List<NovelChapter>,
+    expandedVolumeKeys: Set<Long>,
+): NovelChapterDisplayData {
+    val matched = chapters.mapNotNull { chapter ->
+        matchNovelVolumeChapter(chapter)?.let { chapter to it }
+    }
+    if (matched.size != chapters.size || matched.isEmpty()) {
+        return NovelChapterDisplayData(
+            chapterGroups = emptyList(),
+            displayRows = resolveNovelBranchChapterRows(chapters),
+            volumeGroups = emptyList(),
+        )
+    }
+
+    val volumeGroups = matched
+        .groupBy { (_, volume) -> volume.title }
+        .values
+        .mapIndexed { index, entries ->
+            NovelChapterDisplayRow.VolumeGroup(
+                title = entries.first().second.title,
+                displayNumber = index + 1,
+                chapters = entries.map { it.first },
+            )
+        }
+
+    val childTitlesById = matched.associate { (chapter, volume) -> chapter.id to volume.childTitle }
+    val displayRows = buildList {
+        volumeGroups.forEach { group ->
+            add(group)
+            if (group.groupKey in expandedVolumeKeys) {
+                group.chapters.forEachIndexed { chapterIndex, chapter ->
+                    add(
+                        NovelChapterDisplayRow.VolumeChapter(
+                            chapter = chapter,
+                            displayNumber = chapterIndex + 1,
+                            title = childTitlesById[chapter.id] ?: chapter.name,
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    return NovelChapterDisplayData(
+        chapterGroups = emptyList(),
+        displayRows = displayRows,
+        volumeGroups = volumeGroups,
+    )
+}
+
+private fun matchNovelVolumeChapter(chapter: NovelChapter): NovelVolumeMatch? {
+    val pathVolumeNumber = lnoriBookVolumePathRegex.find(chapter.url)
+        ?.groupValues
+        ?.getOrNull(1)
+        ?.toIntOrNull()
+
+    val simpleNameMatch = simpleVolumeNameRegex.find(chapter.name)
+    if (simpleNameMatch != null) {
+        val number = simpleNameMatch.groupValues.getOrNull(2)?.toIntOrNull() ?: pathVolumeNumber
+        val childTitle = simpleNameMatch.groupValues.getOrNull(3)?.trim().orEmpty()
+        if (number != null && childTitle.isNotBlank()) {
+            return NovelVolumeMatch(title = "Volume $number", childTitle = childTitle)
+        }
+    }
+
+    val nameMatch = novelVolumeNameRegex.find(chapter.name)
+    if (nameMatch != null) {
+        val number = nameMatch.groupValues.getOrNull(2)?.toIntOrNull() ?: pathVolumeNumber
+        val childTitle = nameMatch.groupValues.getOrNull(3)?.trim().orEmpty()
+        if (number != null && childTitle.isNotBlank()) {
+            return NovelVolumeMatch(title = "Volume $number", childTitle = childTitle)
+        }
+    }
+
+    return null
 }
 
 private fun resolveNovelChapterGroups(
@@ -2960,6 +3081,16 @@ internal fun resolveNovelVisibleChapterRows(
                         add(row)
                     }
                 }
+                is NovelChapterDisplayRow.VolumeGroup -> {
+                    if (visibleGroups >= visibleTopLevelCount) return@buildList
+                    visibleGroups++
+                    add(row)
+                }
+                is NovelChapterDisplayRow.VolumeChapter -> {
+                    if (visibleGroups in 1..visibleTopLevelCount) {
+                        add(row)
+                    }
+                }
             }
         }
     }
@@ -2978,11 +3109,18 @@ internal fun resolveNovelChapterRowIndex(
     rows: List<NovelChapterDisplayRow>,
     targetChapterId: Long,
 ): Int {
+    val expandedVolumeChapterIndex = rows.indexOfFirst { row ->
+        row is NovelChapterDisplayRow.VolumeChapter && row.chapter.id == targetChapterId
+    }
+    if (expandedVolumeChapterIndex >= 0) return expandedVolumeChapterIndex
+
     return rows.indexOfFirst { row ->
         when (row) {
             is NovelChapterDisplayRow.BranchChapter -> row.chapter.id == targetChapterId
             is NovelChapterDisplayRow.ChapterGroup -> row.chapters.any { it.id == targetChapterId }
             is NovelChapterDisplayRow.ChapterVariant -> row.chapter.id == targetChapterId
+            is NovelChapterDisplayRow.VolumeGroup -> row.chapters.any { it.id == targetChapterId }
+            is NovelChapterDisplayRow.VolumeChapter -> row.chapter.id == targetChapterId
         }
     }
 }

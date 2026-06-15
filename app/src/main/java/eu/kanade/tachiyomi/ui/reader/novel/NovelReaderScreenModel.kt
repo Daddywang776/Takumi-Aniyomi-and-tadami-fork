@@ -4323,22 +4323,25 @@ internal fun collectContentBlocks(
                     tag == "meta" ||
                     tag == "link" ||
                     tag == "noscript" -> Unit
-                tag == "img" -> {
-                    val rawUrl = node.attr("src")
-                        .ifBlank { node.attr("data-src") }
-                        .ifBlank { node.attr("data-original") }
-                        .trim()
-                    if (rawUrl.isBlank()) return
-                    val resolvedUrl = resolveContentResourceUrl(
-                        rawUrl = rawUrl,
+                tag == "img" || tag == "picture" || tag == "source" -> {
+                    collectImageContentBlock(
+                        node = node,
+                        blocks = blocks,
                         chapterWebUrl = chapterWebUrl,
                         novelUrl = novelUrl,
                         pluginSite = pluginSite,
-                    ) ?: return
-                    blocks += NovelReaderScreenModel.ContentBlock.Image(
-                        url = resolvedUrl,
-                        alt = node.attr("alt").sanitizeTextBlock().ifBlank { null },
                     )
+                }
+                tag == "p" && node.selectFirst("img, picture, source") != null && node.text().isBlank() -> {
+                    node.childNodes().forEach { child ->
+                        collectContentBlocks(
+                            node = child,
+                            blocks = blocks,
+                            chapterWebUrl = chapterWebUrl,
+                            novelUrl = novelUrl,
+                            pluginSite = pluginSite,
+                        )
+                    }
                 }
                 tag == "p" ||
                     tag == "li" ||
@@ -4389,6 +4392,55 @@ internal fun collectContentBlocks(
             }
         }
     }
+}
+
+private fun collectImageContentBlock(
+    node: Element,
+    blocks: MutableList<NovelReaderScreenModel.ContentBlock>,
+    chapterWebUrl: String?,
+    novelUrl: String,
+    pluginSite: String?,
+) {
+    val imageElement = when (node.tagName().lowercase()) {
+        "picture" -> node.selectFirst("img") ?: node.selectFirst("source")
+        else -> node
+    } ?: return
+    val rawUrl = parseReaderImageUrl(imageElement) ?: return
+    val resolvedUrl = resolveContentResourceUrl(
+        rawUrl = rawUrl,
+        chapterWebUrl = chapterWebUrl,
+        novelUrl = novelUrl,
+        pluginSite = pluginSite,
+    ) ?: return
+    blocks += NovelReaderScreenModel.ContentBlock.Image(
+        url = resolvedUrl,
+        alt = imageElement.attr("alt")
+            .ifBlank { node.attr("alt") }
+            .sanitizeTextBlock()
+            .ifBlank { null },
+    )
+}
+
+private fun parseReaderImageUrl(element: Element): String? {
+    val directUrl = element.attr("src")
+        .ifBlank { element.attr("data-src") }
+        .ifBlank { element.attr("data-original") }
+        .ifBlank { element.attr("data-lazy-src") }
+        .ifBlank { element.attr("data-url") }
+        .trim()
+    if (directUrl.isNotBlank()) return directUrl
+
+    val srcSet = element.attr("srcset")
+        .ifBlank { element.attr("data-srcset") }
+        .trim()
+    if (srcSet.isBlank()) return null
+    return srcSet
+        .split(',')
+        .asSequence()
+        .map { it.trim() }
+        .firstOrNull { it.isNotBlank() }
+        ?.substringBefore(' ')
+        ?.trim()
 }
 
 internal fun parseStructuredFragmentToBlocks(
@@ -4959,7 +5011,14 @@ internal fun normalizeHtml(
           color: $textColor;
           word-break: break-word;
         }
-        img { max-width: 100%; height: auto; }
+        picture { display: block; text-align: center; }
+        img {
+          display: block;
+          max-width: 100%;
+          height: auto;
+          margin-left: auto;
+          margin-right: auto;
+        }
         a { color: $linkColor; }
     """.trimIndent()
     val injection = buildString {

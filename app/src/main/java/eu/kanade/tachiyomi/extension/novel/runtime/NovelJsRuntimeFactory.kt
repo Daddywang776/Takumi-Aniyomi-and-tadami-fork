@@ -336,6 +336,8 @@ class NovelJsRuntimeFactory(
 
         override fun domAttr(handle: Int, name: String): String? = domStore.getAttr(handle, name)
 
+        override fun domSetAttr(handle: Int, name: String, value: String) = domStore.setAttr(handle, name, value)
+
         override fun domRemoveAttr(handle: Int, name: String) = domStore.removeAttr(handle, name)
 
         override fun domAttrs(handle: Int): String =

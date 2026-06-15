@@ -145,6 +145,7 @@ class NovelJsRuntime(
         fun domXml(handle: Int): String
         fun domText(handle: Int): String
         fun domAttr(handle: Int, name: String): String?
+        fun domSetAttr(handle: Int, name: String, value: String)
         fun domRemoveAttr(handle: Int, name: String)
         fun domAttrs(handle: Int): String
         fun domHasClass(handle: Int, className: String): Boolean
@@ -1287,8 +1288,14 @@ class NovelJsModuleRegistry(
                 if (!handles.length) return null;
                 return __native.domXml(handles[0]);
               },
-              attr: function(name) {
-                if (!handles.length) return undefined;
+              attr: function(name, value) {
+                if (!handles.length) return value === undefined ? undefined : api;
+                if (value !== undefined) {
+                  for (var i = 0; i < handles.length; i++) {
+                    __native.domSetAttr(handles[i], String(name), String(value));
+                  }
+                  return api;
+                }
                 var val = __native.domAttr(handles[0], String(name));
                 return val == null ? undefined : val;
               },
