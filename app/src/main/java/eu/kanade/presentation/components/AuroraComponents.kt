@@ -1,6 +1,8 @@
 package eu.kanade.presentation.components
 
 import android.animation.ValueAnimator
+import android.graphics.Paint
+import android.graphics.Typeface
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -28,6 +30,8 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -437,8 +441,7 @@ private fun AuroraSpecialBackgroundCanvas(
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         if (styleKey == "neon_orbit" ||
-            styleKey == "trinity_constellation" ||
-            styleKey == "deep_space_archive"
+            styleKey == "trinity_constellation"
         ) {
             FLOATING_STARS.forEach { star ->
                 val alpha =
@@ -656,123 +659,463 @@ private fun AuroraSpecialBackgroundCanvas(
                 )
             }
             "deep_space_archive" -> {
-                // 1. Classical Temple Arch & Columns (Vector outlines from Concept 3)
-                // Left and right column anchor X positions
-                val xLeft = size.width * 0.15f
-                val xRight = size.width * 0.85f
-                val columnAlpha = 0.012f
-                val columnColor = colors.accent.copy(alpha = columnAlpha)
+                val center = Offset(size.width * 0.5f, size.height * 0.52f)
+                val minDim = size.minDimension
+                val time = if (animate) elapsedSeconds else 0f
 
-                // Left Column Fluting Lines
-                drawLine(
-                    columnColor,
-                    Offset(xLeft - 8.dp.toPx(), 0f),
-                    Offset(xLeft - 8.dp.toPx(), size.height),
-                    0.6.dp.toPx(),
+                // FLOATING_FOLIANTS_ORTHO preset from the approved prototype.
+                val booksCount = 11
+                val bookBright = 0.26f
+                val pageBright = 0.28f
+                val scalePreset = 1.07f
+                val variety = 0.84f
+                val scatter = 0.53f
+                val vertical = 1.15f
+                val pitch = -8f * Math.PI.toFloat() / 180f
+                val baseYaw = 13f * Math.PI.toFloat() / 180f
+                val floatStrength = 1.44f
+                val dustDensity = 0.78f
+                val flowSpeed = 0.07f
+                val glowStrength = 0.44f
+                val accentStrength = 0.67f
+
+                val archiveCyan = colors.glowEffect
+                val archivePurple = colors.gradientPurple
+                val archiveAccent = colors.accent
+                val archivePink = Color(0xFFFF5BD0)
+                val archiveGold = Color(0xFFFFD36E)
+                val archiveWhite = Color(0xFFEAFDFF)
+                val paperLight = Color(0xFFF2E8CB)
+                val paperMid = Color(0xFFD8C9A2)
+                val paperShadow = Color(0xFFBCAA82)
+                val leatherBase = Color(0xFF2A1F36)
+                val coverShadow = Color(0xFF171222)
+                val coverShadow2 = Color(0xFF0E0A18)
+
+                data class Vec3(val x: Float, val y: Float, val z: Float)
+                data class Projected(val x: Float, val y: Float, val z: Float, val p: Float)
+                data class BookSpec(
+                    val index: Int,
+                    val theme: Int,
+                    val width: Float,
+                    val depth: Float,
+                    val height: Float,
+                    val x: Float,
+                    val y: Float,
+                    val z: Float,
+                    val bobPhase: Float,
+                    val bobAmp: Float,
                 )
-                drawLine(
-                    colors.glowEffect.copy(alpha = columnAlpha * 1.5f),
-                    Offset(xLeft, 0f),
-                    Offset(xLeft, size.height),
-                    1.0.dp.toPx(),
-                )
-                drawLine(
-                    columnColor,
-                    Offset(xLeft + 8.dp.toPx(), 0f),
-                    Offset(xLeft + 8.dp.toPx(), size.height),
-                    0.6.dp.toPx(),
+                data class FaceDraw(
+                    val book: BookSpec,
+                    val face: String,
+                    val corners: List<Projected>,
+                    val z: Float,
                 )
 
-                // Right Column Fluting Lines
-                drawLine(
-                    columnColor,
-                    Offset(xRight - 8.dp.toPx(), 0f),
-                    Offset(xRight - 8.dp.toPx(), size.height),
-                    0.6.dp.toPx(),
+                fun srHash(seed: Float): Float {
+                    return kotlin.math.abs(kotlin.math.sin(seed * 127.1f + 311.7f) * 43758.5453f) % 1f
+                }
+
+                fun mix(a: Float, b: Float, t: Float): Float = a + (b - a) * t
+
+                fun scaleColor(color: Color, factor: Float): Color {
+                    val f = factor.coerceAtLeast(0f)
+                    return Color(
+                        red = (color.red * f).coerceIn(0f, 1f),
+                        green = (color.green * f).coerceIn(0f, 1f),
+                        blue = (color.blue * f).coerceIn(0f, 1f),
+                        alpha = color.alpha,
+                    )
+                }
+
+                fun blendColor(a: Color, b: Color, t: Float): Color {
+                    val clamped = t.coerceIn(0f, 1f)
+                    val inv = 1f - clamped
+                    return Color(
+                        red = a.red * inv + b.red * clamped,
+                        green = a.green * inv + b.green * clamped,
+                        blue = a.blue * inv + b.blue * clamped,
+                        alpha = a.alpha * inv + b.alpha * clamped,
+                    )
+                }
+
+                fun rotateY(point: Vec3, angle: Float): Vec3 {
+                    val c = kotlin.math.cos(angle)
+                    val s = kotlin.math.sin(angle)
+                    return Vec3(
+                        x = point.x * c - point.z * s,
+                        y = point.y,
+                        z = point.x * s + point.z * c,
+                    )
+                }
+
+                fun rotateX(point: Vec3, angle: Float): Vec3 {
+                    val c = kotlin.math.cos(angle)
+                    val s = kotlin.math.sin(angle)
+                    return Vec3(
+                        x = point.x,
+                        y = point.y * c - point.z * s,
+                        z = point.y * s + point.z * c,
+                    )
+                }
+
+                fun transform(point: Vec3, book: BookSpec): Vec3 {
+                    var q = rotateY(point, baseYaw)
+                    q = Vec3(
+                        q.x + book.x,
+                        q.y + book.y + kotlin.math.sin(time * 0.9f + book.bobPhase) * book.bobAmp * floatStrength,
+                        q.z + book.z,
+                    )
+                    return rotateX(q, pitch)
+                }
+
+                fun project(point: Vec3, scale: Float): Projected {
+                    val camera = 30f
+                    val persp = camera / (camera + point.z)
+                    return Projected(
+                        x = center.x + point.x * scale * persp,
+                        y = center.y - point.y * scale * persp,
+                        z = point.z,
+                        p = persp,
+                    )
+                }
+
+                fun faceLocalPoints(book: BookSpec, face: String): List<Vec3> {
+                    val hw = book.width * 0.5f
+                    val hh = book.height * 0.5f
+                    val hd = book.depth * 0.5f
+                    return when (face) {
+                        "top" -> listOf(Vec3(-hw, hh, -hd), Vec3(hw, hh, -hd), Vec3(hw, hh, hd), Vec3(-hw, hh, hd))
+                        "bottom" -> listOf(Vec3(-hw, -hh, hd), Vec3(hw, -hh, hd), Vec3(hw, -hh, -hd), Vec3(-hw, -hh, -hd))
+                        "front" -> listOf(Vec3(-hw, -hh, hd), Vec3(hw, -hh, hd), Vec3(hw, hh, hd), Vec3(-hw, hh, hd))
+                        "back" -> listOf(Vec3(hw, -hh, -hd), Vec3(-hw, -hh, -hd), Vec3(-hw, hh, -hd), Vec3(hw, hh, -hd))
+                        "right" -> listOf(Vec3(hw, -hh, hd), Vec3(hw, -hh, -hd), Vec3(hw, hh, -hd), Vec3(hw, hh, hd))
+                        else -> listOf(Vec3(-hw, -hh, -hd), Vec3(-hw, -hh, hd), Vec3(-hw, hh, hd), Vec3(-hw, hh, -hd))
+                    }
+                }
+
+                fun faceProjected(book: BookSpec, face: String, scale: Float): List<Projected> {
+                    return faceLocalPoints(book, face).map { project(transform(it, book), scale) }
+                }
+
+                fun themeBase(theme: Int): Color = when (theme % 4) {
+                    0 -> archiveCyan
+                    1 -> archivePurple
+                    2 -> archivePink
+                    else -> archiveGold
+                }
+
+                fun coverColor(book: BookSpec): Color {
+                    val base = themeBase(book.theme)
+                    val tintMix = when (book.theme % 4) {
+                        0 -> 0.10f
+                        1 -> 0.12f
+                        2 -> 0.18f
+                        else -> 0.08f
+                    } + 0.06f * srHash((book.index + 1f) * 4.7f)
+                    val brightness = 0.28f + bookBright * 0.42f + srHash((book.index + 1f) * 8.1f) * 0.06f
+                    return blendColor(scaleColor(base, brightness), archiveAccent, tintMix * accentStrength * 0.35f)
+                }
+
+                fun spineColor(book: BookSpec): Color {
+                    return blendColor(leatherBase, coverColor(book), 0.30f + 0.08f * srHash((book.index + 1f) * 2.9f))
+                }
+
+                val pageTint = 0.46f + pageBright * 0.42f
+                val themeLabels = listOf("アニメ", "漫画", "ラノベ", "アーカイブ")
+                val titleSets = listOf(
+                    listOf("進撃の巨人", "鬼滅の刃", "僕のヒーローアカデミア", "呪術廻戦", "ワンピース", "鋼の錬金術師"),
+                    listOf("ナルト", "BLEACH", "東京喰種", "デスノート", "ベルセルク", "寄生獣"),
+                    listOf("君の名は。", "天気の子", "聲の形", "涼宮ハルヒの憂鬱", "ソードアート", "四月は君の嘘"),
+                    listOf("星海アーカイブ", "虚空写本", "古書目録", "銀河読本", "TADAMI ARCHIVE", "宙の書架"),
                 )
-                drawLine(
-                    colors.glowEffect.copy(alpha = columnAlpha * 1.5f),
-                    Offset(xRight, 0f),
-                    Offset(xRight, size.height),
-                    1.0.dp.toPx(),
-                )
-                drawLine(
-                    columnColor,
-                    Offset(xRight + 8.dp.toPx(), 0f),
-                    Offset(xRight + 8.dp.toPx(), size.height),
-                    0.6.dp.toPx(),
+                val coverMarks = listOf(
+                    listOf("動", "幕", "光", "声"),
+                    listOf("漫", "頁", "墨", "線"),
+                    listOf("小", "説", "章", "語"),
+                    listOf("蔵", "書", "録", "星"),
                 )
 
-                // Classical Nested Arches linking the columns
-                repeat(2) { idx ->
-                    val offsetFactor = 12.dp.toPx() * idx
-                    val startY = size.height * 0.32f + offsetFactor
-                    val controlY = -size.height * 0.12f + offsetFactor
-                    val archPath = Path().apply {
-                        moveTo(xLeft - 10.dp.toPx(), startY)
-                        quadraticTo(size.width * 0.5f, controlY, xRight + 10.dp.toPx(), startY)
+                fun bilinear(corners: List<Projected>, u: Float, v: Float): Offset {
+                    val x = corners[0].x + (corners[1].x - corners[0].x) * u + (corners[3].x - corners[0].x) * v
+                    val y = corners[0].y + (corners[1].y - corners[0].y) * u + (corners[3].y - corners[0].y) * v
+                    return Offset(x, y)
+                }
+
+                fun drawFaceText(
+                    text: String,
+                    position: Offset,
+                    sizePx: Float,
+                    rotationDeg: Float,
+                    color: Color,
+                    alpha: Float,
+                    typeface: Typeface = Typeface.DEFAULT_BOLD,
+                ) {
+                    if (sizePx < 4f || alpha <= 0f) return
+                    val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                        this.color = color.copy(alpha = alpha.coerceIn(0f, 1f)).toArgb()
+                        textAlign = Paint.Align.CENTER
+                        textSize = sizePx
+                        this.typeface = typeface
+                        setShadowLayer(sizePx * 0.18f, 0f, 0f, color.copy(alpha = alpha * 0.35f).toArgb())
+                    }
+                    drawContext.canvas.nativeCanvas.save()
+                    drawContext.canvas.nativeCanvas.rotate(rotationDeg, position.x, position.y)
+                    drawContext.canvas.nativeCanvas.drawText(text, position.x, position.y + sizePx * 0.34f, paint)
+                    drawContext.canvas.nativeCanvas.restore()
+                }
+
+                fun drawBookFace(faceDraw: FaceDraw) {
+                    val book = faceDraw.book
+                    val cover = coverColor(book)
+                    val spine = spineColor(book)
+                    val path = Path().apply {
+                        moveTo(faceDraw.corners[0].x, faceDraw.corners[0].y)
+                        lineTo(faceDraw.corners[1].x, faceDraw.corners[1].y)
+                        lineTo(faceDraw.corners[2].x, faceDraw.corners[2].y)
+                        lineTo(faceDraw.corners[3].x, faceDraw.corners[3].y)
+                        close()
+                    }
+                    val vx = Offset(faceDraw.corners[1].x - faceDraw.corners[0].x, faceDraw.corners[1].y - faceDraw.corners[0].y)
+                    val vy = Offset(faceDraw.corners[3].x - faceDraw.corners[0].x, faceDraw.corners[3].y - faceDraw.corners[0].y)
+                    val faceWidthPx = kotlin.math.hypot(vx.x, vx.y)
+                    val faceHeightPx = kotlin.math.hypot(vy.x, vy.y)
+                    val axisDeg = (Math.atan2(vx.y.toDouble(), vx.x.toDouble()) * 180.0 / Math.PI).toFloat()
+                    val near = ((0.30f - faceDraw.z) / 1.15f).coerceIn(0f, 1f)
+                    val isSpine = faceDraw.face == "front"
+                    val isCover = faceDraw.face == "top" || faceDraw.face == "bottom"
+                    val isPageEdge = faceDraw.face == "back" || faceDraw.face == "left" || faceDraw.face == "right"
+
+                    val brush = when {
+                        isPageEdge -> Brush.linearGradient(
+                            colors = listOf(
+                                scaleColor(paperLight, pageTint * 1.02f),
+                                scaleColor(paperMid, pageTint),
+                                scaleColor(paperShadow, pageTint * 0.96f),
+                            ),
+                            start = Offset(faceDraw.corners[0].x, faceDraw.corners[0].y),
+                            end = Offset(faceDraw.corners[2].x, faceDraw.corners[2].y),
+                        )
+                        isSpine -> Brush.linearGradient(
+                            colors = listOf(
+                                scaleColor(spine, 0.82f),
+                                blendColor(spine, cover, 0.42f),
+                                scaleColor(spine, 0.62f),
+                            ),
+                            start = Offset(faceDraw.corners[0].x, faceDraw.corners[0].y),
+                            end = Offset(faceDraw.corners[2].x, faceDraw.corners[2].y),
+                        )
+                        else -> Brush.linearGradient(
+                            colors = listOf(
+                                blendColor(coverShadow, cover, 0.28f),
+                                cover,
+                                blendColor(coverShadow2, cover, 0.18f),
+                            ),
+                            start = Offset(faceDraw.corners[0].x, faceDraw.corners[0].y),
+                            end = Offset(faceDraw.corners[2].x, faceDraw.corners[2].y),
+                        )
+                    }
+
+                    drawPath(path = path, brush = brush)
+                    drawPath(
+                        path = path,
+                        color = if (isPageEdge) scaleColor(paperShadow, pageTint * 0.96f).copy(alpha = 0.24f + 0.06f * near)
+                        else cover.copy(alpha = 0.06f + 0.03f * near),
+                    )
+                    drawPath(
+                        path = path,
+                        color = if (isPageEdge) archiveWhite.copy(alpha = 0.07f + 0.03f * near) else cover.copy(alpha = 0.10f + 0.04f * near),
+                        style = Stroke(width = 1.0f.dp.toPx()),
+                    )
+
+                    if (isPageEdge) {
+                        val longest = if (faceWidthPx > faceHeightPx) faceWidthPx else faceHeightPx
+                        val count = kotlin.math.max(6, (longest / (6f.dp.toPx())).toInt())
+                        repeat(count + 1) { i ->
+                            val t = i / count.toFloat()
+                            val a = if (faceWidthPx >= faceHeightPx) bilinear(faceDraw.corners, 0.06f, 0.08f + t * 0.84f) else bilinear(faceDraw.corners, 0.08f + t * 0.84f, 0.06f)
+                            val b = if (faceWidthPx >= faceHeightPx) bilinear(faceDraw.corners, 0.94f, 0.08f + t * 0.84f) else bilinear(faceDraw.corners, 0.08f + t * 0.84f, 0.94f)
+                            drawLine(
+                                color = archiveWhite.copy(alpha = 0.08f + 0.04f * near),
+                                start = a,
+                                end = b,
+                                strokeWidth = 0.45f.dp.toPx(),
+                            )
+                        }
+                    }
+
+                    if (isSpine && faceWidthPx > 30.dp.toPx() && faceHeightPx > 12.dp.toPx()) {
+                        val railAlpha = 0.18f + accentStrength * 0.20f + near * 0.08f
+                        listOf(0.10f, 0.90f).forEach { u ->
+                            drawLine(
+                                color = archiveGold.copy(alpha = railAlpha),
+                                start = bilinear(faceDraw.corners, u, 0.10f),
+                                end = bilinear(faceDraw.corners, u, 0.90f),
+                                strokeWidth = 1.0f.dp.toPx(),
+                            )
+                        }
+                        val title = titleSets[book.theme][book.index % titleSets[book.theme].size]
+                        val category = themeLabels[book.theme]
+                        drawFaceText(
+                            text = title,
+                            position = bilinear(faceDraw.corners, 0.50f, 0.52f),
+                            sizePx = (faceHeightPx * 0.34f).coerceIn(8.dp.toPx(), 14.dp.toPx()),
+                            rotationDeg = axisDeg,
+                            color = archiveWhite,
+                            alpha = 0.70f + 0.12f * near,
+                        )
+                        drawFaceText(
+                            text = category,
+                            position = bilinear(faceDraw.corners, 0.50f, 0.80f),
+                            sizePx = (faceHeightPx * 0.18f).coerceIn(5.5f.dp.toPx(), 10.dp.toPx()),
+                            rotationDeg = axisDeg,
+                            color = archiveGold,
+                            alpha = 0.34f + 0.16f * accentStrength,
+                            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL),
+                        )
+                    }
+
+                    if (faceDraw.face == "top" && faceWidthPx > 26.dp.toPx() && faceHeightPx > 16.dp.toPx()) {
+                        val title = titleSets[book.theme][book.index % titleSets[book.theme].size]
+                        val marks = coverMarks[book.theme]
+                        drawFaceText(
+                            text = title,
+                            position = bilinear(faceDraw.corners, 0.52f, 0.26f),
+                            sizePx = (faceHeightPx * 0.17f).coerceIn(6.dp.toPx(), 10.dp.toPx()),
+                            rotationDeg = axisDeg,
+                            color = archiveWhite,
+                            alpha = 0.30f + 0.10f * near,
+                        )
+                        drawFaceText(
+                            text = marks[book.index % marks.size],
+                            position = bilinear(faceDraw.corners, 0.52f, 0.57f),
+                            sizePx = (faceHeightPx * 0.36f).coerceIn(10.dp.toPx(), 18.dp.toPx()),
+                            rotationDeg = axisDeg,
+                            color = blendColor(themeBase(book.theme), archiveAccent, 0.14f * accentStrength),
+                            alpha = 0.20f + 0.10f * near,
+                        )
+                    }
+
+                    if (isCover) {
+                        drawLine(
+                            color = archiveWhite.copy(alpha = 0.04f + 0.03f * near),
+                            start = bilinear(faceDraw.corners, 0.12f, 0.18f),
+                            end = bilinear(faceDraw.corners, 0.84f, 0.18f),
+                            strokeWidth = 0.6f.dp.toPx(),
+                        )
+                    }
+                }
+
+                val scale = minDim * 0.40f * scalePreset
+                val books = List(booksCount) { i ->
+                    val seed = i + 1f
+                    BookSpec(
+                        index = i,
+                        theme = i % 4,
+                        width = mix(0.62f, 0.98f, srHash(seed * 2.1f)) * mix(0.92f, 1.16f, variety),
+                        depth = mix(0.38f, 0.70f, srHash(seed * 3.7f)) * mix(0.88f, 1.12f, variety),
+                        height = mix(0.05f, 0.11f, srHash(seed * 4.2f)) * mix(0.88f, 1.10f, variety),
+                        x = (srHash(seed * 5.3f) - 0.5f) * 0.22f * scatter,
+                        z = (srHash(seed * 6.1f) - 0.5f) * 0.12f * scatter,
+                        y = (i - (booksCount - 1) * 0.5f) * 0.155f * vertical + (srHash(seed * 7.4f) - 0.5f) * 0.022f * scatter,
+                        bobPhase = srHash(seed * 11.3f) * (2f * Math.PI.toFloat()),
+                        bobAmp = mix(0.010f, 0.026f, srHash(seed * 12.7f)),
+                    )
+                }
+
+                drawRect(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            archivePurple.copy(alpha = 0.07f * glowStrength),
+                            archiveCyan.copy(alpha = 0.03f * glowStrength),
+                            Color.Transparent,
+                        ),
+                        center = center,
+                        radius = minDim * 0.82f,
+                    ),
+                )
+
+                repeat(34) { i ->
+                    val seed = i + 1f
+                    val x = size.width * srHash(seed * 1.9f)
+                    val y = size.height * srHash(seed * 4.1f)
+                    val blink = 0.65f + 0.35f * kotlin.math.sin(time * 1.2f + seed)
+                    val starColor = when (i % 4) {
+                        0 -> archiveCyan
+                        1 -> archivePurple
+                        2 -> archiveGold
+                        else -> archiveWhite
+                    }
+                    drawCircle(
+                        color = starColor.copy(alpha = (0.03f + 0.07f * srHash(seed * 3.4f)) * blink),
+                        radius = (0.6f + srHash(seed * 5.2f) * 1.2f).dp.toPx(),
+                        center = Offset(x, y),
+                    )
+                }
+
+                val particleHeight = (size.height / (scale * 1.02f)).coerceAtLeast(3.0f) * 1.08f
+                repeat((42 + 96 * dustDensity).toInt()) { i ->
+                    val seed = i + 1f
+                    val loopT = (srHash(seed * 2.1f) + time * (0.45f + srHash(seed * 3.3f) * 0.95f) * flowSpeed * 0.11f) % 1f
+                    val angle = loopT * 2f * Math.PI.toFloat() * 3.2f + srHash(seed * 4.7f) * 2f * Math.PI.toFloat()
+                    val radial = 0.76f + 0.22f * kotlin.math.sin(angle * 2.0f + srHash(seed * 6.4f) * 8f)
+                    val y = (loopT - 0.5f) * particleHeight
+                    val p = rotateX(Vec3(radial * kotlin.math.cos(angle), y, radial * kotlin.math.sin(angle)), pitch)
+                    val pr = project(p, scale * 1.05f)
+                    val tone = srHash(seed * 8.8f)
+                    val color = when {
+                        tone > 0.82f -> archiveGold
+                        tone > 0.45f -> archiveCyan
+                        else -> archivePurple
+                    }
+                    val alpha = (0.05f + 0.18f * pr.p) * glowStrength * if (tone > 0.82f) (0.72f + 0.42f * accentStrength) else 1f
+                    drawCircle(
+                        color = color.copy(alpha = alpha.coerceIn(0f, 0.55f)),
+                        radius = (0.7f + srHash(seed * 9.9f) * 1.25f).dp.toPx() * pr.p,
+                        center = Offset(pr.x, pr.y),
+                    )
+                }
+
+                books.forEach { book ->
+                    val shadowFace = faceProjected(book, "bottom", scale)
+                    val shadowPath = Path().apply {
+                        moveTo(shadowFace[0].x, shadowFace[0].y + minDim * 0.010f)
+                        lineTo(shadowFace[1].x, shadowFace[1].y + minDim * 0.010f)
+                        lineTo(shadowFace[2].x, shadowFace[2].y + minDim * 0.018f)
+                        lineTo(shadowFace[3].x, shadowFace[3].y + minDim * 0.018f)
+                        close()
                     }
                     drawPath(
-                        path = archPath,
-                        color = colors.accent.copy(alpha = columnAlpha * (1.8f - idx * 0.6f)),
-                        style = Stroke(width = 0.8.dp.toPx()),
+                        path = shadowPath,
+                        color = Color.Black.copy(alpha = 0.08f + 0.04f * srHash((book.index + 1f) * 1.7f)),
                     )
                 }
 
-                // 2. Morphing Constellation Codex Particle System (Concept 4)
-                val center = Offset(size.width * 0.5f, size.height * 0.45f)
-
-                // Morph progress: 0.0 (random cosmic dust) to 1.0 (open book outline)
-                // Period is 16 seconds (smoothly gathers and dissolves)
-                val morphProgress = 0.5f + 0.5f * kotlin.math.sin(elapsedSeconds * 0.38f)
-
-                val numParticles = 24
-                repeat(numParticles) { i ->
-                    val star = FLOATING_STARS[i % FLOATING_STARS.size]
-
-                    // Cloud coordinate (ambient drift)
-                    val driftY = floatMod(star.yFraction - elapsedSeconds * 0.012f * (1f + (i % 3) * 0.3f), 1.0f)
-                    val cloudX = star.xFraction * size.width
-                    val cloudY = driftY * size.height
-
-                    // Book coordinate (parametric mapping)
-                    val u = (i % 4) / 3.0f
-                    val v = (i / 4) / 5.0f
-                    val isRight = (i % 2 == 0)
-
-                    val bookWidth = size.width * 0.22f
-                    val bookHeight = size.height * 0.12f
-                    val wave = kotlin.math.sin(u * Math.PI).toFloat() * 12.dp.toPx()
-
-                    val bookX = if (isRight) {
-                        center.x + (0.04f + u * 0.32f) * bookWidth
-                    } else {
-                        center.x - (0.04f + u * 0.32f) * bookWidth
+                val faces = mutableListOf<FaceDraw>()
+                books.forEach { book ->
+                    listOf("back", "left", "right", "bottom", "top", "front").forEach { face ->
+                        val corners = faceProjected(book, face, scale)
+                        val z = corners.fold(0f) { acc, p -> acc + p.z } / 4f
+                        faces.add(FaceDraw(book = book, face = face, corners = corners, z = z))
                     }
-                    val bookY = center.y - (bookHeight * 0.5f) + v * bookHeight - wave * (1f - v * 0.2f)
-
-                    // Interpolated coordinate
-                    val currentX = cloudX + (bookX - cloudX) * morphProgress
-                    val currentY = cloudY + (bookY - cloudY) * morphProgress
-
-                    // Colors tied strictly to active theme tokens (no hardcoding)
-                    val baseColor = if (i % 2 == 0) colors.accent else colors.glowEffect
-                    val alpha = (0.02f + 0.02f * (i % 3)) * (0.7f + 0.3f * kotlin.math.sin(elapsedSeconds * 3.5f + i))
-
-                    // Draw particle core
-                    drawCircle(
-                        color = baseColor.copy(alpha = alpha * 1.5f),
-                        radius = (1.2f + (i % 3) * 0.4f).dp.toPx(),
-                        center = Offset(currentX, currentY),
-                    )
-
-                    // Subtle glowing halo
-                    drawCircle(
-                        color = baseColor.copy(alpha = alpha * 0.4f),
-                        radius = (3.5f + (i % 3) * 0.8f).dp.toPx(),
-                        center = Offset(currentX, currentY),
-                    )
                 }
+                faces.sortBy { it.z }
+                faces.forEach { drawBookFace(it) }
+
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            archiveCyan.copy(alpha = 0.06f * glowStrength),
+                            archivePurple.copy(alpha = 0.03f * glowStrength),
+                            Color.Transparent,
+                        ),
+                        center = center,
+                        radius = scale * 1.45f,
+                    ),
+                    radius = scale * 1.45f,
+                    center = center,
+                )
             }
             "shadow_realm" -> {
                 val center = Offset(size.width * 0.5f, size.height * 0.50f)
