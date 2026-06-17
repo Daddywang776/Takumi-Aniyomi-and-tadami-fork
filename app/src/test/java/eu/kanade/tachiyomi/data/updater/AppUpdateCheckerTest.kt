@@ -32,10 +32,12 @@ class AppUpdateCheckerTest {
         resolveUpdatedChangelogPrompt(
             currentVersionCode = 120,
             lastSeenVersionCode = 0,
+            pendingPreviousVersionCode = 0,
             isDebug = false,
         ) shouldBe UpdatedChangelogPromptDecision(
             shouldPrompt = false,
             nextSeenVersionCode = 120,
+            nextPendingPreviousVersionCode = 0,
         )
     }
 
@@ -44,10 +46,12 @@ class AppUpdateCheckerTest {
         resolveUpdatedChangelogPrompt(
             currentVersionCode = 121,
             lastSeenVersionCode = 120,
+            pendingPreviousVersionCode = 0,
             isDebug = false,
         ) shouldBe UpdatedChangelogPromptDecision(
             shouldPrompt = true,
             nextSeenVersionCode = 121,
+            nextPendingPreviousVersionCode = 0,
         )
     }
 
@@ -56,10 +60,12 @@ class AppUpdateCheckerTest {
         resolveUpdatedChangelogPrompt(
             currentVersionCode = 121,
             lastSeenVersionCode = 121,
+            pendingPreviousVersionCode = 0,
             isDebug = false,
         ) shouldBe UpdatedChangelogPromptDecision(
             shouldPrompt = false,
             nextSeenVersionCode = 121,
+            nextPendingPreviousVersionCode = 0,
         )
     }
 
@@ -68,10 +74,26 @@ class AppUpdateCheckerTest {
         resolveUpdatedChangelogPrompt(
             currentVersionCode = 121,
             lastSeenVersionCode = 120,
+            pendingPreviousVersionCode = 0,
             isDebug = true,
         ) shouldBe UpdatedChangelogPromptDecision(
             shouldPrompt = false,
             nextSeenVersionCode = 121,
+            nextPendingPreviousVersionCode = 0,
+        )
+    }
+
+    @Test
+    fun `shows updated changelog for existing installs when dedicated seen version is not seeded yet`() {
+        resolveUpdatedChangelogPrompt(
+            currentVersionCode = 121,
+            lastSeenVersionCode = 0,
+            pendingPreviousVersionCode = 120,
+            isDebug = false,
+        ) shouldBe UpdatedChangelogPromptDecision(
+            shouldPrompt = true,
+            nextSeenVersionCode = 121,
+            nextPendingPreviousVersionCode = 0,
         )
     }
 }

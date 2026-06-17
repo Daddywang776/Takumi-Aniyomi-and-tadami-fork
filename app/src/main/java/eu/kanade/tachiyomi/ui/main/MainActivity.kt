@@ -430,14 +430,20 @@ class MainActivity : BaseActivity() {
                     val shouldShowChangelog = withContext(Dispatchers.IO) {
                         val appUpdatePreferences = Injekt.get<AppUpdatePreferences>()
                         val seenVersionPreference = appUpdatePreferences.lastSeenUpdatedChangelogVersionCode()
+                        val pendingPreviousVersionPreference =
+                            appUpdatePreferences.pendingUpdatedChangelogPreviousVersionCode()
                         val decision = resolveUpdatedChangelogPrompt(
                             currentVersionCode = BuildConfig.VERSION_CODE,
                             lastSeenVersionCode = seenVersionPreference.get(),
+                            pendingPreviousVersionCode = pendingPreviousVersionPreference.get(),
                             isDebug = BuildConfig.DEBUG,
                         )
 
                         if (decision.nextSeenVersionCode != seenVersionPreference.get()) {
                             seenVersionPreference.set(decision.nextSeenVersionCode)
+                        }
+                        if (decision.nextPendingPreviousVersionCode != pendingPreviousVersionPreference.get()) {
+                            pendingPreviousVersionPreference.set(decision.nextPendingPreviousVersionCode)
                         }
 
                         decision.shouldPrompt

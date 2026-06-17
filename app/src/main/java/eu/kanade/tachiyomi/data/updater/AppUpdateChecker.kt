@@ -82,16 +82,21 @@ internal fun resolveAppUpdatePrompt(
 data class UpdatedChangelogPromptDecision(
     val shouldPrompt: Boolean,
     val nextSeenVersionCode: Int,
+    val nextPendingPreviousVersionCode: Int,
 )
 
 internal fun resolveUpdatedChangelogPrompt(
     currentVersionCode: Int,
     lastSeenVersionCode: Int,
+    pendingPreviousVersionCode: Int,
     isDebug: Boolean,
 ): UpdatedChangelogPromptDecision {
+    val comparisonVersionCode = lastSeenVersionCode.takeIf { it > 0 } ?: pendingPreviousVersionCode
+
     return UpdatedChangelogPromptDecision(
-        shouldPrompt = !isDebug && lastSeenVersionCode > 0 && currentVersionCode > lastSeenVersionCode,
+        shouldPrompt = !isDebug && comparisonVersionCode > 0 && currentVersionCode > comparisonVersionCode,
         nextSeenVersionCode = currentVersionCode,
+        nextPendingPreviousVersionCode = 0,
     )
 }
 
