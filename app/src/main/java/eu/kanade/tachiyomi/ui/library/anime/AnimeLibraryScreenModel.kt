@@ -41,6 +41,7 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -125,7 +126,7 @@ class AnimeLibraryScreenModel(
                 getTracksPerAnime.subscribe(),
                 getTrackingFilterFlow(),
                 state.map { it.groupType }.distinctUntilChanged(),
-                downloadCache.changes,
+                getDownloadFilterInvalidationFlow(),
             ) { flowsArray ->
                 val searchQuery = flowsArray[0] as String?
 
@@ -221,6 +222,28 @@ class AnimeLibraryScreenModel(
                 activeCategoryIndex = 0
             }
             .launchIn(screenModelScope)
+    }
+
+    private fun getDownloadFilterInvalidationFlow(): Flow<Unit> {
+        return getAnimelibItemPreferencesFlow()
+            .flatMapLatest { prefs ->
+                if (prefs.globalFilterDownloaded || prefs.filterDownloaded != TriState.DISABLED) {
+                    downloadCache.changes.conflate()
+                } else {
+                    flowOf(Unit)
+                }
+            }
+    }
+
+    private fun getDownloadBadgeInvalidationFlow(): Flow<Unit> {
+        return getAnimelibItemPreferencesFlow()
+            .flatMapLatest { prefs ->
+                if (prefs.downloadBadge) {
+                    downloadCache.changes.conflate()
+                } else {
+                    flowOf(Unit)
+                }
+            }
     }
 
     private suspend fun AnimeLibraryMap.applyFilters(
@@ -554,7 +577,7 @@ class AnimeLibraryScreenModel(
         val animelibAnimesFlow = combine(
             getLibraryAnime.subscribe(),
             getAnimelibItemPreferencesFlow(),
-            downloadCache.changes,
+            getDownloadBadgeInvalidationFlow(),
         ) { animelibAnimeList, prefs, _ ->
             animelibAnimeList
                 .map { animelibAnime ->

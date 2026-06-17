@@ -135,7 +135,7 @@ class MangaLibraryScreenModel(
                 getTracksPerManga.subscribe(),
                 getTrackingFilterFlow(),
                 state.map { it.groupType }.distinctUntilChanged(),
-                downloadCache.changes.conflate(),
+                getDownloadFilterInvalidationFlow(),
             ) { flowsArray ->
                 val searchQuery = flowsArray[0] as String?
 
@@ -231,6 +231,28 @@ class MangaLibraryScreenModel(
                 activeCategoryIndex = 0
             }
             .launchIn(screenModelScope)
+    }
+
+    private fun getDownloadFilterInvalidationFlow(): Flow<Unit> {
+        return getLibraryItemPreferencesFlow()
+            .flatMapLatest { prefs ->
+                if (prefs.globalFilterDownloaded || prefs.filterDownloaded != TriState.DISABLED) {
+                    downloadCache.changes.conflate()
+                } else {
+                    flowOf(Unit)
+                }
+            }
+    }
+
+    private fun getDownloadBadgeInvalidationFlow(): Flow<Unit> {
+        return getLibraryItemPreferencesFlow()
+            .flatMapLatest { prefs ->
+                if (prefs.downloadBadge) {
+                    downloadCache.changes.conflate()
+                } else {
+                    flowOf(Unit)
+                }
+            }
     }
 
     private suspend fun MangaLibraryMap.applyFilters(
@@ -626,7 +648,7 @@ class MangaLibraryScreenModel(
             getLibraryMangaSeries.subscribe(),
             getMangaIdsInAnySeries.subscribe(),
             getLibraryItemPreferencesFlow(),
-            downloadCache.changes,
+            getDownloadBadgeInvalidationFlow(),
         ) { libraryMangaList, librarySeriesList, idsInSeries, prefs, _ ->
             val singleItems = libraryMangaList
                 .filterNot { it.manga.id in idsInSeries }
