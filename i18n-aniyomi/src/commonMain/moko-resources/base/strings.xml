@@ -1884,8 +1884,8 @@
     <string name="treasury_reward_orbit_badge_description">Orbit effect that wraps the Home Hub nickname.</string>
     <string name="treasury_reward_crown_badge_description">Crown effect for a more regal Home Hub header.</string>
     <string name="treasury_reward_shuriken_badge_description">Sharp-edged effect with an arcade-like profile vibe.</string>
-    <string name="treasury_reward_petal_storm_background_description">Animated sakura petals drifting across the Aurora background.</string>
-    <string name="treasury_reward_neon_orbit_background_description">Neon orbital rings and particles that replace the default ambient bloom.</string>
+    <string name="treasury_reward_petal_storm_background_description">A fleeting dance of petals in a silent storm.</string>
+    <string name="treasury_reward_neon_orbit_background_description">Luminous rings guarding the core of the digital abyss.</string>
     <string name="treasury_visual_effects">Visual effects</string>
     <string name="treasury_background_effects">Background effects</string>
     <string name="treasury_background_effects_subtitle">Animated wallpapers and overlays to dynamic up-style your interface background.</string>
@@ -1953,11 +1953,11 @@
     <string name="treasury_badge_ascendant_desc">Prestige mark for the rank path</string>
     <!-- Treasury new backgrounds -->
     <string name="treasury_bg_trinity_constellation_title">Trinity Constellation</string>
-    <string name="treasury_bg_trinity_constellation_desc">A premium constellation map for the three media paths</string>
+    <string name="treasury_bg_trinity_constellation_desc">Three radiant cores bound in an endless cosmic waltz.</string>
     <string name="treasury_bg_deep_space_archive_title">Deep Space Archive</string>
-    <string name="treasury_bg_deep_space_archive_desc">Floating archive pages over a quiet starfield</string>
+    <string name="treasury_bg_deep_space_archive_desc">Ancient folios drifting silently through the cosmic void.</string>
     <string name="treasury_bg_shadow_realm_title">Shadow Realm</string>
-    <string name="treasury_bg_shadow_realm_desc">Dark violet fog for secret mythic rewards</string>
+    <string name="treasury_bg_shadow_realm_desc">A swirling abyss where light and time lose their meaning.</string>
     <!-- Treasury misc -->
     <string name="treasury_nickname_preview">Nickname Preview</string>
     <string name="treasury_default_user_name">User Name</string>

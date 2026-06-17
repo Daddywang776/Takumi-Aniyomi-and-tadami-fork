@@ -1595,8 +1595,8 @@
     <string name="unlockable_home_badge_orbit">Orbit Home Hub Effect</string>
     <string name="unlockable_home_badge_crown">Crown Home Hub Effect</string>
     <string name="unlockable_home_badge_shuriken">Shuriken Home Hub Effect</string>
-    <string name="unlockable_special_background_petal_storm">Petal Storm Background</string>
-    <string name="unlockable_special_background_neon_orbit">Neon Orbit Background</string>
+    <string name="unlockable_special_background_petal_storm">Petal Storm</string>
+    <string name="unlockable_special_background_neon_orbit">Neon Orbit</string>
     <string name="unlockable_aura_trinity_orbit">Trinity Orbit Aura</string>
     <string name="unlockable_aura_trinity_orbit_desc">Three orbital rings wrapping cards</string>
     <string name="unlockable_aura_deep_focus">Deep Focus Aura</string>

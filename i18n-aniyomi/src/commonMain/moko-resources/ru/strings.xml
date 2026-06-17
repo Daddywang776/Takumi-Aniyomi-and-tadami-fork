@@ -2276,8 +2276,8 @@
     <string name="treasury_reward_orbit_badge_description">Эффект Orbit, обрамляющий никнейм в шапке Home Hub.</string>
     <string name="treasury_reward_crown_badge_description">Эффект Crown для более королевской шапки Home Hub.</string>
     <string name="treasury_reward_shuriken_badge_description">Эффект Shuriken с аркадным характером для профиля Home Hub.</string>
-    <string name="treasury_reward_petal_storm_background_description">Анимированный фон с лепестками сакуры, который скользит по Aurora.</string>
-    <string name="treasury_reward_neon_orbit_background_description">Неоновые орбитальные кольца и частицы, заменяющие стандартное свечение фона.</string>
+    <string name="treasury_reward_petal_storm_background_description">Мимолетный танец лепестков в безмолвной буре.</string>
+    <string name="treasury_reward_neon_orbit_background_description">Светящиеся кольца, хранящие тайны цифровой бездны.</string>
     <string name="treasury_visual_effects">Визуальные эффекты</string>
     <string name="treasury_background_effects">Фоновые эффекты</string>
     <string name="treasury_background_effects_subtitle">Анимированные обои и наложения для динамического оформления фона интерфейса.</string>
@@ -2346,11 +2346,11 @@
     <string name="treasury_badge_ascendant_desc">Престижный знак для пути рангов</string>
     <!-- Treasury new backgrounds -->
     <string name="treasury_bg_trinity_constellation_title">Созвездие Тринити</string>
-    <string name="treasury_bg_trinity_constellation_desc">Премиальная карта созвездий для трёх медийных путей</string>
+    <string name="treasury_bg_trinity_constellation_desc">Три сияющих ядра, сплетенных в бесконечном космическом вальсе.</string>
     <string name="treasury_bg_deep_space_archive_title">Архив Глубокого Космоса</string>
-    <string name="treasury_bg_deep_space_archive_desc">Парящие страницы архива над тихим звёздным полем</string>
+    <string name="treasury_bg_deep_space_archive_desc">Древние фолианты, безмолвно дрейфующие в космической пустоте.</string>
     <string name="treasury_bg_shadow_realm_title">Царство Теней</string>
-    <string name="treasury_bg_shadow_realm_desc">Тёмно-фиолетовый туман для секретных мифических наград</string>
+    <string name="treasury_bg_shadow_realm_desc">Вращающаяся бездна, где свет и время теряют смысл.</string>
     <!-- Treasury misc -->
     <string name="treasury_nickname_preview">Предпросмотр ника</string>
     <string name="treasury_default_user_name">Имя пользователя</string>

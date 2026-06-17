@@ -1386,8 +1386,8 @@
         {
           "type": "SPECIAL",
           "id": "special_background_petal_storm",
-          "title": "Petal Storm Background",
-          "description": "Animated sakura petals drifting across the Aurora background"
+          "title": "Petal Storm",
+          "description": "A fleeting dance of petals in a silent storm."
         }
       ],
       "rarity": "rare",
@@ -1594,8 +1594,8 @@
         {
           "type": "SPECIAL",
           "id": "special_background_neon_orbit",
-          "title": "Neon Orbit Background",
-          "description": "Rotating neon orbital rings and particles behind the app background"
+          "title": "Neon Orbit",
+          "description": "Luminous rings guarding the core of the digital abyss."
         }
       ],
       "rarity": "rare",
@@ -1788,8 +1788,8 @@
         {
           "type": "SPECIAL",
           "id": "special_background_trinity_constellation",
-          "title": "Trinity Constellation Background",
-          "description": "A constellation map for all three realms"
+          "title": "Trinity Constellation",
+          "description": "Three radiant cores bound in an endless cosmic waltz."
         }
       ],
       "tier_group": "trinity",
@@ -1926,8 +1926,8 @@
         {
           "type": "SPECIAL",
           "id": "special_background_petal_storm",
-          "title": "Petal Storm Background",
-          "description": "Romance-tinted premium background"
+          "title": "Petal Storm",
+          "description": "A fleeting dance of petals in a silent storm."
         }
       ]
     },
@@ -2068,8 +2068,8 @@
         {
           "type": "SPECIAL",
           "id": "special_background_shadow_realm",
-          "title": "Shadow Realm Background",
-          "description": "Dark violet fog for the vault"
+          "title": "Shadow Realm",
+          "description": "A swirling abyss where light and time lose their meaning."
         }
       ],
       "hint": "Command the shadows. Collect enough dark fantasy."
@@ -2253,8 +2253,8 @@
         {
           "type": "SPECIAL",
           "id": "special_background_deep_space_archive",
-          "title": "Deep Space Archive Background",
-          "description": "Floating archive pages in deep space"
+          "title": "Deep Space Archive",
+          "description": "Ancient folios drifting silently through the cosmic void."
         }
       ]
     },
@@ -2358,8 +2358,8 @@
         {
           "type": "SPECIAL",
           "id": "special_background_deep_space_archive",
-          "title": "Deep Space Archive Background",
-          "description": "Floating archive pages in deep space"
+          "title": "Deep Space Archive",
+          "description": "Ancient folios drifting silently through the cosmic void."
         }
       ]
     },
