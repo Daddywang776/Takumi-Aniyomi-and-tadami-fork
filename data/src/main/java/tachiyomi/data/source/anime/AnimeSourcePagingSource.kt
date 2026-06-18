@@ -5,6 +5,7 @@ import eu.kanade.tachiyomi.animesource.AnimeCatalogueSource
 import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
 import eu.kanade.tachiyomi.animesource.model.AnimesPage
 import eu.kanade.tachiyomi.animesource.model.SAnime
+import kotlinx.coroutines.withTimeout
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.domain.items.episode.model.NoEpisodesException
 import tachiyomi.domain.source.anime.repository.AnimeSourcePagingSourceType
@@ -13,19 +14,26 @@ class AnimeSourceSearchPagingSource(
     source: AnimeCatalogueSource,
     val query: String,
     val filters: AnimeFilterList,
-) : AnimeSourcePagingSource(source) {
+    requestTimeoutMillis: Long = ANIME_SOURCE_PAGE_REQUEST_TIMEOUT_MS,
+) : AnimeSourcePagingSource(source, requestTimeoutMillis) {
     override suspend fun requestNextPage(currentPage: Int): AnimesPage {
         return source.getSearchAnime(currentPage, query, filters)
     }
 }
 
-class AnimeSourcePopularPagingSource(source: AnimeCatalogueSource) : AnimeSourcePagingSource(source) {
+class AnimeSourcePopularPagingSource(
+    source: AnimeCatalogueSource,
+    requestTimeoutMillis: Long = ANIME_SOURCE_PAGE_REQUEST_TIMEOUT_MS,
+) : AnimeSourcePagingSource(source, requestTimeoutMillis) {
     override suspend fun requestNextPage(currentPage: Int): AnimesPage {
         return source.getPopularAnime(currentPage)
     }
 }
 
-class AnimeSourceLatestPagingSource(source: AnimeCatalogueSource) : AnimeSourcePagingSource(source) {
+class AnimeSourceLatestPagingSource(
+    source: AnimeCatalogueSource,
+    requestTimeoutMillis: Long = ANIME_SOURCE_PAGE_REQUEST_TIMEOUT_MS,
+) : AnimeSourcePagingSource(source, requestTimeoutMillis) {
     override suspend fun requestNextPage(currentPage: Int): AnimesPage {
         return source.getLatestUpdates(currentPage)
     }
@@ -33,6 +41,7 @@ class AnimeSourceLatestPagingSource(source: AnimeCatalogueSource) : AnimeSourceP
 
 abstract class AnimeSourcePagingSource(
     protected val source: AnimeCatalogueSource,
+    private val requestTimeoutMillis: Long = ANIME_SOURCE_PAGE_REQUEST_TIMEOUT_MS,
 ) : AnimeSourcePagingSourceType() {
 
     abstract suspend fun requestNextPage(currentPage: Int): AnimesPage
@@ -42,7 +51,7 @@ abstract class AnimeSourcePagingSource(
 
         return try {
             withIOContext {
-                val animesPage = requestNextPage(page.toInt())
+                val animesPage = withTimeout(requestTimeoutMillis) { requestNextPage(page.toInt()) }
                 when {
                     animesPage.animes.isNotEmpty() -> {
                         LoadResult.Page(
@@ -76,3 +85,5 @@ abstract class AnimeSourcePagingSource(
         }
     }
 }
+
+internal const val ANIME_SOURCE_PAGE_REQUEST_TIMEOUT_MS = 30_000L

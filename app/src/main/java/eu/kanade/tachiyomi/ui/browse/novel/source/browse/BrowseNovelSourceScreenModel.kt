@@ -87,6 +87,7 @@ class BrowseNovelSourceScreenModel(
 ) : StateScreenModel<BrowseNovelSourceScreenModel.State>(State(Listing.valueOf(listingQuery))) {
 
     var displayMode by sourcePreferences.sourceDisplayMode().asState(screenModelScope)
+    private var defaultFiltersSerialized: String? = null
     private val novelDetailsInFlight = ConcurrentHashMap.newKeySet<Long>()
     private val novelDetailsDispatcher = kotlinx.coroutines.Dispatchers.IO.limitedParallelism(3)
     private val browseNovelCoverUpdates = MutableStateFlow<Map<Long, BrowseNovelCoverUpdate>>(emptyMap())
@@ -110,11 +111,7 @@ class BrowseNovelSourceScreenModel(
             }
 
             screenModelScope.launch {
-                val loadedFilters = runCatching {
-                    withContext(ioCoroutineScope.coroutineContext) {
-                        source.getFilterList()
-                    }
-                }.getOrElse { NovelFilterList() }
+                val loadedFilters = loadSourceFilters()
 
                 mutableState.update { state ->
                     val hadNoFilters = state.filters.isEmpty()
@@ -157,7 +154,7 @@ class BrowseNovelSourceScreenModel(
             screenModelScope.launch {
                 val getSavedSearchById = resolveGetSavedSearchById() ?: return@launch
                 val savedSearch = getSavedSearchById.await(savedSearchId) ?: return@launch
-                val baseFilters = source.getFilterList()
+                val baseFilters = loadSourceFilters()
                 val filtersJson = savedSearch.filtersJson
                 if (filtersJson != null) {
                     SavedSearchFilterSerializer.deserialize(filtersJson, baseFilters)
@@ -172,6 +169,20 @@ class BrowseNovelSourceScreenModel(
                 }
             }
         }
+    }
+
+    private suspend fun loadSourceFilters(): NovelFilterList {
+        val filters = runCatching {
+            withContext(ioCoroutineScope.coroutineContext) {
+                (source as NovelCatalogueSource).getFilterList()
+            }
+        }.getOrElse { NovelFilterList() }
+        defaultFiltersSerialized = serializeFilters(filters)
+        return filters
+    }
+
+    private fun serializeFilters(filters: NovelFilterList): String? {
+        return runCatching { SavedSearchFilterSerializer.serialize(filters) }.getOrNull()
     }
 
     fun loadSavedSearches() {
@@ -222,8 +233,9 @@ class BrowseNovelSourceScreenModel(
     }
 
     fun openSavedSearch(savedSearch: SavedSearch) {
-        if (source is NovelCatalogueSource) {
-            val baseFilters = source.getFilterList()
+        if (source !is NovelCatalogueSource) return
+        screenModelScope.launch {
+            val baseFilters = loadSourceFilters()
             val filtersJson = savedSearch.filtersJson
             if (filtersJson != null) {
                 SavedSearchFilterSerializer.deserialize(filtersJson, baseFilters)
@@ -330,11 +342,7 @@ class BrowseNovelSourceScreenModel(
         if (source !is NovelCatalogueSource) return
 
         screenModelScope.launch {
-            val resetFilters = runCatching {
-                withContext(ioCoroutineScope.coroutineContext) {
-                    source.getFilterList()
-                }
-            }.getOrElse { NovelFilterList() }
+            val resetFilters = loadSourceFilters()
 
             mutableState.update { state ->
                 state.copy(filters = resetFilters)
@@ -376,12 +384,7 @@ class BrowseNovelSourceScreenModel(
         val q = query ?: input.query
         if (!q.isNullOrBlank()) {
             val f = filters ?: input.filters
-            val hasActiveFilters = try {
-                SavedSearchFilterSerializer.serialize(f) !=
-                    SavedSearchFilterSerializer.serialize(source.getFilterList())
-            } catch (e: Exception) {
-                f.isNotEmpty()
-            }
+            val hasActiveFilters = serializeFilters(f)?.let { it != defaultFiltersSerialized } ?: f.isNotEmpty()
             if (hasActiveFilters) {
                 achievementHandler.trackFeatureUsed(AchievementEvent.Feature.ADVANCED_SEARCH)
             } else {

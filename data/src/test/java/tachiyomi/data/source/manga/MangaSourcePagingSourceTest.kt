@@ -6,6 +6,8 @@ import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.SManga
 import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import rx.Observable
@@ -46,6 +48,28 @@ class MangaSourcePagingSourceTest {
 
         val error = result as PagingSource.LoadResult.Error
         error.throwable::class shouldBe NoChaptersException::class
+    }
+
+    @Test
+    fun `paging source returns error when source request times out`() = runTest {
+        val source = FakeMangaCatalogueSource(hasNext = true, mangas = listOf(makeManga("A")))
+        val pagingSource = object : SourcePagingSource(source, requestTimeoutMillis = 1) {
+            override suspend fun requestNextPage(currentPage: Int): MangasPage {
+                delay(50)
+                return MangasPage(listOf(makeManga("A")), hasNextPage = false)
+            }
+        }
+
+        val result = pagingSource.load(
+            PagingSource.LoadParams.Refresh(
+                key = null,
+                loadSize = 20,
+                placeholdersEnabled = false,
+            ),
+        )
+
+        val error = result as PagingSource.LoadResult.Error
+        error.throwable::class shouldBe TimeoutCancellationException::class
     }
 
     @Test

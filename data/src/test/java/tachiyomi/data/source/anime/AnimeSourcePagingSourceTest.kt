@@ -6,6 +6,8 @@ import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
 import eu.kanade.tachiyomi.animesource.model.AnimesPage
 import eu.kanade.tachiyomi.animesource.model.SAnime
 import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.Test
 import rx.Observable
@@ -46,6 +48,28 @@ class AnimeSourcePagingSourceTest {
 
         val error = result as PagingSource.LoadResult.Error
         error.throwable::class shouldBe NoEpisodesException::class
+    }
+
+    @Test
+    fun `paging source returns error when source request times out`() = runTest {
+        val source = FakeAnimeCatalogueSource(hasNext = true, animes = listOf(makeAnime("A")))
+        val pagingSource = object : AnimeSourcePagingSource(source, requestTimeoutMillis = 1) {
+            override suspend fun requestNextPage(currentPage: Int): AnimesPage {
+                delay(50)
+                return AnimesPage(listOf(makeAnime("A")), hasNextPage = false)
+            }
+        }
+
+        val result = pagingSource.load(
+            PagingSource.LoadParams.Refresh(
+                key = null,
+                loadSize = 20,
+                placeholdersEnabled = false,
+            ),
+        )
+
+        val error = result as PagingSource.LoadResult.Error
+        error.throwable::class shouldBe TimeoutCancellationException::class
     }
 
     @Test

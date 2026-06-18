@@ -5,6 +5,7 @@ import eu.kanade.tachiyomi.source.CatalogueSource
 import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.SManga
+import kotlinx.coroutines.withTimeout
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.domain.items.chapter.model.NoChaptersException
 import tachiyomi.domain.source.manga.repository.SourcePagingSourceType
@@ -13,22 +14,30 @@ class SourceSearchPagingSource(
     source: CatalogueSource,
     val query: String,
     val filters: FilterList,
+    requestTimeoutMillis: Long = SOURCE_PAGE_REQUEST_TIMEOUT_MS,
 ) :
     SourcePagingSource(
         source,
+        requestTimeoutMillis,
     ) {
     override suspend fun requestNextPage(currentPage: Int): MangasPage {
         return source.getSearchManga(currentPage, query, filters)
     }
 }
 
-class SourcePopularPagingSource(source: CatalogueSource) : SourcePagingSource(source) {
+class SourcePopularPagingSource(
+    source: CatalogueSource,
+    requestTimeoutMillis: Long = SOURCE_PAGE_REQUEST_TIMEOUT_MS,
+) : SourcePagingSource(source, requestTimeoutMillis) {
     override suspend fun requestNextPage(currentPage: Int): MangasPage {
         return source.getPopularManga(currentPage)
     }
 }
 
-class SourceLatestPagingSource(source: CatalogueSource) : SourcePagingSource(source) {
+class SourceLatestPagingSource(
+    source: CatalogueSource,
+    requestTimeoutMillis: Long = SOURCE_PAGE_REQUEST_TIMEOUT_MS,
+) : SourcePagingSource(source, requestTimeoutMillis) {
     override suspend fun requestNextPage(currentPage: Int): MangasPage {
         return source.getLatestUpdates(currentPage)
     }
@@ -36,6 +45,7 @@ class SourceLatestPagingSource(source: CatalogueSource) : SourcePagingSource(sou
 
 abstract class SourcePagingSource(
     protected val source: CatalogueSource,
+    private val requestTimeoutMillis: Long = SOURCE_PAGE_REQUEST_TIMEOUT_MS,
 ) : SourcePagingSourceType() {
 
     abstract suspend fun requestNextPage(currentPage: Int): MangasPage
@@ -45,7 +55,7 @@ abstract class SourcePagingSource(
 
         return try {
             withIOContext {
-                val mangasPage = requestNextPage(page.toInt())
+                val mangasPage = withTimeout(requestTimeoutMillis) { requestNextPage(page.toInt()) }
                 when {
                     mangasPage.mangas.isNotEmpty() -> {
                         LoadResult.Page(
@@ -79,3 +89,5 @@ abstract class SourcePagingSource(
         }
     }
 }
+
+internal const val SOURCE_PAGE_REQUEST_TIMEOUT_MS = 30_000L
