@@ -53,7 +53,6 @@ import eu.kanade.tachiyomi.data.suggestions.SuggestionSeed
 import eu.kanade.tachiyomi.data.suggestions.SuggestionSourceWeight
 import eu.kanade.tachiyomi.data.suggestions.SuggestionState
 import eu.kanade.tachiyomi.data.suggestions.SuggestionTitleResolver
-import eu.kanade.tachiyomi.data.suggestions.suggestionCoverModel
 import eu.kanade.tachiyomi.data.suggestions.anime.AnimeFallbackOutcome
 import eu.kanade.tachiyomi.data.suggestions.anime.AnimeSearchFallbackEngine
 import eu.kanade.tachiyomi.data.suggestions.manga.MangaFallbackOutcome
@@ -62,6 +61,7 @@ import eu.kanade.tachiyomi.data.suggestions.novel.NovelFallbackOutcome
 import eu.kanade.tachiyomi.data.suggestions.novel.NovelRelatedSuggestionCoordinator
 import eu.kanade.tachiyomi.data.suggestions.novel.NovelSearchFallbackEngine
 import eu.kanade.tachiyomi.data.suggestions.sources.SuggestionMediaType
+import eu.kanade.tachiyomi.data.suggestions.suggestionCoverModel
 import eu.kanade.tachiyomi.data.suggestions.util.bestMatchScoreFor
 import eu.kanade.tachiyomi.data.suggestions.util.dedupeByCleanTitle
 import eu.kanade.tachiyomi.novelsource.NovelCatalogueSource
