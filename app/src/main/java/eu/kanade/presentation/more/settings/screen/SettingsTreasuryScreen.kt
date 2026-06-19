@@ -2771,7 +2771,7 @@ private fun getRewardIconResourceId(rewardId: String, context: android.content.C
         "special_background_trinity_constellation" -> "ic_reward_background_trinity_constellation"
         "special_background_deep_space_archive" -> "ic_reward_background_deep_space_archive"
         "special_background_shadow_realm" -> "ic_reward_background_shadow_realm"
-        "special_background_event_horizon_library" -> "ic_reward_background_shadow_realm"
+        "special_background_event_horizon_library" -> "ic_reward_background_event_horizon_library"
         else -> "ic_reward_$rewardId"
     }
 

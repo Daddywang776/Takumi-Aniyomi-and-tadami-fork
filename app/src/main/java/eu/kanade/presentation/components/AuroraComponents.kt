@@ -999,7 +999,8 @@ private fun AuroraSpecialBackgroundCanvas(
             }
             "event_horizon_library" -> {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                    eventHorizonShader != null && eventHorizonBrush != null
+                    eventHorizonShader != null &&
+                    eventHorizonBrush != null
                 ) {
                     // GPU path (Android 13+): one full-screen AGSL pass.
                     val time = if (animate) elapsedSeconds else 0f
