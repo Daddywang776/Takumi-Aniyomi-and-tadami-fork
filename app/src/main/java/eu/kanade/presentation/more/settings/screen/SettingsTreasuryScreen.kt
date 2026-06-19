@@ -496,6 +496,15 @@ object SettingsTreasuryScreen : SearchableSettings {
                 onApply = { uiPreferences.specialBackgroundStyle().set("shadow_realm") },
                 onDeactivate = { uiPreferences.specialBackgroundStyle().set("none") },
             ),
+            TreasuryPreset(
+                unlockableId = "special_background_event_horizon_library",
+                title = stringResource(AYMR.strings.treasury_bg_event_horizon_title),
+                description = stringResource(AYMR.strings.treasury_bg_event_horizon_desc),
+                accentColor = Color(0xFFF8F3E6),
+                isActive = { specialBackgroundStyleKey == "event_horizon_library" },
+                onApply = { uiPreferences.specialBackgroundStyle().set("event_horizon_library") },
+                onDeactivate = { uiPreferences.specialBackgroundStyle().set("none") },
+            ),
         )
 
         val preferences = mutableListOf<Preference>()
@@ -1634,6 +1643,12 @@ private fun TreasuryThemeSelector(
             tagline = AYMR.strings.treasury_tagline_nebula_tide,
             accentColor = TreasuryCyan,
         ),
+        TreasuryExclusiveThemeSpec(
+            theme = AppTheme.EVENT_HORIZON,
+            rarity = AYMR.strings.treasury_exclusive_rarity_mythic,
+            tagline = AYMR.strings.treasury_tagline_event_horizon,
+            accentColor = Color(0xFFF8F3E6),
+        ),
     )
 
     var parentLayoutCoordinates by remember { mutableStateOf<androidx.compose.ui.layout.LayoutCoordinates?>(null) }
@@ -2737,6 +2752,7 @@ private fun getRewardIconResourceId(rewardId: String, context: android.content.C
         "special_background_trinity_constellation" -> "ic_reward_background_trinity_constellation"
         "special_background_deep_space_archive" -> "ic_reward_background_deep_space_archive"
         "special_background_shadow_realm" -> "ic_reward_background_shadow_realm"
+        "special_background_event_horizon_library" -> "ic_reward_background_shadow_realm"
         else -> "ic_reward_$rewardId"
     }
 

@@ -22,6 +22,7 @@ import eu.kanade.presentation.theme.colorscheme.BaseColorScheme
 import eu.kanade.presentation.theme.colorscheme.CloudflareColorScheme
 import eu.kanade.presentation.theme.colorscheme.CottoncandyColorScheme
 import eu.kanade.presentation.theme.colorscheme.DoomColorScheme
+import eu.kanade.presentation.theme.colorscheme.EventHorizonColorScheme
 import eu.kanade.presentation.theme.colorscheme.GreenAppleColorScheme
 import eu.kanade.presentation.theme.colorscheme.LavenderColorScheme
 import eu.kanade.presentation.theme.colorscheme.MatrixColorScheme
@@ -213,4 +214,5 @@ private val colorSchemes: Map<AppTheme, BaseColorScheme> = mapOf(
     AppTheme.ONYX_GOLD to OnyxGoldColorScheme,
     AppTheme.SAKURA_NOIR to SakuraNoirColorScheme,
     AppTheme.NEBULA_TIDE to NebulaTideColorScheme,
+    AppTheme.EVENT_HORIZON to EventHorizonColorScheme,
 )

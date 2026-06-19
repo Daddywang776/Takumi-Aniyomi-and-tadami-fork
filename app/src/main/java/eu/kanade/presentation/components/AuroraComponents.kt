@@ -918,6 +918,117 @@ private fun AuroraSpecialBackgroundCanvas(
                     center = center,
                 )
             }
+            "event_horizon_library" -> {
+                val center = Offset(size.width * 0.5f, size.height * 0.48f)
+                val time = if (animate) elapsedSeconds else 0f
+                val minDim = size.minDimension
+                val horizon = minDim * 0.18f
+                val infrared = Color(0xFFFF4D2E)
+                val lensGreen = Color(0xFFB7FF6A)
+                val xray = Color(0xFFF8F3E6)
+                val void = Color(0xFF020103)
+                val phase = time * 0.075f
+                val pulse = 0.82f + 0.12f * kotlin.math.sin(time * 0.9f)
+
+                drawRect(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color(0xFF24121B).copy(alpha = 0.72f),
+                            Color(0xFF070407).copy(alpha = 0.88f),
+                            Color.Black,
+                        ),
+                        center = center,
+                        radius = minDim * 0.78f,
+                    ),
+                )
+
+                repeat(28) { index ->
+                    val lane = index % 7
+                    val y = size.height * (0.12f + lane * 0.105f)
+                    val drift = ((phase + index * 0.137f) % 1f) * size.width
+                    val alpha = if (index % 4 == 0) 0.10f else 0.055f
+                    drawLine(
+                        color = xray.copy(alpha = alpha),
+                        start = Offset(drift - size.width * 0.42f, y),
+                        end = Offset(drift - size.width * 0.14f, y - minDim * 0.025f),
+                        strokeWidth = 0.65.dp.toPx(),
+                    )
+                }
+
+                listOf(1.42f to 0.25f, 1.16f to 0.18f, 0.88f to 0.12f).forEachIndexed { index, (scaleX, alpha) ->
+                    withTransform({
+                        rotate(degrees = -13f + time * (2.2f + index), pivot = center)
+                        scale(scaleX = scaleX, scaleY = 0.31f, pivot = center)
+                    }) {
+                        drawCircle(
+                            color = infrared.copy(alpha = alpha * pulse),
+                            radius = horizon * (2.0f + index * 0.22f),
+                            center = center,
+                            style = Stroke(width = (3.6f - index * 0.8f).dp.toPx(), cap = StrokeCap.Round),
+                        )
+                    }
+                }
+
+                withTransform({
+                    rotate(degrees = 23f - time * 1.4f, pivot = center)
+                    scale(scaleX = 1.82f, scaleY = 0.20f, pivot = center)
+                }) {
+                    drawCircle(
+                        color = lensGreen.copy(alpha = 0.22f * pulse),
+                        radius = horizon * 2.15f,
+                        center = center,
+                        style = Stroke(width = 1.2.dp.toPx(), cap = StrokeCap.Round),
+                    )
+                }
+
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            Color.Black,
+                            void.copy(alpha = 0.98f),
+                            Color.Transparent,
+                        ),
+                        center = center,
+                        radius = horizon * 1.06f,
+                    ),
+                    radius = horizon * 1.06f,
+                    center = center,
+                )
+                drawCircle(
+                    color = xray.copy(alpha = 0.22f * pulse),
+                    radius = horizon * 1.08f,
+                    center = center,
+                    style = Stroke(width = 0.8.dp.toPx()),
+                )
+
+                repeat(16) { index ->
+                    val angle = time * (0.05f + index * 0.002f) + index * 0.74f
+                    val radius = horizon * (1.55f + (index % 4) * 0.32f)
+                    val x = center.x + kotlin.math.cos(angle) * radius * 1.92f
+                    val y = center.y + kotlin.math.sin(angle) * radius * 0.48f + minDim * 0.16f
+                    withTransform({ rotate(degrees = angle * 57.2958f + 90f, pivot = Offset(x, y)) }) {
+                        drawRoundRect(
+                            color = (if (index % 3 == 0) lensGreen else xray).copy(alpha = 0.16f),
+                            topLeft = Offset(x - 14.dp.toPx(), y - 2.dp.toPx()),
+                            size = androidx.compose.ui.geometry.Size(28.dp.toPx(), 3.2.dp.toPx()),
+                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(3.dp.toPx(), 3.dp.toPx()),
+                        )
+                    }
+                }
+
+                val gateTop = size.height * 0.16f
+                val gateBottom = size.height * 0.86f
+                val gateLeft = size.width * 0.08f
+                val gateRight = size.width * 0.92f
+                listOf(gateLeft, gateRight).forEach { x ->
+                    drawLine(
+                        color = xray.copy(alpha = 0.11f),
+                        start = Offset(x, gateTop),
+                        end = Offset(x, gateBottom),
+                        strokeWidth = 1.dp.toPx(),
+                    )
+                }
+            }
             "deep_space_archive" -> {
                 val center = Offset(size.width * 0.5f, size.height * 0.52f)
                 val minDim = size.minDimension

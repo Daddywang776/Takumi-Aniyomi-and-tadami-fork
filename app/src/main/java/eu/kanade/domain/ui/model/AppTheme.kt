@@ -32,6 +32,7 @@ enum class AppTheme(
     ONYX_GOLD(AYMR.strings.theme_onyx_gold, isHidden = true),
     SAKURA_NOIR(AYMR.strings.theme_sakura_noir, isHidden = true),
     NEBULA_TIDE(AYMR.strings.theme_nebula_tide, isHidden = true),
+    EVENT_HORIZON(AYMR.strings.theme_event_horizon, isHidden = true),
 
     // Deprecated
     DARK_BLUE(null),
