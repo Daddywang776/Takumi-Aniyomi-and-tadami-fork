@@ -25,7 +25,7 @@ class UnlockableManager(
 
     companion object {
         private const val PREFIX = "unlocked_"
-        private val EXCLUSIVE_THEME_IDS = setOf("ONYX_GOLD", "SAKURA_NOIR", "NEBULA_TIDE")
+        private val EXCLUSIVE_THEME_IDS = setOf("ONYX_GOLD", "SAKURA_NOIR", "NEBULA_TIDE", "EVENT_HORIZON")
     }
 
     /**
@@ -207,6 +207,7 @@ class UnlockableManager(
             "theme_ONYX_GOLD" -> MR.strings.unlockable_theme_ONYX_GOLD
             "theme_SAKURA_NOIR" -> MR.strings.unlockable_theme_SAKURA_NOIR
             "theme_NEBULA_TIDE" -> MR.strings.unlockable_theme_NEBULA_TIDE
+            "theme_EVENT_HORIZON" -> MR.strings.unlockable_theme_EVENT_HORIZON
 
             // Badges
             "badge_achievement_master" -> MR.strings.unlockable_badge_achievement_master
@@ -244,6 +245,7 @@ class UnlockableManager(
             // Special visual rewards
             "special_background_petal_storm" -> MR.strings.unlockable_special_background_petal_storm
             "special_background_neon_orbit" -> MR.strings.unlockable_special_background_neon_orbit
+            "special_background_event_horizon_library" -> MR.strings.unlockable_special_background_event_horizon_library
 
             else -> null
         }

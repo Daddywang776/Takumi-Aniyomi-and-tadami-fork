@@ -156,6 +156,11 @@ class UnlockableManagerTest {
         val goldThemeRes = manager.getUnlockableNameRes("theme_achievement_gold")
         goldThemeRes shouldBe tachiyomi.i18n.MR.strings.unlockable_theme_achievement_gold
 
+        manager.getUnlockableNameRes("theme_EVENT_HORIZON") shouldBe
+            tachiyomi.i18n.MR.strings.unlockable_theme_EVENT_HORIZON
+        manager.getUnlockableNameRes("special_background_event_horizon_library") shouldBe
+            tachiyomi.i18n.MR.strings.unlockable_special_background_event_horizon_library
+
         val invalidRes = manager.getUnlockableNameRes("nonexistent_reward")
         invalidRes shouldBe null
     }

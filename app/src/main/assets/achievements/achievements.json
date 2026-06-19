@@ -1829,6 +1829,47 @@
       ]
     },
     {
+      "id": "event_horizon_cartographer",
+      "type": "diversity",
+      "category": "both",
+      "threshold": 100,
+      "points": 450,
+      "title": "Event horizon cartographer",
+      "description": "Curate 12 manga, 12 anime, 12 novels, and 12 different sources",
+      "badge_icon": "ic_badge_secret_eren",
+      "is_hidden": false,
+      "is_secret": false,
+      "rarity": "mythic",
+      "tags": [
+        "both",
+        "diversity",
+        "library",
+        "source",
+        "aurora"
+      ],
+      "season": null,
+      "rewards": [
+        {
+          "type": "THEME",
+          "id": "theme_EVENT_HORIZON",
+          "title": "Event Horizon",
+          "description": "Obsidian-violet Aurora theme with accretion-disk contrast and singularity glow"
+        },
+        {
+          "type": "SPECIAL",
+          "id": "special_background_event_horizon_library",
+          "title": "Event Horizon Library",
+          "description": "A living singularity background with orbiting archive shards"
+        },
+        {
+          "type": "TITLE",
+          "id": "title_event_horizon_cartographer",
+          "title": "Event Horizon Cartographer",
+          "description": "Mapped the edge of every realm"
+        }
+      ]
+    },
+    {
       "id": "the_finisher",
       "type": "library",
       "category": "both",

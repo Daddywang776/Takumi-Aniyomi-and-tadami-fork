@@ -332,6 +332,10 @@ internal fun achievementTextResourceRefs(achievementId: String): AchievementText
             AYMR.strings.achievement_three_realms_collector_title,
             AYMR.strings.achievement_three_realms_collector_desc,
         )
+        "event_horizon_cartographer" -> text(
+            AYMR.strings.achievement_event_horizon_cartographer_title,
+            AYMR.strings.achievement_event_horizon_cartographer_desc,
+        )
         "the_finisher" -> text(
             AYMR.strings.achievement_the_finisher_title,
             AYMR.strings.achievement_the_finisher_desc,

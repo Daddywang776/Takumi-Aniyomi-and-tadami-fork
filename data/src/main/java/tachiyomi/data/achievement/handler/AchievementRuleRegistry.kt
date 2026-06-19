@@ -10,6 +10,7 @@ import tachiyomi.data.achievement.rules.DarkFantasyRule
 import tachiyomi.data.achievement.rules.DekuRule
 import tachiyomi.data.achievement.rules.DiversityRule
 import tachiyomi.data.achievement.rules.ErenRule
+import tachiyomi.data.achievement.rules.EventHorizonCartographerRule
 import tachiyomi.data.achievement.rules.EventRule
 import tachiyomi.data.achievement.rules.FeatureBasedRule
 import tachiyomi.data.achievement.rules.GenreCountRule
@@ -116,6 +117,7 @@ class AchievementRuleRegistry(
 
             // Three Realms balanced library -- NEW
             ThreeRealmsRule("three_realms_collector"),
+            EventHorizonCartographerRule(),
 
             // Completion ratio -- NEW
             CompletionRatioRule("the_finisher", minLibrarySize = 10),
