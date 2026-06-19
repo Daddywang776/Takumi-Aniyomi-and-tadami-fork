@@ -58,4 +58,35 @@ class NovelPluginIndexParserTest {
         plugins[0].versionName shouldBe "3"
         plugins[0].sha256 shouldBe "abcd"
     }
+
+    @Test
+    fun `parses tachiyomi kotlin novel extension index payload`() {
+        val payload = """
+            [
+              {
+                "name": "NovelApp: Shosetsu",
+                "pkg": "eu.kanade.tachiyomi.novelextension.all.shosetsu",
+                "apk": "tsundoku-all.shosetsu-v1.4.8.apk",
+                "lang": "all",
+                "code": 8,
+                "version": "1.4.8",
+                "nsfw": 0,
+                "isNovel": true,
+                "sources": []
+              }
+            ]
+        """.trimIndent()
+        val parser = NovelPluginIndexParser(json)
+
+        val plugins = parser.parse(payload, "https://raw.githubusercontent.com/wasu-code/novel-compat-shosetsu/repo")
+
+        plugins.size shouldBe 1
+        plugins[0].id shouldBe "eu.kanade.tachiyomi.novelextension.all.shosetsu"
+        plugins[0].name shouldBe "Shosetsu"
+        plugins[0].versionCode shouldBe 8
+        plugins[0].versionName shouldBe "1.4.8"
+        plugins[0].apkUrl shouldBe
+            "https://raw.githubusercontent.com/wasu-code/novel-compat-shosetsu/repo/apk/tsundoku-all.shosetsu-v1.4.8.apk"
+        plugins[0].isKotlinExtension shouldBe true
+    }
 }

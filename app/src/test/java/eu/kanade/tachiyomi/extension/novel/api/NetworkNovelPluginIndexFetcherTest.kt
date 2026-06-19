@@ -60,4 +60,22 @@ class NetworkNovelPluginIndexFetcherTest {
         server.takeRequest().path shouldBe "/plugins.min.json"
         server.takeRequest().path shouldBe "/plugins.json"
     }
+
+    @Test
+    fun `falls back to tachiyomi index json after novel plugin indexes fail`() = runTest {
+        server.enqueue(MockResponse().setResponseCode(404))
+        server.enqueue(MockResponse().setResponseCode(404))
+        server.enqueue(MockResponse().setResponseCode(404))
+        server.enqueue(MockResponse().setBody("[]"))
+        val baseUrl = server.url("/").toString().trimEnd('/')
+
+        val fetcher = NetworkNovelPluginIndexFetcher(OkHttpClient())
+        val payload = fetcher.fetch(baseUrl)
+
+        payload shouldBe "[]"
+        server.takeRequest().path shouldBe "/plugins.min.json"
+        server.takeRequest().path shouldBe "/plugins.json"
+        server.takeRequest().path shouldBe "/index.min.json"
+        server.takeRequest().path shouldBe "/index.json"
+    }
 }

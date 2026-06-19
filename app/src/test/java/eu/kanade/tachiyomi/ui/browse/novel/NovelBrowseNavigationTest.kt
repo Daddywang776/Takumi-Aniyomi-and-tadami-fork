@@ -26,10 +26,10 @@ class NovelBrowseNavigationTest {
     }
 
     @Test
-    fun `extension list settings navigation converts plugin id to source id`() {
-        val screen = novelExtensionSettingsScreen("komga")
+    fun `extension list settings navigation keeps resolved source id`() {
+        val screen = novelExtensionSettingsScreen(42L)
 
-        screen.sourceId shouldBe eu.kanade.tachiyomi.extension.novel.NovelPluginId.toSourceId("komga")
+        screen.sourceId shouldBe 42L
     }
 
     @Test

@@ -101,7 +101,7 @@ fun NovelExtensionScreen(
     onUpdateExtension: (NovelPlugin.Installed) -> Unit,
     onReinstallExtension: (NovelPlugin.Installed) -> Unit,
     onOpenExtension: (NovelPlugin.Installed) -> Unit,
-    onOpenExtensionSettings: (NovelPlugin.Installed) -> Unit,
+    onOpenExtensionSettings: (Long) -> Unit,
     onUninstallExtension: (NovelPlugin.Installed) -> Unit,
     onUpdateAll: () -> Unit,
     onRefresh: () -> Unit,
@@ -160,7 +160,7 @@ private fun NovelExtensionContent(
     onUpdateExtension: (NovelPlugin.Installed) -> Unit,
     onReinstallExtension: (NovelPlugin.Installed) -> Unit,
     onOpenExtension: (NovelPlugin.Installed) -> Unit,
-    onOpenExtensionSettings: (NovelPlugin.Installed) -> Unit,
+    onOpenExtensionSettings: (Long) -> Unit,
     onUninstallExtension: (NovelPlugin.Installed) -> Unit,
     onUpdateAll: () -> Unit,
     onToggleSection: (String) -> Unit,
@@ -274,7 +274,7 @@ private fun NovelExtensionItemRow(
     onUpdateExtension: ((NovelPlugin.Installed) -> Unit)? = null,
     onReinstallExtension: ((NovelPlugin.Installed) -> Unit)? = null,
     onOpenExtension: ((NovelPlugin.Installed) -> Unit)? = null,
-    onOpenExtensionSettings: ((NovelPlugin.Installed) -> Unit)? = null,
+    onOpenExtensionSettings: ((Long) -> Unit)? = null,
     onUninstallExtension: ((NovelPlugin.Installed) -> Unit)? = null,
 ) {
     val plugin = item.plugin
@@ -348,8 +348,8 @@ private fun NovelExtensionItemRow(
                     }
                     plugin is NovelPlugin.Installed -> {
                         Row {
-                            if (onOpenExtensionSettings != null && item.hasSettings) {
-                                IconButton(onClick = { onOpenExtensionSettings(plugin) }) {
+                            if (onOpenExtensionSettings != null && item.settingsSourceId != null) {
+                                IconButton(onClick = { onOpenExtensionSettings(item.settingsSourceId) }) {
                                     Icon(
                                         imageVector = Icons.Outlined.Settings,
                                         contentDescription = stringResource(MR.strings.action_settings),

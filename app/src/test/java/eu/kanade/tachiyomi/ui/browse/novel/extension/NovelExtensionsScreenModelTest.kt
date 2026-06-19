@@ -268,6 +268,41 @@ class NovelExtensionsScreenModelTest {
 
             val item = screenModel.state.value.items.first { it.plugin.id == "komga" }
             item.hasSettings shouldBe true
+            item.settingsSourceId shouldBe 1L
+        }
+    }
+
+    @Test
+    fun `installed kotlin plugin settings uses actual source id instead of plugin hash`() {
+        runBlocking {
+            val installed = pluginInstalled("eu.kanade.tachiyomi.novelextension.all.shosetsu", 1)
+
+            val screenModel = NovelExtensionsScreenModel(
+                extensionManager = FakeNovelExtensionManager(
+                    installed = listOf(installed),
+                    installedSources = listOf(
+                        FakeNovelPluginSource(
+                            id = 42L,
+                            pluginId = "eu.kanade.tachiyomi.novelextension.all.shosetsu",
+                            hasSettings = true,
+                        ),
+                    ),
+                    available = emptyList(),
+                    updates = emptyList(),
+                ),
+                sourcePreferences = sourcePreferences,
+            ).also(activeScreenModels::add)
+
+            withTimeout(1_000) {
+                while (screenModel.state.value.isLoading) {
+                    yield()
+                }
+            }
+
+            val item = screenModel.state.value.items.first {
+                it.plugin.id == "eu.kanade.tachiyomi.novelextension.all.shosetsu"
+            }
+            item.settingsSourceId shouldBe 42L
         }
     }
 

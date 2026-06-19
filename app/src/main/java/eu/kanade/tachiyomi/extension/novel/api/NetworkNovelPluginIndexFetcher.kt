@@ -20,6 +20,7 @@ class NetworkNovelPluginIndexFetcher(
                     "$baseUrl/plugins.min.json",
                     "$baseUrl/plugins.json",
                     "$baseUrl/index.min.json",
+                    "$baseUrl/index.json",
                 )
             }
 

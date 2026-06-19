@@ -7,6 +7,7 @@ import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.presentation.components.SEARCH_DEBOUNCE_MILLIS
 import eu.kanade.tachiyomi.extension.InstallStep
 import eu.kanade.tachiyomi.extension.novel.NovelExtensionManager
+import eu.kanade.tachiyomi.extension.novel.NovelPluginId
 import eu.kanade.tachiyomi.extension.novel.runtime.NovelPluginIdentitySource
 import eu.kanade.tachiyomi.extension.novel.runtime.hasVisiblePluginSettingsByDiscovery
 import eu.kanade.tachiyomi.util.system.LocaleHelper
@@ -73,11 +74,15 @@ class NovelExtensionsScreenModel(
                 val available = variantsMap.mapNotNull { (_, plugins) ->
                     plugins.maxWithOrNull(NOVEL_AVAILABLE_COMPARATOR)
                 }
-                val installedSettingsPluginIds = input.installedSources
+                val installedSettingsSourceIdsByPluginId = input.installedSources
                     .asSequence()
                     .filter { source -> source.hasVisiblePluginSettingsByDiscovery() }
-                    .mapNotNull { source -> (source as? NovelPluginIdentitySource)?.pluginId }
-                    .toSet()
+                    .mapNotNull { source ->
+                        val pluginId = (source as? NovelPluginIdentitySource)?.pluginId ?: return@mapNotNull null
+                        pluginId to source.id
+                    }
+                    .groupBy({ it.first }, { it.second })
+                    .mapValues { (_, sourceIds) -> sourceIds.first() }
                 val searchQuery = input.query
 
                 val updateStatesById = input.installed.associate { plugin ->
@@ -117,7 +122,7 @@ class NovelExtensionsScreenModel(
                                 plugin = plugin,
                                 status = NovelExtensionItem.Status.UpdateAvailable,
                                 installStep = input.downloads[plugin.id] ?: InstallStep.Idle,
-                                hasSettings = plugin.hasSettings || plugin.id in installedSettingsPluginIds,
+                                settingsSourceId = plugin.settingsSourceId(installedSettingsSourceIdsByPluginId),
                                 repoSourceCount = repoCounts[plugin.id] ?: 1,
                                 hasUpdate = updateState.hasSameRepoUpdate,
                                 hasRepoUpdate = updateState.hasOtherRepoUpdate,
@@ -131,7 +136,7 @@ class NovelExtensionsScreenModel(
                                 plugin = plugin,
                                 status = NovelExtensionItem.Status.Installed,
                                 installStep = input.downloads[plugin.id] ?: InstallStep.Idle,
-                                hasSettings = plugin.hasSettings || plugin.id in installedSettingsPluginIds,
+                                settingsSourceId = plugin.settingsSourceId(installedSettingsSourceIdsByPluginId),
                                 repoSourceCount = repoCounts[plugin.id] ?: 1,
                                 repoDisplayName = plugin.fallbackRepoDisplayName(variantsMap[plugin.id].orEmpty()),
                             ),
@@ -143,7 +148,7 @@ class NovelExtensionsScreenModel(
                                 plugin = plugin,
                                 status = NovelExtensionItem.Status.Available,
                                 installStep = input.downloads[plugin.id] ?: InstallStep.Idle,
-                                hasSettings = plugin.hasSettings,
+                                settingsSourceId = null,
                                 repoSourceCount = repoCounts[plugin.id] ?: 1,
                             ),
                         )
@@ -348,17 +353,26 @@ data class NovelExtensionItem(
     val plugin: NovelPlugin,
     val status: Status,
     val installStep: InstallStep,
-    val hasSettings: Boolean,
+    val settingsSourceId: Long?,
     val repoSourceCount: Int = 1,
     val hasUpdate: Boolean = false,
     val hasRepoUpdate: Boolean = false,
     val repoDisplayName: String? = null,
 ) {
+    val hasSettings: Boolean
+        get() = settingsSourceId != null
+
     sealed interface Status {
         data object UpdateAvailable : Status
         data object Installed : Status
         data object Available : Status
     }
+}
+
+private fun NovelPlugin.Installed.settingsSourceId(
+    sourceIdsByPluginId: Map<String, Long>,
+): Long? {
+    return sourceIdsByPluginId[id] ?: if (hasSettings) NovelPluginId.toSourceId(id) else null
 }
 
 private fun NovelPlugin.Installed.fallbackRepoDisplayName(

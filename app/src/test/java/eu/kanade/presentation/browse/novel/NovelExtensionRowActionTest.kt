@@ -106,7 +106,7 @@ class NovelExtensionRowActionTest {
         plugin = plugin,
         status = status,
         installStep = installStep,
-        hasSettings = false,
+        settingsSourceId = null,
         hasUpdate = hasUpdate,
         hasRepoUpdate = hasRepoUpdate,
     )

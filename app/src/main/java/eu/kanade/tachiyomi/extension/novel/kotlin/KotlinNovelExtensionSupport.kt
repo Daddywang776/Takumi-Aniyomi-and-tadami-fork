@@ -21,6 +21,7 @@ import androidx.preference.PreferenceScreen
 import dalvik.system.PathClassLoader
 import eu.kanade.domain.extension.novel.interactor.TrustNovelExtension
 import eu.kanade.domain.source.service.SourcePreferences
+import eu.kanade.tachiyomi.extension.novel.runtime.NovelPluginIdentitySource
 import eu.kanade.tachiyomi.network.GET
 import eu.kanade.tachiyomi.network.awaitSuccess
 import eu.kanade.tachiyomi.novelsource.ConfigurableNovelSource
@@ -303,7 +304,7 @@ object KotlinNovelExtensionLoader {
                 instantiateSources(classLoader, appInfo.sourceDir, className, extName)
                     ?: return null
             }
-            .mapNotNull { it.asNovelSource() }
+            .mapNotNull { it.asNovelSource(pkgName) }
 
         if (sources.isEmpty()) {
             logcat(LogPriority.WARN) { "Kotlin novel extension $pkgName did not expose any compatible novel sources" }
@@ -400,18 +401,18 @@ object KotlinNovelExtensionLoader {
         }
     }
 
-    private fun Any.asNovelSource(): NovelSource? {
+    private fun Any.asNovelSource(pluginId: String): NovelSource? {
         return when (this) {
-            is NovelSource -> this
+            is NovelSource -> this.withKotlinPluginIdentity(pluginId)
             is CatalogueSource -> if (this is ConfigurableSource) {
-                KotlinConfigurableCatalogueNovelSourceAdapter(this, this)
+                KotlinConfigurableCatalogueNovelSourceAdapter(this, this, pluginId)
             } else {
-                KotlinCatalogueNovelSourceAdapter(this)
+                KotlinCatalogueNovelSourceAdapter(this, pluginId)
             }
             is TachiyomiSource -> if (this is ConfigurableSource) {
-                KotlinConfigurableMangaNovelSourceAdapter(this)
+                KotlinConfigurableMangaNovelSourceAdapter(this, pluginId)
             } else {
-                KotlinMangaNovelSourceAdapter(this)
+                KotlinMangaNovelSourceAdapter(this, pluginId)
             }
             else -> null
         }
@@ -469,8 +470,8 @@ object KotlinNovelExtensionLoader {
     }
 
     private fun ApplicationInfo.fixBasePaths(apkPath: String) {
-        if (sourceDir == null) sourceDir = apkPath
-        if (publicSourceDir == null) publicSourceDir = apkPath
+        sourceDir = apkPath
+        publicSourceDir = apkPath
     }
 
     private data class ExtensionInfo(
@@ -479,9 +480,112 @@ object KotlinNovelExtensionLoader {
     )
 }
 
+private fun NovelSource.withKotlinPluginIdentity(pluginId: String): NovelSource {
+    if (this is NovelPluginIdentitySource) return this
+    return when {
+        this is NovelCatalogueSource && this is ConfigurableNovelSource -> {
+            KotlinIdentityConfigurableCatalogueNovelSourceAdapter(this, this, pluginId)
+        }
+        this is NovelCatalogueSource -> KotlinIdentityCatalogueNovelSourceAdapter(this, pluginId)
+        this is ConfigurableNovelSource -> KotlinIdentityConfigurableNovelSourceAdapter(this, pluginId)
+        else -> KotlinIdentityBasicNovelSourceAdapter(this, pluginId)
+    }
+}
+
+private open class KotlinIdentityBasicNovelSourceAdapter(
+    protected val source: NovelSource,
+    override val pluginId: String,
+) : NovelSource, NovelSiteSource, NovelPluginIdentitySource {
+    override val id: Long = source.id
+    override val name: String = source.name
+    override val lang: String = source.lang
+    override val siteUrl: String? = (source as? NovelSiteSource)?.siteUrl
+
+    override suspend fun getNovelDetails(novel: SNovel): SNovel = source.getNovelDetails(novel)
+
+    override suspend fun getChapterList(novel: SNovel): List<SNovelChapter> = source.getChapterList(novel)
+
+    override suspend fun getChapterText(chapter: SNovelChapter): String = source.getChapterText(chapter)
+
+    @Deprecated("Use the non-RxJava API instead.")
+    @Suppress("DEPRECATION")
+    override fun fetchNovelDetails(novel: SNovel): Observable<SNovel> = source.fetchNovelDetails(novel)
+
+    @Deprecated("Use the non-RxJava API instead.")
+    @Suppress("DEPRECATION")
+    override fun fetchChapterList(novel: SNovel): Observable<List<SNovelChapter>> = source.fetchChapterList(novel)
+
+    @Deprecated("Use the non-RxJava API instead.")
+    @Suppress("DEPRECATION")
+    override fun fetchChapterText(chapter: SNovelChapter): Observable<String> = source.fetchChapterText(chapter)
+}
+
+private open class KotlinIdentityCatalogueNovelSourceAdapter(
+    protected val catalogueSource: NovelCatalogueSource,
+    pluginId: String,
+) : KotlinIdentityBasicNovelSourceAdapter(catalogueSource, pluginId), NovelCatalogueSource {
+    override val supportsLatest: Boolean = catalogueSource.supportsLatest
+
+    override suspend fun getPopularNovels(page: Int): NovelsPage = catalogueSource.getPopularNovels(page)
+
+    override suspend fun getPopularNovels(page: Int, filters: NovelFilterList): NovelsPage {
+        return catalogueSource.getPopularNovels(page, filters)
+    }
+
+    override suspend fun getSearchNovels(page: Int, query: String, filters: NovelFilterList): NovelsPage {
+        return catalogueSource.getSearchNovels(page, query, filters)
+    }
+
+    override suspend fun getLatestUpdates(page: Int): NovelsPage = catalogueSource.getLatestUpdates(page)
+
+    override suspend fun getLatestUpdates(page: Int, filters: NovelFilterList): NovelsPage {
+        return catalogueSource.getLatestUpdates(page, filters)
+    }
+
+    override fun getFilterList(): NovelFilterList = catalogueSource.getFilterList()
+
+    @Deprecated("Use the non-RxJava API instead.")
+    @Suppress("DEPRECATION")
+    override fun fetchPopularNovels(page: Int): Observable<NovelsPage> {
+        return catalogueSource.fetchPopularNovels(page)
+    }
+
+    @Deprecated("Use the non-RxJava API instead.")
+    @Suppress("DEPRECATION")
+    override fun fetchSearchNovels(page: Int, query: String, filters: NovelFilterList): Observable<NovelsPage> {
+        return catalogueSource.fetchSearchNovels(page, query, filters)
+    }
+
+    @Deprecated("Use the non-RxJava API instead.")
+    @Suppress("DEPRECATION")
+    override fun fetchLatestUpdates(page: Int): Observable<NovelsPage> {
+        return catalogueSource.fetchLatestUpdates(page)
+    }
+}
+
+private class KotlinIdentityConfigurableNovelSourceAdapter(
+    source: ConfigurableNovelSource,
+    pluginId: String,
+) : KotlinIdentityBasicNovelSourceAdapter(source, pluginId), ConfigurableNovelSource {
+    override fun setupPreferenceScreen(screen: PreferenceScreen) {
+        (source as ConfigurableNovelSource).setupPreferenceScreen(screen)
+    }
+}
+
+private class KotlinIdentityConfigurableCatalogueNovelSourceAdapter(
+    catalogueSource: NovelCatalogueSource,
+    private val configurableSource: ConfigurableNovelSource,
+    pluginId: String,
+) : KotlinIdentityCatalogueNovelSourceAdapter(catalogueSource, pluginId), ConfigurableNovelSource {
+    override fun setupPreferenceScreen(screen: PreferenceScreen) {
+        configurableSource.setupPreferenceScreen(screen)
+    }
+}
+
 private open class KotlinMangaNovelSourceAdapter(
     protected val source: TachiyomiSource,
-) : NovelSource, NovelSiteSource {
+    override val pluginId: String,
+) : NovelSource, NovelSiteSource, NovelPluginIdentitySource {
     override val id: Long = source.id
     override val name: String = source.name
     override val lang: String = source.lang
@@ -505,7 +609,8 @@ private open class KotlinMangaNovelSourceAdapter(
 
 private open class KotlinConfigurableMangaNovelSourceAdapter(
     source: ConfigurableSource,
-) : KotlinMangaNovelSourceAdapter(source), ConfigurableNovelSource {
+    pluginId: String,
+) : KotlinMangaNovelSourceAdapter(source, pluginId), ConfigurableNovelSource {
     private val configurableSource: ConfigurableSource = source
 
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
@@ -515,7 +620,8 @@ private open class KotlinConfigurableMangaNovelSourceAdapter(
 
 private open class KotlinCatalogueNovelSourceAdapter(
     source: CatalogueSource,
-) : KotlinMangaNovelSourceAdapter(source), NovelCatalogueSource {
+    pluginId: String,
+) : KotlinMangaNovelSourceAdapter(source, pluginId), NovelCatalogueSource {
     private val catalogueSource: CatalogueSource = source
 
     override val supportsLatest: Boolean = catalogueSource.supportsLatest
@@ -566,7 +672,8 @@ private open class KotlinCatalogueNovelSourceAdapter(
 private class KotlinConfigurableCatalogueNovelSourceAdapter(
     source: CatalogueSource,
     private val configurableSource: ConfigurableSource,
-) : KotlinCatalogueNovelSourceAdapter(source), ConfigurableNovelSource {
+    pluginId: String,
+) : KotlinCatalogueNovelSourceAdapter(source, pluginId), ConfigurableNovelSource {
 
     override fun setupPreferenceScreen(screen: PreferenceScreen) {
         configurableSource.setupPreferenceScreen(screen)
