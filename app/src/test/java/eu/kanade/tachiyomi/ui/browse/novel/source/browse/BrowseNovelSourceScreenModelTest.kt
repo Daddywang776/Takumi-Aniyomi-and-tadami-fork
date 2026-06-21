@@ -188,7 +188,7 @@ class BrowseNovelSourceScreenModelTest {
     }
 
     @Test
-    fun `applyFilters increments filter version for popular listing`() {
+    fun `applyFilters switches popular listing to blank search and increments filter version`() {
         val source = FakeNovelCatalogueSource(id = 1L, name = "Novel", lang = "en")
         val sourceManager = FakeNovelSourceManager(source)
         val prefs = SourcePreferences(FakePreferenceStore())
@@ -211,7 +211,8 @@ class BrowseNovelSourceScreenModelTest {
         screenModel.applyFilters()
         val state = screenModel.state.value
         state.filterVersion shouldBe 1
-        state.listing shouldBe BrowseNovelSourceScreenModel.Listing.Popular
+        val listing = state.listing as BrowseNovelSourceScreenModel.Listing.Search
+        listing.query shouldBe null
     }
 
     @Test
@@ -244,7 +245,7 @@ class BrowseNovelSourceScreenModelTest {
     }
 
     @Test
-    fun `applyFilters keeps popular listing and bumps version when filters are available`() {
+    fun `applyFilters switches popular listing to blank search when filters are available`() {
         runBlocking {
             val source = FakeNovelCatalogueSourceWithFilters(
                 id = 1L,
@@ -284,13 +285,14 @@ class BrowseNovelSourceScreenModelTest {
             screenModel.applyFilters()
             val state = screenModel.state.value
 
-            state.listing shouldBe BrowseNovelSourceScreenModel.Listing.Popular
+            val listing = state.listing as BrowseNovelSourceScreenModel.Listing.Search
+            listing.query shouldBe null
             state.filterVersion shouldBe beforeVersion + 1
         }
     }
 
     @Test
-    fun `applyFilters does not expose internal latest query in toolbar`() {
+    fun `applyFilters switches latest listing to blank search without exposing internal query`() {
         val source = FakeNovelCatalogueSource(id = 1L, name = "Novel", lang = "en")
         val sourceManager = FakeNovelSourceManager(source)
         val prefs = SourcePreferences(FakePreferenceStore())
@@ -313,7 +315,8 @@ class BrowseNovelSourceScreenModelTest {
         screenModel.applyFilters()
         val state = screenModel.state.value
 
-        state.listing shouldBe BrowseNovelSourceScreenModel.Listing.Latest
+        val listing = state.listing as BrowseNovelSourceScreenModel.Listing.Search
+        listing.query shouldBe null
         state.toolbarQuery shouldBe null
         state.filterVersion shouldBe beforeVersion + 1
     }
@@ -360,7 +363,7 @@ class BrowseNovelSourceScreenModelTest {
     }
 
     @Test
-    fun `openFilterSheet loads async filters`() {
+    fun `init loads filters asynchronously so filter chip can be shown`() {
         runBlocking {
             val source = FakeNovelCatalogueSourceWithFilters(
                 id = 1L,
@@ -386,10 +389,6 @@ class BrowseNovelSourceScreenModelTest {
                     networkToLocalNovel = networkToLocal,
                 ),
             )
-
-            screenModel.state.value.filters.isEmpty() shouldBe true
-
-            screenModel.openFilterSheet()
 
             repeat(20) {
                 if (screenModel.state.value.filters.isNotEmpty()) return@repeat

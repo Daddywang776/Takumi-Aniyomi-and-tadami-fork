@@ -17,6 +17,7 @@ import eu.kanade.presentation.util.ioCoroutineScope
 import eu.kanade.tachiyomi.extension.novel.runtime.hasVisiblePluginSettings
 import eu.kanade.tachiyomi.novelsource.ConfigurableNovelSource
 import eu.kanade.tachiyomi.novelsource.NovelCatalogueSource
+import eu.kanade.tachiyomi.novelsource.model.NovelFilter
 import eu.kanade.tachiyomi.novelsource.model.NovelFilterList
 import eu.kanade.tachiyomi.novelsource.model.SNovel
 import eu.kanade.tachiyomi.ui.browse.search.SavedSearchFilterSerializer
@@ -60,6 +61,68 @@ import tachiyomi.domain.source.novel.service.NovelSourceManager
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.time.Instant
+
+internal fun copyNovelFilterState(source: NovelFilterList, destination: NovelFilterList) {
+    copyNovelFilterState(source.toList(), destination.toList())
+}
+
+private fun copyNovelFilterState(source: List<NovelFilter<*>>, destination: List<NovelFilter<*>>) {
+    val matchedIndices = mutableSetOf<Int>()
+    source.forEach { sourceFilter ->
+        val destinationIndex = destination
+            .asSequence()
+            .withIndex()
+            .firstOrNull { (index, destinationFilter) ->
+                index !in matchedIndices && sourceFilter.isStateCompatibleWith(destinationFilter)
+            }
+            ?.index
+            ?: return@forEach
+        sourceFilter.copyStateTo(destination[destinationIndex])
+        matchedIndices.add(destinationIndex)
+    }
+}
+
+private fun NovelFilter<*>.isStateCompatibleWith(other: NovelFilter<*>): Boolean {
+    if (name != other.name) return false
+    return when (this) {
+        is NovelFilter.CheckBox -> other is NovelFilter.CheckBox
+        is NovelFilter.Switch -> other is NovelFilter.Switch
+        is NovelFilter.XCheckBox -> other is NovelFilter.XCheckBox || other is NovelFilter.TriState
+        is NovelFilter.TriState -> other is NovelFilter.TriState
+        is NovelFilter.Text -> other is NovelFilter.Text
+        is NovelFilter.Select<*> -> other is NovelFilter.Select<*>
+        is NovelFilter.Sort -> other is NovelFilter.Sort
+        is NovelFilter.Group<*> -> other is NovelFilter.Group<*>
+        is NovelFilter.Header -> other is NovelFilter.Header
+        is NovelFilter.Separator -> other is NovelFilter.Separator
+    }
+}
+
+@Suppress("UNCHECKED_CAST")
+private fun NovelFilter<*>.copyStateTo(destination: NovelFilter<*>) {
+    when {
+        this is NovelFilter.CheckBox && destination is NovelFilter.CheckBox -> destination.state = state
+        this is NovelFilter.Switch && destination is NovelFilter.Switch -> destination.state = state
+        this is NovelFilter.TriState && destination is NovelFilter.TriState -> destination.state = state
+        this is NovelFilter.Text && destination is NovelFilter.Text -> destination.state = state
+        this is NovelFilter.Select<*> && destination is NovelFilter.Select<*> -> destination.state = state
+        this is NovelFilter.Sort && destination is NovelFilter.Sort -> destination.state = state
+        this is NovelFilter.Group<*> && destination is NovelFilter.Group<*> -> {
+            val sourceChildren = state.filterIsInstance<NovelFilter<*>>()
+            val destinationChildren = destination.state.filterIsInstance<NovelFilter<*>>()
+            copyNovelFilterState(sourceChildren, destinationChildren)
+        }
+    }
+}
+
+internal fun BrowseNovelSourceScreenModel.Listing.withAppliedNovelFilters(
+    filters: NovelFilterList,
+): BrowseNovelSourceScreenModel.Listing.Search {
+    return when (this) {
+        is BrowseNovelSourceScreenModel.Listing.Search -> copy(filters = filters)
+        else -> BrowseNovelSourceScreenModel.Listing.Search(query = null, filters = filters)
+    }
+}
 
 class BrowseNovelSourceScreenModel(
     private val sourceId: Long,
@@ -106,6 +169,29 @@ class BrowseNovelSourceScreenModel(
 
         mutableState.update {
             it.copy(isSourceConfigurable = source is ConfigurableNovelSource || source.hasVisiblePluginSettings())
+        }
+
+        if (savedSearchId == null && source is NovelCatalogueSource) {
+            screenModelScope.launch {
+                val initialFilters = loadSourceFilters()
+                mutableState.update { current ->
+                    val updatedListing = when (val listing = current.listing) {
+                        is Listing.Search -> if (listing.filters.isEmpty()) {
+                            listing.copy(
+                                filters = initialFilters,
+                            )
+                        } else {
+                            listing
+                        }
+                        else -> current.listing
+                    }
+                    current.copy(
+                        listing = updatedListing,
+                        filters = if (current.filters.isEmpty()) initialFilters else current.filters,
+                        filtersLoaded = true,
+                    )
+                }
+            }
         }
 
         if (savedSearchId != null && source is NovelCatalogueSource) {
@@ -283,16 +369,20 @@ class BrowseNovelSourceScreenModel(
     fun setFilters(filters: NovelFilterList) {
         if (source !is NovelCatalogueSource) return
 
+        val currentFilters = state.value.filters
         val changed = try {
-            SavedSearchFilterSerializer.serialize(filters) != SavedSearchFilterSerializer.serialize(state.value.filters)
+            SavedSearchFilterSerializer.serialize(filters) != SavedSearchFilterSerializer.serialize(currentFilters)
         } catch (e: Exception) {
             true
         }
 
-        mutableState.update {
-            it.copy(
-                filters = filters,
-            )
+        mutableState.update { current ->
+            val updatedFilters = if (current.listing == Listing.Latest && filters !== current.filters) {
+                current.filters.also { copyNovelFilterState(filters, it) }
+            } else {
+                filters
+            }
+            current.copy(filters = updatedFilters)
         }
         if (changed) {
             achievementHandler.trackFeatureUsed(AchievementEvent.Feature.FILTER)
@@ -336,45 +426,20 @@ class BrowseNovelSourceScreenModel(
     fun applyFilters() {
         if (source !is NovelCatalogueSource) return
         mutableState.update { state ->
-            val updatedListing = when (val listing = state.listing) {
-                is Listing.Search -> listing.copy(filters = state.filters)
-                else -> listing
-            }
-            val updatedToolbarQuery = when (updatedListing) {
-                is Listing.Search -> updatedListing.query
-                else -> null
-            }
+            val appliedFilters = state.filters
+            val updatedListing = state.listing.withAppliedNovelFilters(appliedFilters)
             state.copy(
                 listing = updatedListing,
-                toolbarQuery = updatedToolbarQuery,
+                filters = appliedFilters,
+                toolbarQuery = updatedListing.query,
                 filterVersion = state.filterVersion + 1,
             )
         }
     }
 
     fun openFilterSheet() {
-        if (source !is NovelCatalogueSource || state.value.filtersLoaded) {
-            setDialog(Dialog.Filter)
-            return
-        }
-
-        screenModelScope.launch {
-            val loadedFilters = loadSourceFilters()
-            mutableState.update { current ->
-                val updatedListing = when (val listing = current.listing) {
-                    is Listing.Search -> {
-                        if (listing.filters.isEmpty()) listing.copy(filters = loadedFilters) else listing
-                    }
-                    else -> current.listing
-                }
-                current.copy(
-                    listing = updatedListing,
-                    filters = if (current.filters.isEmpty()) loadedFilters else current.filters,
-                    filtersLoaded = true,
-                    dialog = Dialog.Filter,
-                )
-            }
-        }
+        if (source !is NovelCatalogueSource) return
+        setDialog(Dialog.Filter)
     }
 
     fun setDialog(dialog: Dialog?) {

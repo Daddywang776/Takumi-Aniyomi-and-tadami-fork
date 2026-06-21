@@ -237,7 +237,7 @@ data class BrowseNovelSourceScreen(
                         filters = visibleNovelFiltersForListing(state.listing, state.filters),
                         onReset = screenModel::resetFilters,
                         onFilter = screenModel::applyFilters,
-                        onUpdate = { screenModel.setFilters(state.filters) },
+                        onUpdate = screenModel::setFilters,
                         savedSearches = screenModel.state.value.savedSearches,
                         onSaveSearch = screenModel::openSaveSearchDialog,
                         onOpenSavedSearch = screenModel::openSavedSearch,

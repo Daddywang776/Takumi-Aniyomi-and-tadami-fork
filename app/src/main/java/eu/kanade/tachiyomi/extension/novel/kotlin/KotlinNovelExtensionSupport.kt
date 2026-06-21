@@ -28,7 +28,6 @@ import eu.kanade.tachiyomi.novelsource.ConfigurableNovelSource
 import eu.kanade.tachiyomi.novelsource.NovelCatalogueSource
 import eu.kanade.tachiyomi.novelsource.NovelSource
 import eu.kanade.tachiyomi.novelsource.NovelSourceFactory
-import eu.kanade.tachiyomi.novelsource.model.NovelFilter
 import eu.kanade.tachiyomi.novelsource.model.NovelFilterList
 import eu.kanade.tachiyomi.novelsource.model.NovelsPage
 import eu.kanade.tachiyomi.novelsource.model.SNovel
@@ -37,8 +36,6 @@ import eu.kanade.tachiyomi.source.CatalogueSource
 import eu.kanade.tachiyomi.source.ConfigurableSource
 import eu.kanade.tachiyomi.source.MangaSource
 import eu.kanade.tachiyomi.source.SourceFactory
-import eu.kanade.tachiyomi.source.model.Filter
-import eu.kanade.tachiyomi.source.model.FilterList
 import eu.kanade.tachiyomi.source.model.MangasPage
 import eu.kanade.tachiyomi.source.model.Page
 import eu.kanade.tachiyomi.source.model.SChapter
@@ -621,6 +618,12 @@ private open class KotlinConfigurableMangaNovelSourceAdapter(
     }
 }
 
+internal fun CatalogueSource.asKotlinNovelCatalogueSource(pluginId: String): NovelCatalogueSource {
+    return KotlinCatalogueNovelSourceAdapter(this, pluginId)
+}
+
+private val filterAdapter: KotlinNovelFilterAdapter = KotlinNovelFilterAdapterImpl()
+
 private open class KotlinCatalogueNovelSourceAdapter(
     source: CatalogueSource,
     pluginId: String,
@@ -634,11 +637,18 @@ private open class KotlinCatalogueNovelSourceAdapter(
     }
 
     override suspend fun getPopularNovels(page: Int, filters: NovelFilterList): NovelsPage {
-        return catalogueSource.getPopularManga(page).toNovelsPage(source)
+        return when {
+            filters.isEmpty() -> getPopularNovels(page)
+            else -> getSearchNovels(page, query = "", filters = filters)
+        }
     }
 
     override suspend fun getSearchNovels(page: Int, query: String, filters: NovelFilterList): NovelsPage {
-        return catalogueSource.getSearchManga(page, query, filters.toMangaFilterList()).toNovelsPage(source)
+        return catalogueSource.getSearchManga(
+            page,
+            query,
+            filterAdapter.toMangaFilterList(filters, catalogueSource),
+        ).toNovelsPage(source)
     }
 
     override suspend fun getLatestUpdates(page: Int): NovelsPage {
@@ -646,10 +656,13 @@ private open class KotlinCatalogueNovelSourceAdapter(
     }
 
     override suspend fun getLatestUpdates(page: Int, filters: NovelFilterList): NovelsPage {
-        return getLatestUpdates(page)
+        return when {
+            filters.isEmpty() -> getLatestUpdates(page)
+            else -> getSearchNovels(page, query = "", filters = filters)
+        }
     }
 
-    override fun getFilterList(): NovelFilterList = catalogueSource.getFilterList().toNovelFilterList()
+    override fun getFilterList(): NovelFilterList = filterAdapter.toNovelFilterList(catalogueSource.getFilterList())
 
     @Deprecated("Use the non-RxJava API instead.")
     @Suppress("DEPRECATION")
@@ -660,7 +673,11 @@ private open class KotlinCatalogueNovelSourceAdapter(
     @Deprecated("Use the non-RxJava API instead.")
     @Suppress("DEPRECATION")
     override fun fetchSearchNovels(page: Int, query: String, filters: NovelFilterList): Observable<NovelsPage> {
-        return catalogueSource.fetchSearchManga(page, query, filters.toMangaFilterList()).map {
+        return catalogueSource.fetchSearchManga(
+            page,
+            query,
+            filterAdapter.toMangaFilterList(filters, catalogueSource),
+        ).map {
             it.toNovelsPage(source)
         }
     }
@@ -683,59 +700,6 @@ private class KotlinConfigurableCatalogueNovelSourceAdapter(
     }
 }
 
-private fun FilterList.toNovelFilterList(): NovelFilterList {
-    return NovelFilterList(map { it.toNovelFilter() })
-}
-
-private fun NovelFilterList.toMangaFilterList(): FilterList {
-    return FilterList(map { it.toMangaFilter() })
-}
-
-@Suppress("UNCHECKED_CAST")
-private fun Filter<*>.toNovelFilter(): NovelFilter<*> {
-    return when (this) {
-        is Filter.Header -> NovelFilter.Header(name)
-        is Filter.Separator -> NovelFilter.Separator(name)
-        is Filter.CheckBox -> object : NovelFilter.CheckBox(name, state) {}
-        is Filter.TriState -> object : NovelFilter.TriState(name, state) {}
-        is Filter.Text -> object : NovelFilter.Text(name, state) {}
-        is Filter.Select<*> -> object : NovelFilter.Select<Any?>(name, values as Array<Any?>, state) {}
-        is Filter.Group<*> -> object : NovelFilter.Group<NovelFilter<*>>(
-            name,
-            state.filterIsInstance<Filter<*>>().map { it.toNovelFilter() },
-        ) {}
-        is Filter.Sort -> object : NovelFilter.Sort(
-            name,
-            values,
-            state?.let { NovelFilter.Sort.Selection(it.index, it.ascending) },
-        ) {}
-    }
-}
-
-@Suppress("UNCHECKED_CAST")
-private fun NovelFilter<*>.toMangaFilter(): Filter<*> {
-    return when (this) {
-        is NovelFilter.Header -> Filter.Header(name)
-        is NovelFilter.Separator -> Filter.Separator(name)
-        is NovelFilter.CheckBox -> object : Filter.CheckBox(name, state) {}
-        is NovelFilter.Switch -> object : Filter.CheckBox(name, state) {}
-        is NovelFilter.TriState -> object : Filter.TriState(name, state) {}
-        is NovelFilter.Text -> object : Filter.Text(name, state) {}
-        is NovelFilter.Select<*> -> object : Filter.Select<Any?>(name, values as Array<Any?>, state) {}
-        is NovelFilter.Group<*> -> object : Filter.Group<Filter<*>>(
-            name,
-            state.filterIsInstance<NovelFilter<*>>().map { it.toMangaFilter() },
-        ) {}
-        is NovelFilter.Sort -> object : Filter.Sort(
-            name,
-            values,
-            state?.let { Filter.Sort.Selection(it.index, it.ascending) },
-        ) {}
-        is NovelFilter.Picker<*> -> object : Filter.Select<Any?>(name, values as Array<Any?>, state) {}
-        is NovelFilter.XCheckBox -> object : Filter.TriState(name, state) {}
-    }
-}
-
 private fun MangasPage.toNovelsPage(source: TachiyomiSource): NovelsPage {
     return NovelsPage(mangas.map { it.toNovel(source) }, hasNextPage)
 }
@@ -748,8 +712,8 @@ private fun SManga.toNovel(source: TachiyomiSource): SNovel {
         it.author = runCatching { author }.getOrNull() ?: runCatching { artist }.getOrNull()
         it.description = runCatching { description }.getOrNull()
         it.genre = runCatching { genre }.getOrNull()
-        it.status = runCatching { status }.getOrDefault(SNovel.UNKNOWN)
-        it.thumbnail_url = runCatching { thumbnail_url }.getOrNull()
+        it.status = runCatching { status }.getOrDefault(5).toNovelStatus()
+        it.thumbnail_url = runCatching { thumbnail_url }.getOrNull()?.let { resolveSourceUrl(source, it) }
         it.update_strategy = runCatching { update_strategy }.getOrDefault(it.update_strategy)
         it.initialized = runCatching { initialized }.getOrDefault(false)
     }
@@ -764,11 +728,31 @@ private fun SNovel.toManga(): SManga {
         it.author = runCatching { author }.getOrNull()
         it.description = runCatching { description }.getOrNull()
         it.genre = runCatching { genre }.getOrNull()
-        it.status = runCatching { status }.getOrDefault(SManga.UNKNOWN)
+        it.status = runCatching { status }.getOrDefault(SNovel.UNKNOWN).toMangaStatus()
         it.thumbnail_url = runCatching { thumbnail_url }.getOrNull()
         it.update_strategy = runCatching { update_strategy }.getOrDefault(it.update_strategy)
         it.initialized = runCatching { initialized }.getOrDefault(false)
     }
+}
+
+private fun Int.toNovelStatus(): Int = when (this) {
+    0 -> SNovel.ONGOING
+    1 -> SNovel.COMPLETED
+    2 -> SNovel.LICENSED
+    3 -> SNovel.PUBLISHING_FINISHED
+    4 -> SNovel.CANCELLED
+    6 -> SNovel.ON_HIATUS
+    else -> SNovel.UNKNOWN
+}
+
+private fun Int.toMangaStatus(): Int = when (this) {
+    SNovel.ONGOING -> 0
+    SNovel.COMPLETED -> 1
+    SNovel.LICENSED -> 2
+    SNovel.PUBLISHING_FINISHED -> 3
+    SNovel.CANCELLED -> 4
+    SNovel.ON_HIATUS -> 6
+    else -> 5
 }
 
 private fun SChapter.toNovelChapter(source: TachiyomiSource): SNovelChapter {

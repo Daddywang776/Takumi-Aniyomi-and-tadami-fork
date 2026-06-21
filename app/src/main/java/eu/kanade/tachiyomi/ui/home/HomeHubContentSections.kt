@@ -486,7 +486,7 @@ internal fun QuickSourceButton(sourceName: String?, onClick: () -> Unit) {
                 listOf(
                     Color.White.copy(alpha = 0.08f),
                     Color.Transparent,
-                )
+                ),
             )
         } else {
             auroraMenuRimLightBrush(colors)
