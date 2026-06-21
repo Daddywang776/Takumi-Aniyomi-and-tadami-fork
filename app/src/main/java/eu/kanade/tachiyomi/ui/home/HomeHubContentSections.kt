@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.ui.home
 
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,8 +27,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -69,11 +68,13 @@ import eu.kanade.presentation.components.rememberThemeAwareCoverErrorPainter
 import eu.kanade.presentation.components.resolveAuroraCoverModel
 import eu.kanade.presentation.components.resolveAuroraCtaLabelShadowSpec
 import eu.kanade.presentation.components.resolveAuroraHomeIconShadowSpec
+import eu.kanade.presentation.components.resolveAuroraTabContainerColor
 import eu.kanade.presentation.components.toComposeShadow
 import eu.kanade.presentation.entries.components.aurora.AuroraGlassCtaSurface
 import eu.kanade.presentation.entries.components.aurora.AuroraHeroCtaMode
 import eu.kanade.presentation.entries.components.aurora.rememberAuroraPosterColorFilter
 import eu.kanade.presentation.entries.components.aurora.resolveAuroraHeroOverlayBrush
+import eu.kanade.presentation.more.settings.auroraCardStyle
 import eu.kanade.presentation.theme.AuroraSurfaceLevel
 import eu.kanade.presentation.theme.AuroraTheme
 import eu.kanade.presentation.theme.aurora.adaptive.AuroraDeviceClass
@@ -476,26 +477,21 @@ internal fun QuickSourceButton(sourceName: String?, onClick: () -> Unit) {
     val appHaptics = LocalAppHaptics.current
     val auroraAdaptiveSpec = rememberAuroraAdaptiveSpec()
     val contentMaxWidthDp = auroraAdaptiveSpec.updatesMaxWidthDp ?: auroraAdaptiveSpec.entryMaxWidthDp
-    val sourceButtonShape = RoundedCornerShape(14.dp)
+    val sourceButtonShape = RoundedCornerShape(20.dp)
     val isLightTheme = !colors.isDark && !colors.isEInk
-    val sourceSurface = when {
-        colors.isEInk -> resolveAuroraSurfaceColor(colors, AuroraSurfaceLevel.Strong)
-        colors.isDark -> Color.White.copy(alpha = 0.05f)
-        else -> Color.Transparent
-    }
+    val tabContainerColor = resolveAuroraTabContainerColor(colors)
     val sourceBorderBrush = remember(colors) { auroraMenuRimLightBrush(colors) }
     val sourceShowBorder = colors.isDark || colors.isEInk
-    val sourceBorderWidth = if (sourceShowBorder) 1.dp else 0.dp
 
-    Box(
+    Card(
         modifier = Modifier
             .auroraCenteredMaxWidth(contentMaxWidthDp)
-            .padding(horizontal = 20.dp, vertical = if (isLightTheme) 12.dp else 10.dp)
+            .padding(horizontal = 16.dp, vertical = if (isLightTheme) 12.dp else 10.dp)
             .then(
                 if (isLightTheme) {
                     Modifier
                         .drawBehind {
-                            val radius = 14.dp.toPx()
+                            val radius = 20.dp.toPx()
                             val cornerRadius = CornerRadius(radius, radius)
 
                             val neutralOffsetY = 3.dp.toPx()
@@ -541,37 +537,43 @@ internal fun QuickSourceButton(sourceName: String?, onClick: () -> Unit) {
                             ),
                             shape = sourceButtonShape,
                         )
+                } else if (colors.isDark && !colors.isEInk) {
+                    Modifier
+                        .auroraCardStyle(
+                            colors = colors,
+                            shape = sourceButtonShape,
+                            applyDarkRimLight = false,
+                            applyDarkShadow = false,
+                        )
+                        .border(
+                            BorderStroke(1.dp, sourceBorderBrush),
+                            shape = sourceButtonShape,
+                        )
                 } else {
                     Modifier
                 },
-            ),
-    ) {
-        Button(
-            onClick = {
+            )
+            .clickable {
                 appHaptics.tap()
                 onClick()
             },
-            colors = ButtonDefaults.buttonColors(
-                containerColor = sourceSurface,
-                contentColor = colors.textPrimary,
-            ),
-            shape = sourceButtonShape,
-            elevation = ButtonDefaults.buttonElevation(
-                defaultElevation = 0.dp,
-                pressedElevation = 0.dp,
-                focusedElevation = 0.dp,
-                hoveredElevation = 0.dp,
-            ),
+        shape = sourceButtonShape,
+        colors = CardDefaults.cardColors(
+            containerColor = if (isLightTheme) Color.Transparent else tabContainerColor,
+        ),
+        border = if (sourceShowBorder && !colors.isDark) {
+            BorderStroke(0.75.dp, sourceBorderBrush)
+        } else {
+            null
+        },
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp)
-                .then(
-                    if (sourceShowBorder) {
-                        Modifier.border(sourceBorderWidth, sourceBorderBrush, sourceButtonShape)
-                    } else {
-                        Modifier
-                    },
-                ),
+                .height(48.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(Icons.Filled.Search, null, tint = colors.accent, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))

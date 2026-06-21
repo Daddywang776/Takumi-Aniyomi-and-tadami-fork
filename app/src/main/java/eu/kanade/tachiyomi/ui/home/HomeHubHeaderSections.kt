@@ -159,7 +159,7 @@ internal fun HomeHubPinnedHeader(
                     onStreakClick = onStreakClick,
                 )
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(6.dp))
                 if (tabs.size > 1) {
                     AuroraTabRow(
                         tabs = tabs,
@@ -168,7 +168,7 @@ internal fun HomeHubPinnedHeader(
                         scrollable = false,
                     )
                 }
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(6.dp))
             }
         },
         modifier = Modifier

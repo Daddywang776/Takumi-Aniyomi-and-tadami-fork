@@ -579,7 +579,7 @@ private fun AuroraUpdatesPinnedHeader(
         }
 
         if (tabs.size > 1) {
-            Spacer(modifier = Modifier.size(12.dp))
+            Spacer(modifier = Modifier.size(6.dp))
             AuroraTabRow(
                 tabs = tabs,
                 selectedIndex = selected,

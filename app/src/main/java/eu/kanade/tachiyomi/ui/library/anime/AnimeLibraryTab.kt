@@ -6,7 +6,8 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -63,6 +64,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -70,10 +72,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -82,6 +88,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -1853,7 +1860,7 @@ private fun AuroraLibraryPinnedHeader(
                 }
 
                 if (tabs.size > 1) {
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     AuroraTabRow(
                         tabs = tabs.toImmutableList(),
                         selectedIndex = selectedSectionIndex,
@@ -1908,8 +1915,8 @@ private fun AuroraLibraryCategoryTabs(
     val colors = AuroraTheme.colors
     val appHaptics = LocalAppHaptics.current
     val coercedSelected = coerceAuroraLibraryCategoryIndex(selectedIndex, categories.size)
-    val rowShape = RoundedCornerShape(28.dp)
-    val tabShape = RoundedCornerShape(20.dp)
+    val rowShape = CircleShape
+    val tabShape = CircleShape
     val isLightTheme = !colors.isDark && !colors.isEInk
     val rowContainerColor = remember(colors) { resolveAuroraLibraryCategoryTabRowContainerColor(colors) }
     val selectedTabBrush = remember(colors) { resolveAuroraLibraryCategorySelectedTabBrush(colors) }
@@ -1920,6 +1927,53 @@ private fun AuroraLibraryCategoryTabs(
     val tabWidths = remember { mutableMapOf<Int, Int>() }
     var containerWidthPx by remember { mutableIntStateOf(0) }
     val density = LocalDensity.current
+
+    val animTabWidths = remember { mutableStateMapOf<Int, Float>() }
+    val animTabHeights = remember { mutableStateMapOf<Int, Float>() }
+    val animTabPositionsX = remember { mutableStateMapOf<Int, Float>() }
+    val animTabPositionsY = remember { mutableStateMapOf<Int, Float>() }
+
+    var prevSelectedIndex by remember { mutableIntStateOf(coercedSelected) }
+    LaunchedEffect(coercedSelected) {
+        prevSelectedIndex = coercedSelected
+    }
+
+    val activeWidth = animTabWidths[coercedSelected] ?: 0f
+    val activeHeight = animTabHeights[coercedSelected] ?: 0f
+    val activeX = animTabPositionsX[coercedSelected] ?: 0f
+    val activeY = animTabPositionsY[coercedSelected] ?: 0f
+
+    val activeLeft = activeX
+    val activeRight = activeX + activeWidth
+
+    val leadingStiffness = 500f
+    val trailingStiffness = 250f
+    val damping = 0.78f
+
+    val isMovingRight = coercedSelected > prevSelectedIndex
+    val leftStiffness = if (isMovingRight) trailingStiffness else leadingStiffness
+    val rightStiffness = if (isMovingRight) leadingStiffness else trailingStiffness
+
+    val animatedLeft by animateFloatAsState(
+        targetValue = activeLeft,
+        animationSpec = spring(dampingRatio = damping, stiffness = leftStiffness),
+        label = "tabLeft",
+    )
+    val animatedRight by animateFloatAsState(
+        targetValue = activeRight,
+        animationSpec = spring(dampingRatio = damping, stiffness = rightStiffness),
+        label = "tabRight",
+    )
+    val animatedHeight by animateFloatAsState(
+        targetValue = activeHeight,
+        animationSpec = spring(dampingRatio = damping, stiffness = leadingStiffness),
+        label = "tabHeight",
+    )
+    val animatedY by animateFloatAsState(
+        targetValue = activeY,
+        animationSpec = spring(dampingRatio = damping, stiffness = leadingStiffness),
+        label = "tabY",
+    )
 
     // Auto-scroll to center the selected category (except first two which stay at start).
     // Keys: selection change, categories change, or container laid out (first time / resize).
@@ -1996,7 +2050,36 @@ private fun AuroraLibraryCategoryTabs(
                 .fillMaxWidth()
                 .onSizeChanged { containerWidthPx = it.width }
                 .horizontalScroll(scrollState)
-                .padding(horizontal = 6.dp, vertical = 6.dp),
+                .padding(6.dp)
+                .drawBehind {
+                    if (animatedRight > animatedLeft &&
+                        animatedHeight > 0f &&
+                        colors.eInkProfile != EInkProfile.MONOCHROME
+                    ) {
+                        val minWidth = minOf(activeWidth, animatedHeight)
+                        val drawWidth = (animatedRight - animatedLeft).coerceAtLeast(minWidth)
+                        val drawX = if (animatedRight - animatedLeft < minWidth) {
+                            animatedLeft - (minWidth - (animatedRight - animatedLeft)) / 2f
+                        } else {
+                            animatedLeft
+                        }
+
+                        val radiusPx = animatedHeight / 2f
+                        drawRoundRect(
+                            brush = selectedTabBrush,
+                            topLeft = Offset(drawX, animatedY),
+                            size = Size(drawWidth, animatedHeight),
+                            cornerRadius = CornerRadius(radiusPx, radiusPx),
+                        )
+                        drawRoundRect(
+                            color = selectedTabBorderColor,
+                            topLeft = Offset(drawX, animatedY),
+                            size = Size(drawWidth, animatedHeight),
+                            cornerRadius = CornerRadius(radiusPx, radiusPx),
+                            style = Stroke(width = 1.dp.toPx()),
+                        )
+                    }
+                },
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             categories.forEachIndexed { index, category ->
@@ -2012,29 +2095,26 @@ private fun AuroraLibraryCategoryTabs(
                     textOnAccent = colors.textOnAccent,
                     background = colors.background,
                 )
-                val animatedBorderColor by animateColorAsState(
-                    targetValue = if (isSelected) selectedTabBorderColor else Color.Transparent,
-                    animationSpec = tween(250),
-                    label = "tabBorder",
-                )
 
                 key(category.id) {
                     Row(
                         modifier = Modifier
                             .clip(tabShape)
                             .background(
-                                brush = if (isSelected && colors.eInkProfile != EInkProfile.MONOCHROME) {
-                                    selectedTabBrush
-                                } else {
+                                brush = if (colors.eInkProfile == EInkProfile.MONOCHROME) {
                                     Brush.linearGradient(
                                         colors = listOf(tabColors.tabBackground, tabColors.tabBackground),
+                                    )
+                                } else {
+                                    Brush.linearGradient(
+                                        colors = listOf(Color.Transparent, Color.Transparent),
                                     )
                                 },
                                 shape = tabShape,
                             )
                             .then(
-                                if (isSelected || animatedBorderColor.alpha > 0f) {
-                                    Modifier.border(1.dp, animatedBorderColor, tabShape)
+                                if (colors.eInkProfile == EInkProfile.MONOCHROME && isSelected) {
+                                    Modifier.border(1.dp, selectedTabBorderColor, tabShape)
                                 } else {
                                     Modifier
                                 },
@@ -2053,6 +2133,13 @@ private fun AuroraLibraryCategoryTabs(
                                     null
                                 },
                             )
+                            .onGloballyPositioned { coordinates ->
+                                animTabWidths[index] = coordinates.size.width.toFloat()
+                                animTabHeights[index] = coordinates.size.height.toFloat()
+                                val pos = coordinates.positionInParent()
+                                animTabPositionsX[index] = pos.x
+                                animTabPositionsY[index] = pos.y
+                            }
                             .padding(horizontal = 14.dp, vertical = 9.dp)
                             .onGloballyPositioned { coordinates ->
                                 tabWidths[index] = coordinates.size.width

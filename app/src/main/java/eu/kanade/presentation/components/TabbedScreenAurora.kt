@@ -1,6 +1,7 @@
 package eu.kanade.presentation.components
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -69,18 +70,15 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.ClipOp
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -604,7 +602,10 @@ internal fun AuroraTabRow(
 ) {
     val colors = AuroraTheme.colors
     val scrollState = rememberScrollState()
-    val tabWidths = remember { mutableMapOf<Int, Int>() }
+    val tabWidths = remember { mutableMapOf<Int, Float>() }
+    val tabHeights = remember { mutableMapOf<Int, Float>() }
+    val tabPositionsX = remember { mutableMapOf<Int, Float>() }
+    val tabPositionsY = remember { mutableMapOf<Int, Float>() }
     var containerWidthPx by remember { mutableIntStateOf(0) }
     val density = LocalDensity.current
 
@@ -619,12 +620,13 @@ internal fun AuroraTabRow(
             return@LaunchedEffect
         }
 
-        val leftPaddingPx = with(density) { 4.dp.toPx() }
-        val accumulatedWidth = (0 until selectedIndex).sumOf { tabWidths[it] ?: 0 }
-        val currentTabWidth = tabWidths[selectedIndex] ?: 0
+        val leftPaddingPx = with(density) { 6.dp.toPx() }
+        val spacingPx = with(density) { 8.dp.toPx() }
+        val accumulatedWidth = (0 until selectedIndex).sumOf { (tabWidths[it] ?: 0f).roundToInt() }
+        val currentTabWidth = (tabWidths[selectedIndex] ?: 0f).roundToInt()
         if (currentTabWidth == 0) return@LaunchedEffect
 
-        val tabCenter = leftPaddingPx + accumulatedWidth + currentTabWidth / 2f
+        val tabCenter = leftPaddingPx + accumulatedWidth + selectedIndex * spacingPx + currentTabWidth / 2f
         val targetScroll = (tabCenter - containerWidthPx / 2f).coerceAtLeast(0f).toInt()
 
         if (scrollState.value != targetScroll) {
@@ -636,7 +638,67 @@ internal fun AuroraTabRow(
     val tabContainerColor = resolveAuroraTabContainerColor(colors)
     val isLightTheme = !colors.isDark && !colors.isEInk
     val showBorderFinal = showBorder && (colors.isDark || colors.isEInk)
-    val tabShape = RoundedCornerShape(20.dp)
+    val tabShape = CircleShape
+
+    val selectedTabBrush = remember(colors.accent) {
+        Brush.verticalGradient(
+            colors = listOf(
+                if (colors.isDark) {
+                    lerp(colors.accent, Color.White, 0.18f).copy(alpha = 0.32f)
+                } else {
+                    colors.accent.copy(alpha = 0.20f)
+                },
+                if (colors.isDark) {
+                    colors.accent.copy(alpha = 0.18f)
+                } else {
+                    Color.White.copy(alpha = 0.40f)
+                },
+            ),
+        )
+    }
+    val selectedTabBorderColor = remember(colors) { resolveAuroraTabSelectionBorderColor(colors) }
+
+    var prevSelectedIndex by remember { mutableIntStateOf(selectedIndex) }
+    LaunchedEffect(selectedIndex) {
+        prevSelectedIndex = selectedIndex
+    }
+
+    val activeWidth = tabWidths[selectedIndex] ?: 0f
+    val activeHeight = tabHeights[selectedIndex] ?: 0f
+    val activeX = tabPositionsX[selectedIndex] ?: 0f
+    val activeY = tabPositionsY[selectedIndex] ?: 0f
+
+    val activeLeft = activeX
+    val activeRight = activeX + activeWidth
+
+    val leadingStiffness = 500f
+    val trailingStiffness = 250f
+    val damping = 0.78f
+
+    val isMovingRight = selectedIndex > prevSelectedIndex
+    val leftStiffness = if (isMovingRight) trailingStiffness else leadingStiffness
+    val rightStiffness = if (isMovingRight) leadingStiffness else trailingStiffness
+
+    val animatedLeft by animateFloatAsState(
+        targetValue = activeLeft,
+        animationSpec = spring(dampingRatio = damping, stiffness = leftStiffness),
+        label = "tabLeft",
+    )
+    val animatedRight by animateFloatAsState(
+        targetValue = activeRight,
+        animationSpec = spring(dampingRatio = damping, stiffness = rightStiffness),
+        label = "tabRight",
+    )
+    val animatedHeight by animateFloatAsState(
+        targetValue = activeHeight,
+        animationSpec = spring(dampingRatio = damping, stiffness = leadingStiffness),
+        label = "tabHeight",
+    )
+    val animatedY by animateFloatAsState(
+        targetValue = activeY,
+        animationSpec = spring(dampingRatio = damping, stiffness = leadingStiffness),
+        label = "tabY",
+    )
 
     Card(
         modifier = Modifier
@@ -646,7 +708,7 @@ internal fun AuroraTabRow(
                 if (isLightTheme) {
                     Modifier
                         .drawBehind {
-                            val radius = 20.dp.toPx()
+                            val radius = size.height / 2f
                             val cornerRadius = CornerRadius(radius, radius)
 
                             val neutralOffsetY = 3.dp.toPx()
@@ -725,37 +787,58 @@ internal fun AuroraTabRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .onSizeChanged { containerWidthPx = it.width }
-                .padding(horizontal = 4.dp, vertical = 6.dp)
-                .then(if (scrollable) Modifier.horizontalScroll(scrollState) else Modifier),
-            horizontalArrangement = if (scrollable) Arrangement.Start else Arrangement.SpaceEvenly,
+                .padding(6.dp)
+                .then(if (scrollable) Modifier.horizontalScroll(scrollState) else Modifier)
+                .drawBehind {
+                    if (animatedRight > animatedLeft && animatedHeight > 0f) {
+                        val minWidth = minOf(activeWidth, animatedHeight)
+                        val drawWidth = (animatedRight - animatedLeft).coerceAtLeast(minWidth)
+                        val drawX = if (animatedRight - animatedLeft < minWidth) {
+                            animatedLeft - (minWidth - (animatedRight - animatedLeft)) / 2f
+                        } else {
+                            animatedLeft
+                        }
+
+                        val radiusPx = animatedHeight / 2f
+                        drawRoundRect(
+                            brush = selectedTabBrush,
+                            topLeft = Offset(drawX, animatedY),
+                            size = Size(drawWidth, animatedHeight),
+                            cornerRadius = CornerRadius(radiusPx, radiusPx),
+                        )
+                        drawRoundRect(
+                            color = selectedTabBorderColor,
+                            topLeft = Offset(drawX, animatedY),
+                            size = Size(drawWidth, animatedHeight),
+                            cornerRadius = CornerRadius(radiusPx, radiusPx),
+                            style = Stroke(width = 1.dp.toPx()),
+                        )
+                    }
+                },
+            horizontalArrangement = if (scrollable) Arrangement.spacedBy(8.dp) else Arrangement.SpaceEvenly,
         ) {
             tabs.forEachIndexed { index, tab ->
                 val isSelected = index == selectedIndex
                 val tabModifier = if (scrollable) {
-                    Modifier.padding(horizontal = 4.dp)
+                    Modifier
                 } else {
                     Modifier.weight(1f)
                 }
-                val posModifier = if (scrollable) {
-                    Modifier.onGloballyPositioned { coords ->
-                        tabWidths[index] = coords.size.width
-                    }
-                } else {
-                    Modifier
-                }
-                Box(
-                    modifier = Modifier
-                        .then(posModifier)
-                        .then(tabModifier),
-                ) {
-                    AuroraTab(
-                        text = stringResource(tab.titleRes),
-                        isSelected = isSelected,
-                        badgeCount = tab.badgeNumber,
-                        onClick = { onTabSelected(index) },
-                        fillAvailableWidth = !scrollable,
-                    )
-                }
+                AuroraTab(
+                    text = stringResource(tab.titleRes),
+                    isSelected = isSelected,
+                    badgeCount = tab.badgeNumber,
+                    onClick = { onTabSelected(index) },
+                    fillAvailableWidth = !scrollable,
+                    modifier = tabModifier
+                        .onGloballyPositioned { coords ->
+                            tabWidths[index] = coords.size.width.toFloat()
+                            tabHeights[index] = coords.size.height.toFloat()
+                            val pos = coords.positionInParent()
+                            tabPositionsX[index] = pos.x
+                            tabPositionsY[index] = pos.y
+                        },
+                )
             }
         }
     }
@@ -772,48 +855,16 @@ internal fun AuroraTab(
 ) {
     val colors = AuroraTheme.colors
     val appHaptics = LocalAppHaptics.current
-    val tabShape = RoundedCornerShape(16.dp)
+    val tabShape = CircleShape
     val maxTabTextWidth = if (!fillAvailableWidth) {
         (LocalConfiguration.current.screenWidthDp.dp - 72.dp).coerceAtMost(220.dp)
     } else {
         Dp.Unspecified
     }
-    val selectedTabBrush = remember(colors.accent) {
-        Brush.verticalGradient(
-            colors = listOf(
-                if (colors.isDark) {
-                    lerp(colors.accent, Color.White, 0.18f).copy(alpha = 0.32f)
-                } else {
-                    colors.accent.copy(alpha = 0.20f)
-                },
-                if (colors.isDark) {
-                    colors.accent.copy(alpha = 0.18f)
-                } else {
-                    Color.White.copy(alpha = 0.40f)
-                },
-            ),
-        )
-    }
 
-    // Segmented tab style: lighter filled background for active tab (good contrast on dark mode)
     Box(
         modifier = modifier
             .clip(tabShape)
-            .background(
-                brush = if (isSelected) {
-                    selectedTabBrush
-                } else {
-                    Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
-                },
-                shape = tabShape,
-            )
-            .then(
-                if (isSelected) {
-                    Modifier.border(1.dp, resolveAuroraTabSelectionBorderColor(colors), tabShape)
-                } else {
-                    Modifier
-                },
-            )
             .clickable {
                 appHaptics.tap()
                 onClick()

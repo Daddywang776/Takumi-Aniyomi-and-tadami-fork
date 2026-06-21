@@ -251,7 +251,7 @@ data object BrowseTab : Tab {
                 extraHeaderContent = {
                     if (sections.size > 1) {
                         Column {
-                            Spacer(modifier = Modifier.height(8.dp))
+                            Spacer(modifier = Modifier.height(6.dp))
                             AuroraTabRow(
                                 tabs = sections.map { section ->
                                     when (section) {
@@ -276,7 +276,7 @@ data object BrowseTab : Tab {
                                 },
                                 scrollable = false,
                             )
-                            Spacer(modifier = Modifier.height(if (useWideBrowseTabs) 15.dp else 16.dp))
+                            Spacer(modifier = Modifier.height(6.dp))
                         }
                     } else {
                         Spacer(modifier = Modifier.height(4.dp))

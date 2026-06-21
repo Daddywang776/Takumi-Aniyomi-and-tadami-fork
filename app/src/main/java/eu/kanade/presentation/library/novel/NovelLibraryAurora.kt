@@ -1028,7 +1028,7 @@ private fun InlineNovelLibraryHeader(
         }
 
         if (tabState != null && tabState.tabs.size > 1) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(6.dp))
             AuroraTabRow(
                 tabs = tabState.tabs,
                 selectedIndex = tabState.selectedIndex,
