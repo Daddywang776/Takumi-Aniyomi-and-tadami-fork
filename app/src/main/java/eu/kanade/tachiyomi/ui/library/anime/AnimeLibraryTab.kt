@@ -1860,7 +1860,7 @@ private fun AuroraLibraryPinnedHeader(
                 }
 
                 if (tabs.size > 1) {
-                    Spacer(modifier = Modifier.height(6.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
                     AuroraTabRow(
                         tabs = tabs.toImmutableList(),
                         selectedIndex = selectedSectionIndex,

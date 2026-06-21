@@ -283,6 +283,7 @@ fun TabbedScreenAurora(
 
             // Add tabs for Browse
             if (showTabs) {
+                Spacer(modifier = Modifier.height(6.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
