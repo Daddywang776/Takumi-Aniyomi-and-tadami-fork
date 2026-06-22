@@ -92,5 +92,6 @@ class NovelSourceRepositoryImpl(
         name = source.name,
         supportsLatest = false,
         isStub = false,
+        isKotlinExtension = source.isKotlinExtension,
     )
 }

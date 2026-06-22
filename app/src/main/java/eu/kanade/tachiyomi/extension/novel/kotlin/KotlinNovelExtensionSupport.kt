@@ -524,6 +524,7 @@ private open class KotlinIdentityBasicNovelSourceAdapter(
     override val id: Long = source.id
     override val name: String = source.name
     override val lang: String = source.lang
+    override val isKotlinExtension: Boolean = true
     override val siteUrl: String? = (source as? NovelSiteSource)?.siteUrl
 
     override suspend fun getNovelDetails(novel: SNovel): SNovel = source.getNovelDetails(novel)
@@ -614,6 +615,7 @@ private open class KotlinMangaNovelSourceAdapter(
     override val id: Long = source.id
     override val name: String = source.name
     override val lang: String = source.lang
+    override val isKotlinExtension: Boolean = true
     override val siteUrl: String? = (source as? HttpSource)?.baseUrl
 
     override suspend fun getNovelDetails(novel: SNovel): SNovel {

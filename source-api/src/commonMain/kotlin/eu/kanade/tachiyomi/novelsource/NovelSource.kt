@@ -24,6 +24,13 @@ interface NovelSource {
         get() = ""
 
     /**
+     * Whether this source is implemented as a Kotlin (APK) extension.
+     * JS-based sources return false (default); Kotlin extension wrappers override to true.
+     */
+    val isKotlinExtension: Boolean
+        get() = false
+
+    /**
      * Get the updated details for a novel.
      *
      * @since extensions-lib 1.5

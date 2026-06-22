@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -46,7 +47,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import eu.kanade.presentation.browse.novel.components.BaseNovelSourceItem
 import eu.kanade.presentation.theme.AuroraTheme
 import eu.kanade.tachiyomi.ui.browse.novel.source.NovelSourcesScreenModel
@@ -64,6 +67,7 @@ import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.screens.LoadingScreen
 import tachiyomi.presentation.core.theme.header
 import tachiyomi.presentation.core.util.plus
+import tachiyomi.presentation.core.util.secondaryItemAlpha
 
 @Composable
 fun NovelSourcesScreen(
@@ -291,6 +295,53 @@ private fun SourceItem(
         source = source,
         onClickItem = { onClickItem(source, Listing.Popular) },
         onLongClickItem = { onLongClickItem(source) },
+        content = { src, sourceLangString ->
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = MaterialTheme.padding.medium)
+                    .weight(1f),
+            ) {
+                // Name row with JS/KT badge
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = src.name,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    val isKt = src.isKotlinExtension
+                    Box(
+                        modifier = Modifier
+                            .background(
+                                color = if (isKt) Color(0xFF7F52FF) else Color(0xFFF0B429),
+                                shape = RoundedCornerShape(3.dp),
+                            )
+                            .padding(horizontal = 4.dp, vertical = 1.dp),
+                    ) {
+                        Text(
+                            text = if (isKt) "KT" else "JS",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                fontSize = 9.sp,
+                                letterSpacing = 0.3.sp,
+                            ),
+                            color = Color.White,
+                            maxLines = 1,
+                        )
+                    }
+                }
+                if (sourceLangString != null) {
+                    Text(
+                        modifier = Modifier.secondaryItemAlpha(),
+                        text = sourceLangString,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        },
         action = {
             if (source.supportsLatest && showLatest) {
                 TextButton(onClick = { onClickItem(source, Listing.Latest) }) {

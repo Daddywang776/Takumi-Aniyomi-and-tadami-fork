@@ -6,6 +6,7 @@ data class Source(
     val name: String,
     val supportsLatest: Boolean,
     val isStub: Boolean,
+    val isKotlinExtension: Boolean = false,
     val pin: Pins = Pins.unpinned,
     val isUsedLast: Boolean = false,
     // SY -->
