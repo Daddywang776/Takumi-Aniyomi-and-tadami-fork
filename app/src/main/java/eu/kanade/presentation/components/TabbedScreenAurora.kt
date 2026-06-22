@@ -58,6 +58,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -604,10 +605,10 @@ internal fun AuroraTabRow(
 ) {
     val colors = AuroraTheme.colors
     val scrollState = rememberScrollState()
-    val tabWidths = remember { mutableMapOf<Int, Float>() }
-    val tabHeights = remember { mutableMapOf<Int, Float>() }
-    val tabPositionsX = remember { mutableMapOf<Int, Float>() }
-    val tabPositionsY = remember { mutableMapOf<Int, Float>() }
+    val tabWidths = remember { mutableStateMapOf<Int, Float>() }
+    val tabHeights = remember { mutableStateMapOf<Int, Float>() }
+    val tabPositionsX = remember { mutableStateMapOf<Int, Float>() }
+    val tabPositionsY = remember { mutableStateMapOf<Int, Float>() }
     var containerWidthPx by remember { mutableIntStateOf(0) }
     val density = LocalDensity.current
 
