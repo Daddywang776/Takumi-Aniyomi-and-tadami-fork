@@ -26,10 +26,22 @@ class ReleaseServiceImpl(
     }
 
     override suspend fun byTag(repository: String, versionTag: String): Release? {
-        val encodedTag = URLEncoder.encode(versionTag, Charsets.UTF_8.name())
-        val release = requestGithubRelease(
-            "https://api.github.com/repos/$repository/releases/tags/$encodedTag",
-        )
+        val release = try {
+            val encodedTag = URLEncoder.encode(versionTag, Charsets.UTF_8.name())
+            requestGithubRelease(
+                "https://api.github.com/repos/$repository/releases/tags/$encodedTag",
+            )
+        } catch (e: Exception) {
+            val fallbackTag = if (versionTag.startsWith("v")) {
+                versionTag.removePrefix("v")
+            } else {
+                "v$versionTag"
+            }
+            val encodedFallbackTag = URLEncoder.encode(fallbackTag, Charsets.UTF_8.name())
+            requestGithubRelease(
+                "https://api.github.com/repos/$repository/releases/tags/$encodedFallbackTag",
+            )
+        }
         val downloadLink = getDownloadLink(release = release) ?: release.assets.firstOrNull()?.downloadLink.orEmpty()
 
         return release.toRelease(downloadLink)
