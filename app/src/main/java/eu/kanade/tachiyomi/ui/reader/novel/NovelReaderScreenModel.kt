@@ -8,6 +8,8 @@ import eu.kanade.domain.entries.novel.model.toSNovel
 import eu.kanade.domain.items.novelchapter.interactor.SyncNovelChaptersWithSource
 import eu.kanade.domain.items.novelchapter.model.toSNovelChapter
 import eu.kanade.domain.track.novel.interactor.TrackNovelChapter
+import eu.kanade.presentation.reader.novel.NovelAutoScrollHandoffState
+import eu.kanade.presentation.reader.novel.NovelReaderAutoScrollHandoffPolicy
 import eu.kanade.presentation.reader.novel.NovelReaderTtsChapterHandoffPolicy
 import eu.kanade.presentation.reader.novel.SeriesInterstitialState
 import eu.kanade.tachiyomi.data.download.novel.NovelDownloadManager
@@ -2026,6 +2028,39 @@ class NovelReaderScreenModel(
             )
         }
     }
+    fun prepareAutoScrollHandoff(
+        targetChapterId: Long,
+        speed: Int,
+    ) {
+        val chapter = currentChapter ?: return
+        NovelReaderAutoScrollHandoffPolicy.prepareHandoff(
+            fromChapterId = chapter.id,
+            targetChapterId = targetChapterId,
+            speed = speed,
+        )
+    }
+
+    fun consumeAutoScrollHandoffIfMatches(chapterId: Long): NovelAutoScrollHandoffState? {
+        return NovelReaderAutoScrollHandoffPolicy.consumeIfMatches(chapterId)
+    }
+
+    fun cancelAutoScrollHandoff() {
+        NovelReaderAutoScrollHandoffPolicy.cancel()
+    }
+
+    fun requestAutoScrollNextChapterPrefetch() {
+        if (hasTriggeredNextChapterPrefetch) return
+        val novel = currentNovel ?: return
+        val chapter = currentChapter ?: return
+        val source = sourceManager.get(novel.source) ?: return
+        hasTriggeredNextChapterPrefetch = true
+        scheduleNextChapterPrefetch(
+            novel = novel,
+            currentChapter = chapter,
+            source = source,
+        )
+    }
+
     fun toggleChapterBookmark() {
         val chapter = currentChapter ?: return
         val bookmarked = !chapter.bookmark

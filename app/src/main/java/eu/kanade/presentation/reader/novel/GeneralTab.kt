@@ -36,11 +36,13 @@ import eu.kanade.presentation.more.settings.widget.EditTextPreferenceWidget
 import eu.kanade.presentation.more.settings.widget.ListPreferenceWidget
 import eu.kanade.presentation.more.settings.widget.SwitchPreferenceWidget
 import eu.kanade.presentation.more.settings.widget.TextPreferenceWidget
+import eu.kanade.tachiyomi.ui.reader.novel.setting.NovelAutoScrollChapterEndBehavior
 import eu.kanade.tachiyomi.ui.reader.novel.setting.NovelPageTransitionStyle
 import eu.kanade.tachiyomi.ui.reader.novel.setting.NovelReaderOverride
 import eu.kanade.tachiyomi.ui.reader.novel.setting.NovelReaderPreferences
 import eu.kanade.tachiyomi.ui.reader.novel.setting.NovelTranslationProvider
 import eu.kanade.tachiyomi.ui.reader.novel.translation.GeminiPrivateBridge
+import kotlinx.collections.immutable.persistentMapOf
 import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
@@ -90,6 +92,7 @@ fun GeneralTab(
         )
     }
     val pageTransitionEntries = novelPageTransitionStyleEntries()
+    val autoScrollChapterEndBehaviorEntries = novelAutoScrollChapterEndBehaviorEntries()
     val pageTurnSpeedEntries = novelPageTurnSpeedEntries()
     val pageTurnIntensityEntries = novelPageTurnIntensityEntries()
     val pageTurnShadowEntries = novelPageTurnShadowIntensityEntries()
@@ -627,6 +630,33 @@ fun GeneralTab(
                     update(it, { o, v -> o.copy(bionicReading = v) }, { preferences.bionicReading().set(it) })
                 },
             )
+            ListPreferenceWidget(
+                value = settings.autoScrollChapterEndBehavior,
+                title = stringResource(AYMR.strings.novel_reader_auto_scroll_chapter_end_behavior),
+                subtitle = autoScrollChapterEndBehaviorEntries[settings.autoScrollChapterEndBehavior],
+                icon = null,
+                entries = autoScrollChapterEndBehaviorEntries,
+                onValueChange = {
+                    update(
+                        it,
+                        { o, v -> o.copy(autoScrollChapterEndBehavior = v) },
+                        { preferences.autoScrollChapterEndBehavior().set(it) },
+                    )
+                },
+            )
+            SwitchPreferenceWidget(
+                checked = settings.autoScrollAdaptiveDelay,
+                title = stringResource(AYMR.strings.novel_reader_auto_scroll_adaptive_delay),
+                subtitle = stringResource(AYMR.strings.novel_reader_auto_scroll_adaptive_delay_summary),
+                icon = null,
+                onCheckedChanged = { checked ->
+                    update(
+                        checked,
+                        { o, v -> o.copy(autoScrollAdaptiveDelay = v) },
+                        { preferences.autoScrollAdaptiveDelay().set(checked) },
+                    )
+                },
+            )
             LnReaderSliderRow(
                 label = stringResource(AYMR.strings.novel_reader_auto_scroll_speed),
                 valueText = { it.roundToInt().toString() },
@@ -685,6 +715,16 @@ fun GeneralTab(
         }
     }
 }
+
+@Composable
+internal fun novelAutoScrollChapterEndBehaviorEntries() = persistentMapOf(
+    NovelAutoScrollChapterEndBehavior.StopAtEnd to
+        stringResource(AYMR.strings.novel_reader_auto_scroll_chapter_end_stop),
+    NovelAutoScrollChapterEndBehavior.AdvanceAndStop to
+        stringResource(AYMR.strings.novel_reader_auto_scroll_chapter_end_advance_stop),
+    NovelAutoScrollChapterEndBehavior.ContinuousReading to
+        stringResource(AYMR.strings.novel_reader_auto_scroll_chapter_end_continuous),
+)
 
 @Composable
 private fun getNovelReaderTranslationProviderLabel(provider: NovelTranslationProvider): String {

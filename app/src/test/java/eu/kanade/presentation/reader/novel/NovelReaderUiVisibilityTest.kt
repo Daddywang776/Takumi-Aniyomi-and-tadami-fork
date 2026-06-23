@@ -948,6 +948,44 @@ class NovelReaderUiVisibilityTest {
     }
 
     @Test
+    fun `auto-scroll page delay scales with character count`() {
+        val shortDelay =
+            autoScrollPageDelayMsForCharacterCount(intervalSeconds = 30, characterCount = 200, adaptiveEnabled = true)
+        val mediumDelay =
+            autoScrollPageDelayMsForCharacterCount(intervalSeconds = 30, characterCount = 900, adaptiveEnabled = true)
+        val longDelay =
+            autoScrollPageDelayMsForCharacterCount(intervalSeconds = 30, characterCount = 2_000, adaptiveEnabled = true)
+
+        assertTrue(shortDelay >= 2_000L)
+        assertTrue(mediumDelay > shortDelay)
+        assertTrue(longDelay > mediumDelay)
+        assertTrue(longDelay <= 60_000L)
+
+        val fixedDelay =
+            autoScrollPageDelayMsForCharacterCount(
+                intervalSeconds = 30,
+                characterCount = 2_000,
+                adaptiveEnabled = false,
+            )
+        val expectedFixed = 30 * 1000L
+        assertTrue(fixedDelay == expectedFixed)
+    }
+
+    @Test
+    fun `page reader character count sums visible slice ranges`() {
+        val blocks = listOf(
+            PlainPageReaderTextBlock(sourceBlockIndex = 0, text = "abcdef"),
+            PlainPageReaderTextBlock(sourceBlockIndex = 1, text = "0123456789"),
+        )
+        val page = listOf(
+            PlainPageSlice(blockIndex = 0, range = TextPageRange(start = 1, endExclusive = 4)),
+            PlainPageSlice(blockIndex = 1, range = TextPageRange(start = 2, endExclusive = 7)),
+        )
+
+        assertTrue(plainPageReaderCharacterCount(page, blocks) == 8)
+    }
+
+    @Test
     fun `auto-scroll toggle hides reader panels when enabling`() {
         val state = resolveAutoScrollUiStateOnToggle(
             currentEnabled = false,

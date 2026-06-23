@@ -30,6 +30,8 @@ import androidx.compose.ui.unit.dp
 fun AutoScrollActionFab(
     autoScrollEnabled: Boolean,
     showFab: Boolean,
+    contentDescription: String? = null,
+    longClickLabel: String? = null,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -53,6 +55,7 @@ fun AutoScrollActionFab(
                 .combinedClickable(
                     onClick = onClick,
                     onLongClick = onLongClick,
+                    onLongClickLabel = longClickLabel,
                 ),
             contentAlignment = Alignment.Center,
         ) {
@@ -62,7 +65,7 @@ fun AutoScrollActionFab(
                 } else {
                     Icons.Outlined.PlayArrow
                 },
-                contentDescription = null,
+                contentDescription = contentDescription,
                 modifier = Modifier
                     .size(24.dp)
                     .offset(x = if (!autoScrollEnabled) 1.dp else 0.dp),

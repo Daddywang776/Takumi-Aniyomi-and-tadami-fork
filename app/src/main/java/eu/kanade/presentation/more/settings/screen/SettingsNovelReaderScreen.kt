@@ -67,6 +67,7 @@ import eu.kanade.presentation.reader.novel.ensureLegacyNovelReaderBackgroundItem
 import eu.kanade.presentation.reader.novel.importNovelReaderCustomBackgroundItem
 import eu.kanade.presentation.reader.novel.importNovelReaderCustomFont
 import eu.kanade.presentation.reader.novel.intervalToAutoScrollSpeed
+import eu.kanade.presentation.reader.novel.novelAutoScrollChapterEndBehaviorEntries
 import eu.kanade.presentation.reader.novel.novelBookFlipAnimationSpeedEntries
 import eu.kanade.presentation.reader.novel.novelBookFlipAnimationSpeedSliderIndex
 import eu.kanade.presentation.reader.novel.novelPageTransitionStyleEntries
@@ -980,6 +981,11 @@ object SettingsNovelReaderScreen : SearchableSettings {
         val autoScrollSpeed = intervalToAutoScrollSpeed(autoScrollInterval)
         val autoScrollOffsetPref = prefs.autoScrollOffset()
         val autoScrollOffset by autoScrollOffsetPref.collectAsState()
+        val autoScrollChapterEndBehaviorPref = prefs.autoScrollChapterEndBehavior()
+        val autoScrollChapterEndBehavior by autoScrollChapterEndBehaviorPref.collectAsState()
+        val autoScrollAdaptiveDelayPref = prefs.autoScrollAdaptiveDelay()
+        val autoScrollAdaptiveDelay by autoScrollAdaptiveDelayPref.collectAsState()
+        val autoScrollChapterEndBehaviorEntries = novelAutoScrollChapterEndBehaviorEntries()
         val cacheReadChaptersPref = prefs.cacheReadChapters()
         val cacheReadChapters by cacheReadChaptersPref.collectAsState()
         val cacheReadChaptersUnlimitedPref = prefs.cacheReadChaptersUnlimited()
@@ -1237,6 +1243,21 @@ object SettingsNovelReaderScreen : SearchableSettings {
                     title = stringResource(AYMR.strings.novel_reader_rich_native_renderer_experimental),
                     subtitle = richNativeSubtitle,
                     enabled = rendererAvailability.richNativeEnabled,
+                ),
+            )
+            add(
+                Preference.PreferenceItem.ListPreference(
+                    preference = autoScrollChapterEndBehaviorPref,
+                    title = stringResource(AYMR.strings.novel_reader_auto_scroll_chapter_end_behavior),
+                    subtitle = autoScrollChapterEndBehaviorEntries[autoScrollChapterEndBehavior],
+                    entries = autoScrollChapterEndBehaviorEntries,
+                ),
+            )
+            add(
+                Preference.PreferenceItem.SwitchPreference(
+                    preference = autoScrollAdaptiveDelayPref,
+                    title = stringResource(AYMR.strings.novel_reader_auto_scroll_adaptive_delay),
+                    subtitle = stringResource(AYMR.strings.novel_reader_auto_scroll_adaptive_delay_summary),
                 ),
             )
             add(

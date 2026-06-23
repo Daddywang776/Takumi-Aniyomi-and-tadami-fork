@@ -325,6 +325,10 @@ fun NovelReaderScreen(
     onDisableTts: () -> Unit = {},
     onOpenPreviousChapter: ((Long) -> Unit)? = null,
     onOpenNextChapter: ((Long) -> Unit)? = null,
+    onPrepareAutoScrollHandoff: (targetChapterId: Long, speed: Int) -> Unit = { _, _ -> },
+    onConsumeAutoScrollHandoff: (chapterId: Long) -> NovelAutoScrollHandoffState? = { null },
+    onCancelAutoScrollHandoff: () -> Unit = {},
+    onRequestAutoScrollNextChapterPrefetch: () -> Unit = {},
     onOpenChapter: ((Long) -> Unit)? = null,
     onDownloadChapter: ((Long) -> Unit)? = null,
     showReaderUi: Boolean,
@@ -442,16 +446,29 @@ fun NovelReaderScreen(
     val sourceId = state.novel.source
     val hasSourceOverride = remember(sourceId) { readerPreferences.getSourceOverride(sourceId) != null }
     var pageViewportSize by remember(state.chapter.id) { mutableStateOf(IntSize.Zero) }
-    var autoScrollEnabled by remember(state.chapter.id) {
-        mutableStateOf(resolveInitialAutoScrollEnabled(savedPreferenceEnabled = state.readerSettings.autoScroll))
+    var hasCompletedInitialReaderLayout by remember(state.chapter.id) { mutableStateOf(false) }
+    val autoScrollHandoff = remember(state.chapter.id) {
+        onConsumeAutoScrollHandoff(state.chapter.id)
     }
-    var autoScrollSpeed by remember(state.chapter.id, state.readerSettings.autoScrollInterval) {
-        mutableIntStateOf(intervalToAutoScrollSpeed(state.readerSettings.autoScrollInterval))
+    var autoScrollEnabled by remember(state.chapter.id, autoScrollHandoff) {
+        mutableStateOf(
+            resolveInitialAutoScrollEnabled(
+                savedPreferenceEnabled = state.readerSettings.autoScroll,
+                handoff = autoScrollHandoff,
+            ),
+        )
+    }
+    var autoScrollSpeed by remember(state.chapter.id, state.readerSettings.autoScrollInterval, autoScrollHandoff) {
+        mutableIntStateOf(
+            autoScrollHandoff?.speed ?: intervalToAutoScrollSpeed(state.readerSettings.autoScrollInterval),
+        )
     }
     var autoScrollExpanded by remember(state.chapter.id) { mutableStateOf(false) }
     var autoScrollWasUsed by remember(state.chapter.id) { mutableStateOf(false) }
     var touchCooldownUntilNanos by remember(state.chapter.id) { mutableLongStateOf(0L) }
     var speedFactor by remember(state.chapter.id) { mutableFloatStateOf(1f) }
+    var autoScrollEndStableFrames by remember(state.chapter.id) { mutableIntStateOf(0) }
+    var autoScrollEndDwellActive by remember(state.chapter.id) { mutableStateOf(false) }
     var showGeminiDialog by remember(state.chapter.id) { mutableStateOf(false) }
     var showGoogleDialog by remember(state.chapter.id) { mutableStateOf(false) }
     var translationSwitchRequest by remember(state.chapter.id) {
@@ -465,7 +482,9 @@ fun NovelReaderScreen(
     var webProgressPercent by remember(state.chapter.id) {
         mutableIntStateOf(state.lastSavedWebProgressPercent.coerceIn(0, 100))
     }
+    var webAutoScrollNearEnd by remember(state.chapter.id) { mutableStateOf(false) }
     var shouldRestoreWebScroll by remember(state.chapter.id) { mutableStateOf(true) }
+    var webViewPageReadyForAutoScroll by remember(state.chapter.id) { mutableStateOf(false) }
     var appliedWebCssFingerprint by remember(state.chapter.id) { mutableStateOf<String?>(null) }
     var hasReportedReadingProgress by remember(state.chapter.id, showWebView, state.readerSettings.pageReader) {
         mutableStateOf(false)
@@ -494,6 +513,19 @@ fun NovelReaderScreen(
             }
         } else {
             readerPreferences.autoScrollInterval().set(interval)
+        }
+    }
+    fun persistAutoScrollAdaptiveDelayPreference(
+        enabled: Boolean,
+    ) {
+        if (hasSourceOverride) {
+            readerPreferences.updateSourceOverride(sourceId) { override ->
+                override.copy(
+                    autoScrollAdaptiveDelay = enabled,
+                )
+            }
+        } else {
+            readerPreferences.autoScrollAdaptiveDelay().set(enabled)
         }
     }
     fun reportReadingProgress(
@@ -1010,6 +1042,23 @@ fun NovelReaderScreen(
             pageReaderPages.isNotEmpty() || richPageReaderPages.isNotEmpty()
             )
     val useRichPageReader = usePageReader && richPageReaderPages.isNotEmpty()
+    val pageReaderCharacterCounts = remember(
+        useRichPageReader,
+        pageReaderPages,
+        richPageReaderPages,
+        pageReaderTextBlocks,
+        richPageReaderBlockTexts,
+    ) {
+        if (useRichPageReader) {
+            richPageReaderPages.map { page ->
+                richPageReaderCharacterCount(page, richPageReaderBlockTexts)
+            }
+        } else {
+            pageReaderPages.map { page ->
+                plainPageReaderCharacterCount(page, pageReaderTextBlocks)
+            }
+        }
+    }
     val pageReaderContentPages = remember(
         useRichPageReader,
         pageReaderPages,
@@ -1070,6 +1119,15 @@ fun NovelReaderScreen(
         richContentUnsupportedFeaturesDetected = state.richContentUnsupportedFeaturesDetected,
     )
     val nativeScrollItemsCount = if (useRichNativeScroll) richScrollBlocks.size else scrollContentBlocks.size
+    val autoScrollContentReady = when {
+        showWebView -> webViewPageReadyForAutoScroll && scrollContentBlocks.isNotEmpty()
+        else -> scrollContentBlocks.isNotEmpty() || richScrollBlocks.isNotEmpty()
+    }
+    val autoScrollHasRenderableItems = when {
+        showWebView -> webViewInstance != null
+        usePageReader -> pageReaderItemsCount > 0
+        else -> nativeScrollItemsCount > 0
+    }
     val initialContentPage = resolveInitialPageReaderPage(
         savedPageReaderProgress = state.lastSavedPageReaderProgress,
         legacyLastSavedIndex = state.lastSavedIndex,
@@ -1553,6 +1611,36 @@ fun NovelReaderScreen(
         onOpenNextChapter?.invoke(chapterId)
     }
 
+    fun handleAutoScrollChapterEnd() {
+        val nextChapterId = state.nextChapterId
+        val behavior = state.readerSettings.autoScrollChapterEndBehavior
+        if (!shouldAutoScrollAdvanceToNextChapter(behavior, nextChapterId != null) || nextChapterId == null) {
+            autoScrollEnabled = false
+            autoScrollEndStableFrames = 0
+            autoScrollEndDwellActive = false
+            onCancelAutoScrollHandoff()
+            return
+        }
+        if (shouldAutoScrollContinueAcrossChapters(behavior)) {
+            onPrepareAutoScrollHandoff(nextChapterId, autoScrollSpeed)
+        } else {
+            onCancelAutoScrollHandoff()
+        }
+        autoScrollEnabled = false
+        autoScrollEndStableFrames = 0
+        autoScrollEndDwellActive = false
+        openNextChapterFromReader()
+    }
+
+    suspend fun handleAutoScrollStableChapterEndAfterDwell() {
+        autoScrollEndStableFrames = 0
+        autoScrollEndDwellActive = true
+        delay(AUTO_SCROLL_END_DWELL_MS)
+        if (!autoScrollEnabled || showReaderUi || !autoScrollEndDwellActive) return
+        autoScrollEndDwellActive = false
+        handleAutoScrollChapterEnd()
+    }
+
     suspend fun moveBackwardByReaderActionWithAnimation(pageAnimationDurationMillis: Int?) {
         if (showWebView) {
             val webView = webViewInstance
@@ -1711,13 +1799,18 @@ fun NovelReaderScreen(
     LaunchedEffect(
         autoScrollEnabled,
         autoScrollSpeed,
+        state.readerSettings.autoScrollInterval,
+        state.readerSettings.autoScrollAdaptiveDelay,
         usePageReader,
         showReaderUi,
         showWebView,
         webViewInstance,
         state.nextChapterId,
-        state.readerSettings.swipeToNextChapter,
+        state.readerSettings.autoScrollChapterEndBehavior,
         pageReaderItemsCount,
+        autoScrollContentReady,
+        autoScrollHasRenderableItems,
+        hasCompletedInitialReaderLayout,
     ) {
         if (!autoScrollEnabled) return@LaunchedEffect
         var previousFrameNanos: Long? = null
@@ -1730,19 +1823,24 @@ fun NovelReaderScreen(
                 continue
             }
 
-            // Touch cooldown + smooth acceleration/deceleration
+            if (resolveAutoScrollPrefetchNeeded(
+                    currentIndex = readingProgressPercent,
+                    totalItems = 100,
+                    behavior = state.readerSettings.autoScrollChapterEndBehavior,
+                )
+            ) {
+                onRequestAutoScrollNextChapterPrefetch()
+            }
+
             val isInCooldown = System.nanoTime() < touchCooldownUntilNanos
-            when {
-                isInCooldown && speedFactor > 0f -> {
-                    speedFactor = (speedFactor - AUTO_SCROLL_SPEED_FACTOR_DELTA).coerceAtLeast(0f)
-                    if (speedFactor <= 0f) {
-                        delay(100)
-                        continue
-                    }
-                }
-                !isInCooldown && speedFactor < 1f -> {
-                    speedFactor = (speedFactor + AUTO_SCROLL_SPEED_FACTOR_DELTA).coerceAtMost(1f)
-                }
+            speedFactor = resolveAutoScrollSpeedFactor(
+                currentFactor = speedFactor,
+                inCooldown = isInCooldown,
+                delta = AUTO_SCROLL_SPEED_FACTOR_DELTA,
+            )
+            if (isInCooldown && speedFactor <= 0f) {
+                delay(100)
+                continue
             }
 
             if (showWebView) {
@@ -1750,6 +1848,7 @@ fun NovelReaderScreen(
                 if (webView == null) {
                     previousFrameNanos = null
                     stepRemainderPx = 0f
+                    autoScrollEndStableFrames = 0
                     delay(120)
                     continue
                 }
@@ -1770,28 +1869,38 @@ fun NovelReaderScreen(
                 if (canScrollBefore) {
                     webView.scrollBy(0, stepPx)
                 }
-                val reachedEnd = !webView.canScrollVertically(1)
-                if (reachedEnd && state.readerSettings.swipeToNextChapter && state.nextChapterId != null) {
-                    autoScrollEnabled = false
-                    openNextChapterFromReader()
-                } else if (reachedEnd && !canScrollBefore) {
-                    autoScrollEnabled = false
+                val reachedWebAutoScrollThreshold = webAutoScrollNearEnd || !webView.canScrollVertically(1)
+                val endState = resolveNovelAutoScrollEndState(
+                    canScrollForward = webView.canScrollVertically(1) && !reachedWebAutoScrollThreshold,
+                    scrollConsumedPx = if (canScrollBefore) stepPx.toFloat() else 0f,
+                    isContentReady = autoScrollContentReady,
+                    hasCompletedInitialLayout = hasCompletedInitialReaderLayout,
+                    hasRenderableItems = autoScrollHasRenderableItems,
+                    previousStableEndFrameCount = autoScrollEndStableFrames,
+                )
+                autoScrollEndStableFrames = endState.stableEndFrameCount
+                if (endState.shouldEnterDwell) {
+                    handleAutoScrollStableChapterEndAfterDwell()
                 }
                 continue
             }
             if (usePageReader) {
                 previousFrameNanos = null
                 stepRemainderPx = 0f
-                delay(autoScrollPageDelayMs(autoScrollSpeed))
+                autoScrollEndStableFrames = 0
+                delay(
+                    autoScrollPageDelayMsForCharacterCount(
+                        intervalSeconds = state.readerSettings.autoScrollInterval,
+                        characterCount = pageReaderCharacterCounts.getOrNull(pageReaderProgressPageIndex) ?: 0,
+                        adaptiveEnabled = state.readerSettings.autoScrollAdaptiveDelay,
+                    ),
+                )
                 if (showReaderUi || showWebView || !autoScrollEnabled) continue
                 val currentPage = pageReaderProgressPageIndex
                 if (currentPage < pageReaderItemsCount - 1) {
                     moveForwardByReaderActionWithAnimation(bookFlipPageAnimationDurationMillis)
-                } else if (state.readerSettings.swipeToNextChapter && state.nextChapterId != null) {
-                    autoScrollEnabled = false
-                    moveForwardByReaderActionWithAnimation(bookFlipPageAnimationDurationMillis)
-                } else {
-                    autoScrollEnabled = false
+                } else if (autoScrollContentReady && hasCompletedInitialReaderLayout && autoScrollHasRenderableItems) {
+                    handleAutoScrollStableChapterEndAfterDwell()
                 }
             } else {
                 val frameTimeNanos = withFrameNanos { it }
@@ -1808,12 +1917,24 @@ fun NovelReaderScreen(
                 stepRemainderPx = resolvedStep.remainderPx
                 if (stepPx == 0) continue
                 val consumed = textListState.scrollBy(stepPx.toFloat())
-                val reachedEnd = consumed == 0f || !textListState.canScrollForward
-                if (reachedEnd && state.readerSettings.swipeToNextChapter && state.nextChapterId != null) {
-                    autoScrollEnabled = false
-                    openNextChapterFromReader()
-                } else if (reachedEnd) {
-                    autoScrollEnabled = false
+                val layoutInfo = textListState.layoutInfo
+                val lastVisibleItem = layoutInfo.visibleItemsInfo.lastOrNull()
+                val nativeNearConfiguredEndOffset = state.readerSettings.autoScrollOffset > 0 &&
+                    lastVisibleItem != null &&
+                    lastVisibleItem.index >= nativeScrollItemsCount - 1 &&
+                    lastVisibleItem.offset + lastVisibleItem.size <=
+                    layoutInfo.viewportEndOffset + state.readerSettings.autoScrollOffset
+                val endState = resolveNovelAutoScrollEndState(
+                    canScrollForward = textListState.canScrollForward && !nativeNearConfiguredEndOffset,
+                    scrollConsumedPx = consumed,
+                    isContentReady = autoScrollContentReady,
+                    hasCompletedInitialLayout = hasCompletedInitialReaderLayout,
+                    hasRenderableItems = autoScrollHasRenderableItems,
+                    previousStableEndFrameCount = autoScrollEndStableFrames,
+                )
+                autoScrollEndStableFrames = endState.stableEndFrameCount
+                if (endState.shouldEnterDwell) {
+                    handleAutoScrollStableChapterEndAfterDwell()
                 }
             }
         }
@@ -1829,7 +1950,12 @@ fun NovelReaderScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(textBackground)
-                .onSizeChanged { pageViewportSize = it }
+                .onSizeChanged { size ->
+                    pageViewportSize = size
+                    if (size.width > 0 && size.height > 0) {
+                        hasCompletedInitialReaderLayout = true
+                    }
+                }
                 .pointerInput(autoScrollEnabled) {
                     awaitEachGesture {
                         awaitFirstDown(requireUnconsumed = false)
@@ -2497,6 +2623,7 @@ fun NovelReaderScreen(
                                 }
 
                                 override fun onPageFinished(view: WebView?, url: String?) {
+                                    webViewPageReadyForAutoScroll = true
                                     view?.applyReaderCss(
                                         fontFaceCss = initialFontFaceCss,
                                         paddingTop = initialPaddingTop,
@@ -2568,6 +2695,7 @@ fun NovelReaderScreen(
                                                         )
                                                     ) {
                                                         webProgressPercent = settledProgress
+                                                        webAutoScrollNearEnd = settledProgress >= 100
                                                         reportReadingProgress(
                                                             settledProgress,
                                                             100,
@@ -2588,6 +2716,7 @@ fun NovelReaderScreen(
                                             )
                                         ) {
                                             webProgressPercent = settledProgress
+                                            webAutoScrollNearEnd = settledProgress >= 100
                                             reportReadingProgress(
                                                 settledProgress,
                                                 100,
@@ -2616,6 +2745,15 @@ fun NovelReaderScreen(
                                     if (!shouldTrackWebViewProgress(shouldRestoreWebScroll)) {
                                         return@setOnScrollChangeListener
                                     }
+                                    val totalScrollable = resolveWebViewTotalScrollablePx(
+                                        contentHeightPx = webView.resolveWebViewContentHeightPx(),
+                                        viewHeightPx = webView.height,
+                                    )
+                                    webAutoScrollNearEnd = resolveWebViewAutoScrollNearEnd(
+                                        totalScrollablePx = totalScrollable,
+                                        scrollYPx = scrollY,
+                                        endOffsetPx = state.readerSettings.autoScrollOffset,
+                                    )
                                     val newPercent = webView.resolveCurrentWebViewProgressPercent(
                                         scrollYOverride = scrollY,
                                     )
@@ -2863,6 +3001,7 @@ fun NovelReaderScreen(
                                 }
 
                                 override fun onPageFinished(view: WebView?, url: String?) {
+                                    webViewPageReadyForAutoScroll = true
                                     view?.applyReaderCss(
                                         fontFaceCss = fontFaceCss,
                                         paddingTop = paddingTop,
@@ -3452,46 +3591,110 @@ fun NovelReaderScreen(
                                 .padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
-                            // Speed section
                             Column {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                                ) {
-                                    Text(
-                                        text = stringResource(AYMR.strings.novel_reader_auto_scroll_speed),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = MaterialTheme.colorScheme.secondary,
-                                    )
-                                    Text(
-                                        text = "$autoScrollSpeed",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                    )
-                                }
-                                Slider(
-                                    value = autoScrollSpeed.toFloat(),
-                                    onValueChange = {
-                                        val newSpeed = it.roundToInt().coerceIn(1, 100)
-                                        autoScrollSpeed = newSpeed
-                                        persistAutoScrollIntervalPreference(
-                                            interval = autoScrollSpeedToInterval(newSpeed),
-                                        )
-                                    },
-                                    valueRange = 1f..100f,
-                                    steps = 98,
-                                    modifier = Modifier.padding(top = 4.dp),
-                                )
                                 if (usePageReader) {
-                                    Text(
-                                        text = stringResource(
-                                            AYMR.strings.reader_auto_scroll_page_time,
-                                            autoScrollPageDelayMs(autoScrollSpeed) / 1000,
-                                        ),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.align(androidx.compose.ui.Alignment.CenterHorizontally),
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                                    ) {
+                                        Text(
+                                            text = stringResource(AYMR.strings.novel_reader_auto_scroll_page_delay),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.secondary,
+                                        )
+                                        Text(
+                                            text = stringResource(
+                                                AYMR.strings.reader_auto_scroll_page_time_fixed,
+                                                state.readerSettings.autoScrollInterval,
+                                            ),
+                                            style = MaterialTheme.typography.labelLarge,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                    }
+                                    Slider(
+                                        value = state.readerSettings.autoScrollInterval.toFloat().coerceIn(2f, 60f),
+                                        onValueChange = {
+                                            persistAutoScrollIntervalPreference(it.roundToInt())
+                                        },
+                                        valueRange = 2f..60f,
+                                        steps = 58,
+                                        modifier = Modifier.padding(top = 4.dp),
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .clickable {
+                                                persistAutoScrollAdaptiveDelayPreference(
+                                                    !state.readerSettings.autoScrollAdaptiveDelay,
+                                                )
+                                            },
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                                    ) {
+                                        Text(
+                                            text = stringResource(AYMR.strings.novel_reader_auto_scroll_adaptive_delay),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.weight(1f),
+                                        )
+                                        Switch(
+                                            checked = state.readerSettings.autoScrollAdaptiveDelay,
+                                            onCheckedChange = {
+                                                persistAutoScrollAdaptiveDelayPreference(it)
+                                            },
+                                            modifier = Modifier.padding(start = 8.dp),
+                                        )
+                                    }
+                                    if (state.readerSettings.autoScrollAdaptiveDelay) {
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = stringResource(
+                                                AYMR.strings.reader_auto_scroll_page_time,
+                                                autoScrollPageDelayMsForCharacterCount(
+                                                    intervalSeconds = state.readerSettings.autoScrollInterval,
+                                                    characterCount =
+                                                    pageReaderCharacterCounts.getOrNull(pageReaderProgressPageIndex)
+                                                        ?: 0,
+                                                    adaptiveEnabled = true,
+                                                ) / 1000,
+                                            ),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.align(androidx.compose.ui.Alignment.CenterHorizontally),
+                                        )
+                                    }
+                                } else {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                                    ) {
+                                        Text(
+                                            text = stringResource(AYMR.strings.novel_reader_auto_scroll_speed),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.secondary,
+                                        )
+                                        Text(
+                                            text = "$autoScrollSpeed",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                    }
+                                    Slider(
+                                        value = autoScrollSpeed.toFloat(),
+                                        onValueChange = {
+                                            val newSpeed = it.roundToInt().coerceIn(1, 100)
+                                            autoScrollSpeed = newSpeed
+                                            persistAutoScrollIntervalPreference(
+                                                interval = autoScrollSpeedToInterval(newSpeed),
+                                            )
+                                        },
+                                        valueRange = 1f..100f,
+                                        steps = 98,
+                                        modifier = Modifier.padding(top = 4.dp),
                                     )
                                 }
                             }
@@ -3512,6 +3715,11 @@ fun NovelReaderScreen(
                                                 autoScrollExpanded = autoScrollExpanded,
                                             )
                                             autoScrollEnabled = nextState.autoScrollEnabled
+                                            if (!nextState.autoScrollEnabled) {
+                                                onCancelAutoScrollHandoff()
+                                                autoScrollEndStableFrames = 0
+                                                autoScrollEndDwellActive = false
+                                            }
                                             onSetShowReaderUi(nextState.showReaderUi)
                                             autoScrollExpanded = nextState.autoScrollExpanded
                                         },
@@ -3531,7 +3739,13 @@ fun NovelReaderScreen(
                                             } else {
                                                 Icons.Filled.PlayArrow
                                             },
-                                            contentDescription = null,
+                                            contentDescription = stringResource(
+                                                if (autoScrollEnabled) {
+                                                    AYMR.strings.novel_reader_auto_scroll_pause_description
+                                                } else {
+                                                    AYMR.strings.novel_reader_auto_scroll_play_description
+                                                },
+                                            ),
                                             tint = Color.White,
                                             modifier = Modifier.size(20.dp),
                                         )
@@ -3778,12 +3992,51 @@ fun NovelReaderScreen(
                 )
             }
 
+            NovelReaderAutoScrollEndOverlay(
+                visible = autoScrollEndDwellActive && autoScrollEnabled && !showReaderUi,
+                nextChapterName = state.nextChapterName,
+                isEInkMode = eInkProfile.isEnabled || isEInkMode,
+                onGoNow = {
+                    autoScrollEndDwellActive = false
+                    handleAutoScrollChapterEnd()
+                },
+                onStop = {
+                    autoScrollEnabled = false
+                    autoScrollEndDwellActive = false
+                    autoScrollEndStableFrames = 0
+                    onCancelAutoScrollHandoff()
+                },
+                onStay = {
+                    autoScrollEnabled = false
+                    autoScrollEndDwellActive = false
+                    autoScrollEndStableFrames = 0
+                    onCancelAutoScrollHandoff()
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(horizontal = 16.dp, vertical = 72.dp),
+            )
+
             AutoScrollActionFab(
                 autoScrollEnabled = autoScrollEnabled,
                 showFab = state.readerSettings.showAutoScrollFloatingButton && !showReaderUi,
+                contentDescription = stringResource(
+                    if (autoScrollEnabled) {
+                        AYMR.strings.novel_reader_auto_scroll_pause_description
+                    } else {
+                        AYMR.strings.novel_reader_auto_scroll_play_description
+                    },
+                ),
+                longClickLabel = stringResource(AYMR.strings.novel_reader_auto_scroll_settings_description),
                 onClick = {
                     autoScrollEnabled = !autoScrollEnabled
-                    if (autoScrollEnabled) onSetShowReaderUi(false)
+                    if (autoScrollEnabled) {
+                        onSetShowReaderUi(false)
+                    } else {
+                        onCancelAutoScrollHandoff()
+                        autoScrollEndStableFrames = 0
+                        autoScrollEndDwellActive = false
+                    }
                 },
                 onLongClick = { autoScrollExpanded = !autoScrollExpanded },
                 modifier = Modifier
@@ -3995,6 +4248,80 @@ fun NovelReaderScreen(
                         }
                     },
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NovelReaderAutoScrollEndOverlay(
+    visible: Boolean,
+    nextChapterName: String?,
+    isEInkMode: Boolean,
+    onGoNow: () -> Unit,
+    onStop: () -> Unit,
+    onStay: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = if (isEInkMode) fadeIn(animationSpec = tween(0)) else fadeIn(),
+        exit = if (isEInkMode) fadeOut(animationSpec = tween(0)) else fadeOut(),
+        modifier = modifier,
+    ) {
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surfaceColorAtElevation(8.dp).copy(alpha = 0.96f),
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            border = BorderStroke(
+                width = 1.dp,
+                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.7f),
+            ),
+            tonalElevation = 8.dp,
+            shadowElevation = if (isEInkMode) 0.dp else 8.dp,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = if (isEInkMode) {
+                        stringResource(AYMR.strings.novel_reader_auto_scroll_next_static_eink)
+                    } else {
+                        stringResource(
+                            AYMR.strings.novel_reader_auto_scroll_next_countdown,
+                            ((AUTO_SCROLL_END_DWELL_MS + 999L) / 1000L).toInt(),
+                        )
+                    },
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                if (!nextChapterName.isNullOrBlank()) {
+                    Text(
+                        text = stringResource(
+                            AYMR.strings.novel_reader_auto_scroll_next_chapter_named,
+                            nextChapterName,
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    TextButton(onClick = onStay) {
+                        Text(text = stringResource(AYMR.strings.novel_reader_auto_scroll_stay_here))
+                    }
+                    TextButton(onClick = onStop) {
+                        Text(text = stringResource(AYMR.strings.novel_reader_auto_scroll_stop_here))
+                    }
+                    TextButton(onClick = onGoNow) {
+                        Text(text = stringResource(AYMR.strings.novel_reader_auto_scroll_go_now))
+                    }
+                }
             }
         }
     }

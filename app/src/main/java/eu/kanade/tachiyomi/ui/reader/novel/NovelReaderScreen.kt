@@ -312,6 +312,10 @@ class NovelReaderScreen(
                     onTranslateSelectedText = screenModel::translateSelectedText,
                     onRetrySelectedTextTranslation = screenModel::retrySelectedTextTranslation,
                     onDismissSelectedTextTranslation = screenModel::dismissSelectedTextTranslation,
+                    onPrepareAutoScrollHandoff = screenModel::prepareAutoScrollHandoff,
+                    onConsumeAutoScrollHandoff = screenModel::consumeAutoScrollHandoffIfMatches,
+                    onCancelAutoScrollHandoff = screenModel::cancelAutoScrollHandoff,
+                    onRequestAutoScrollNextChapterPrefetch = screenModel::requestAutoScrollNextChapterPrefetch,
                     onOpenPreviousChapter = { previousChapterId ->
                         coroutineScope.launch {
                             screenModel.persistCurrentChapterExitState()

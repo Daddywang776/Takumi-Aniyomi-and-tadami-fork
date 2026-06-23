@@ -67,6 +67,42 @@ internal object NovelReaderChapterHandoffPolicy {
     }
 }
 
+internal object NovelReaderAutoScrollHandoffPolicy {
+    @Volatile
+    private var pendingHandoff: NovelAutoScrollHandoffState? = null
+
+    fun prepareHandoff(
+        fromChapterId: Long,
+        targetChapterId: Long,
+        speed: Int,
+        requestedAtMs: Long = System.currentTimeMillis(),
+    ) {
+        pendingHandoff = NovelAutoScrollHandoffState(
+            fromChapterId = fromChapterId,
+            targetChapterId = targetChapterId,
+            speed = speed.coerceIn(1, 100),
+            requestedAtMs = requestedAtMs,
+        )
+    }
+
+    fun consumeIfMatches(
+        currentChapterId: Long,
+        nowMs: Long = System.currentTimeMillis(),
+    ): NovelAutoScrollHandoffState? {
+        val pending = pendingHandoff ?: return null
+        if (pending.targetChapterId != currentChapterId || isAutoScrollHandoffExpired(pending.requestedAtMs, nowMs)) {
+            pendingHandoff = null
+            return null
+        }
+        pendingHandoff = null
+        return pending
+    }
+
+    fun cancel() {
+        pendingHandoff = null
+    }
+}
+
 internal object NovelReaderTtsChapterHandoffPolicy {
     @Volatile
     private var pendingRestoreChapterId: Long? = null

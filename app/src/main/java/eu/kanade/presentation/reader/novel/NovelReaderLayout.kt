@@ -138,6 +138,47 @@ internal fun autoScrollPageDelayMs(speed: Int): Long {
     return (10_000 - (clamped - 1) * 80).toLong().coerceIn(2_000L, 10_000L)
 }
 
+internal fun autoScrollPageDelayMsForCharacterCount(
+    intervalSeconds: Int,
+    characterCount: Int,
+    adaptiveEnabled: Boolean = true,
+): Long {
+    val baseDelayMs = intervalSeconds * 1000L
+    if (!adaptiveEnabled || characterCount <= 0) return baseDelayMs.coerceIn(2_000L, 60_000L)
+    val normalizedFactor = characterCount.toFloat() / 900f
+    return (baseDelayMs * normalizedFactor)
+        .roundToInt()
+        .toLong()
+        .coerceIn(2_000L, 60_000L)
+}
+
+internal fun plainPageReaderCharacterCount(
+    page: List<PlainPageSlice>,
+    textBlocks: List<PlainPageReaderTextBlock>,
+): Int {
+    return page.sumOf { slice ->
+        val text = textBlocks.getOrNull(slice.blockIndex)?.text.orEmpty()
+        (slice.range.endExclusive.coerceAtMost(text.length) - slice.range.start.coerceAtLeast(0))
+            .coerceAtLeast(0)
+    }
+}
+
+internal fun richPageReaderCharacterCount(
+    page: List<RichPageSlice>,
+    blockTexts: List<RichPageBlockText>,
+): Int {
+    return page.sumOf { slice ->
+        when (slice) {
+            is RichPageSlice.Text -> {
+                val text = blockTexts.getOrNull(slice.blockIndex)?.text?.text.orEmpty()
+                (slice.range.endExclusive.coerceAtMost(text.length) - slice.range.start.coerceAtLeast(0))
+                    .coerceAtLeast(0)
+            }
+            is RichPageSlice.Image -> 0
+        }
+    }
+}
+
 internal fun autoScrollScrollStepPx(speed: Int): Float {
     val clamped = speed.coerceIn(1, 100)
     return 0.5f + (clamped - 1) * (4.5f / 99f)
@@ -187,8 +228,9 @@ internal fun resolveAutoScrollUiStateOnToggle(
 internal fun resolveInitialAutoScrollEnabled(
     @Suppress("UNUSED_PARAMETER")
     savedPreferenceEnabled: Boolean,
+    handoff: NovelAutoScrollHandoffState? = null,
 ): Boolean {
-    return false
+    return handoff != null
 }
 
 internal fun resolveAutoScrollStep(
