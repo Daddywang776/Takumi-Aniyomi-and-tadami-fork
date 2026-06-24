@@ -260,6 +260,7 @@ dependencies {
     implementation(androidx.recyclerview)
     implementation(androidx.viewpager)
     implementation(androidx.localbroadcastmanager)
+    implementation(androidx.documentfile)
     implementation(androidx.profileinstaller)
     implementation(androidx.webkit)
     implementation(aniyomilibs.mediasession)
