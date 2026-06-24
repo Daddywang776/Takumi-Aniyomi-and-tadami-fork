@@ -599,7 +599,8 @@ class AnimeLibraryScreenModel(
             filterBookmarked,
             filterCompleted,
             filterIntervalCustom,
-        ).any { it != TriState.DISABLED } || trackingFilter.values.any { it != TriState.DISABLED }
+        ).any { it != TriState.DISABLED } ||
+            trackingFilter.values.any { it != TriState.DISABLED }
     }
 
     private fun getAnimelibItemPreferencesFlow(): Flow<ItemPreferences> {

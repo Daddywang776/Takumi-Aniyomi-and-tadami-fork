@@ -100,6 +100,7 @@ import eu.kanade.presentation.entries.novel.components.NovelCoverDialog
 import eu.kanade.presentation.entries.novel.components.NovelTranslatedDownloadFormatSelector
 import eu.kanade.tachiyomi.data.download.novel.NovelTranslatedDownloadFormat
 import eu.kanade.tachiyomi.data.export.novel.NovelEpubExportProgress
+import eu.kanade.tachiyomi.data.export.novel.NovelEpubExportResult
 import eu.kanade.tachiyomi.extension.novel.runtime.resolveUrl
 import eu.kanade.tachiyomi.novelsource.NovelSource
 import eu.kanade.tachiyomi.source.novel.NovelSiteSource
@@ -757,7 +758,7 @@ class NovelScreen(
                             includeCustomJs = includeCustomJs,
                         )
                         epubExportProgress = NovelEpubExportProgress.Preparing(successState.chapters.size)
-                        val exportFile = try {
+                        val exportResult = try {
                             screenModel.exportAsEpub(
                                 downloadedOnly = downloadedOnly,
                                 startChapter = startChapter,
@@ -773,16 +774,20 @@ class NovelScreen(
                         } finally {
                             epubExportProgress = null
                         }
-                        if (exportFile == null) {
-                            context.toast(context.contextStringResource(AYMR.strings.novel_export_failed))
-                            return@launch
+                        when (exportResult) {
+                            is NovelEpubExportResult.Failure -> {
+                                context.toast(resolveEpubFailureMessage(context, exportResult))
+                                return@launch
+                            }
+                            is NovelEpubExportResult.Success -> {
+                                showEpubExportDialog = false
+                                if (destinationTreeUri.isNotBlank()) {
+                                    context.toast(resolveEpubSuccessMessage(context, exportResult))
+                                    return@launch
+                                }
+                                shareNovelFile(context, exportResult.cacheFile)
+                            }
                         }
-                        showEpubExportDialog = false
-                        if (destinationTreeUri.isNotBlank()) {
-                            context.toast(context.contextStringResource(AYMR.strings.novel_export_saved_to_folder))
-                            return@launch
-                        }
-                        shareNovelFile(context, exportFile)
                     }
                 },
             )
@@ -942,6 +947,32 @@ class NovelScreen(
             )
         } catch (e: Exception) {
             context.toast(e.message)
+        }
+    }
+
+    private fun resolveEpubFailureMessage(
+        context: Context,
+        result: NovelEpubExportResult.Failure,
+    ): String {
+        val base = context.contextStringResource(AYMR.strings.novel_export_failed)
+        val skipped = result.report?.skippedChapters?.size ?: 0
+        return if (skipped > 0) {
+            "$base: skipped $skipped selected chapters"
+        } else {
+            "$base: ${result.reason.name.lowercase().replace('_', ' ')}"
+        }
+    }
+
+    private fun resolveEpubSuccessMessage(
+        context: Context,
+        result: NovelEpubExportResult.Success,
+    ): String {
+        val base = context.contextStringResource(AYMR.strings.novel_export_saved_to_folder)
+        val skipped = result.report.skippedChapters.size
+        return if (skipped > 0) {
+            "$base, skipped $skipped chapters"
+        } else {
+            base
         }
     }
 

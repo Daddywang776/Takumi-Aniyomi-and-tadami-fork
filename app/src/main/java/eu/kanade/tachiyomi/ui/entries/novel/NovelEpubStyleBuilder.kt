@@ -28,10 +28,12 @@ internal object NovelEpubStyleBuilder {
                 appendLine("  word-wrap: break-word;")
                 appendLine("}")
                 appendLine("body {")
-                appendLine("  padding-left: ${settings.margin}px;")
-                appendLine("  padding-right: ${settings.margin}px;")
-                appendLine("  padding-bottom: 40px;")
-                appendLine("  font-size: ${settings.fontSize}px;")
+                val marginEm = (settings.margin / 16f).coerceAtLeast(0f)
+                val fontPercent = ((settings.fontSize / 16f) * 100f).coerceAtLeast(75f)
+                appendLine("  padding-left: ${formatCssNumber(marginEm)}em;")
+                appendLine("  padding-right: ${formatCssNumber(marginEm)}em;")
+                appendLine("  padding-bottom: 2.5em;")
+                appendLine("  font-size: ${formatCssNumber(fontPercent)}%;")
                 appendLine("  color: ${colors.text};")
                 resolveEpubCssTextAlign(settings.textAlign)?.let { align ->
                     appendLine("  text-align: $align;")
@@ -43,8 +45,8 @@ internal object NovelEpubStyleBuilder {
                 appendLine("  background-color: ${colors.background};")
                 appendLine("}")
                 appendLine("hr {")
-                appendLine("  margin-top: 20px;")
-                appendLine("  margin-bottom: 20px;")
+                appendLine("  margin-top: 1.25em;")
+                appendLine("  margin-bottom: 1.25em;")
                 appendLine("}")
                 appendLine("a {")
                 appendLine("  color: $linkColor;")
@@ -115,6 +117,14 @@ internal object NovelEpubStyleBuilder {
         )
     }
 
+    private fun formatCssNumber(value: Float): String {
+        return if (value % 1f == 0f) {
+            value.toInt().toString()
+        } else {
+            "%.3f".format(java.util.Locale.US, value).trimEnd('0').trimEnd('.')
+        }
+    }
+
     private fun sanitizeSourceScopedCss(
         css: String,
         sourceId: Long,
@@ -123,8 +133,18 @@ internal object NovelEpubStyleBuilder {
 
         val sourceScopeRegex = Regex("#sourceId-$sourceId\\s*\\{", RegexOption.IGNORE_CASE)
         val selectorCleanupRegex = Regex("#sourceId-$sourceId[^.#A-Z]*", RegexOption.IGNORE_CASE)
+        val externalImportRegex = Regex("@import[^;]+;?", RegexOption.IGNORE_CASE)
+        val externalUrlRegex = Regex("url\\(\\s*['\"]?(?:https?:)?//[^)]+\\)", RegexOption.IGNORE_CASE)
+        val fixedPositionRegex = Regex("position\\s*:\\s*fixed\\s*;?", RegexOption.IGNORE_CASE)
+        val viewportUnitsRegex = Regex("[-+]?(?:\\d*\\.)?\\d+v[whminax]", RegexOption.IGNORE_CASE)
+        val animationRegex = Regex("(?:animation|transition)[^:]*:[^;]+;?", RegexOption.IGNORE_CASE)
 
         return css
+            .replace(externalImportRegex, "")
+            .replace(externalUrlRegex, "none")
+            .replace(fixedPositionRegex, "")
+            .replace(viewportUnitsRegex, "100%")
+            .replace(animationRegex, "")
             .replace(sourceScopeRegex, "body {")
             .replace(selectorCleanupRegex, "")
     }

@@ -338,6 +338,7 @@ dependencies {
     testRuntimeOnly(libs.junitVintageEngine)
     testRuntimeOnly(libs.conscrypt.openjdk.uber)
     testImplementation(libs.okhttp.mockwebserver)
+    testImplementation(libs.epubcheck)
 
     // For detecting memory leaks; see https://square.github.io/leakcanary/
     // debugImplementation(libs.leakcanary.android)

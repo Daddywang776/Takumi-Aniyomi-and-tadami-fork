@@ -11,6 +11,7 @@ import eu.kanade.tachiyomi.ui.reader.novel.setting.TextAlign
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.string.shouldNotContain
 import org.junit.jupiter.api.Test
 import tachiyomi.domain.entries.novel.model.Novel
 
@@ -44,8 +45,13 @@ class NovelEpubStyleBuilderTest {
             linkColor = "#33AAFF",
         )
 
-        stylesheet.shouldContain("font-size: 18px")
+        stylesheet.shouldContain("font-size: 112.5%")
+        stylesheet.shouldContain("padding-left: 1.25em")
+        stylesheet.shouldContain("padding-right: 1.25em")
         stylesheet.shouldContain("line-height: 1.7")
+        stylesheet.shouldNotContain("font-size: 18px")
+        stylesheet.shouldNotContain("padding-left: 20px")
+        stylesheet.shouldNotContain("px")
         stylesheet.shouldContain("text-align: justify")
         stylesheet.shouldContain("background-color: #101010")
         stylesheet.shouldContain("color: #EFEFEF")
@@ -53,6 +59,38 @@ class NovelEpubStyleBuilderTest {
         stylesheet.shouldContain("a {")
         stylesheet.shouldContain("#33AAFF")
         stylesheet.shouldContain("body { color: red; }")
+    }
+
+    @Test
+    fun `buildStylesheet sanitizes custom css features that reduce epub compatibility`() {
+        val settings = defaultSettings(
+            customCSS = """
+                @import url('https://example.org/style.css');
+                #sourceId-123 {
+                    background-image: url(//example.org/bg.png);
+                    position: fixed;
+                    width: 100vw;
+                    animation: fade 1s;
+                    color: red;
+                }
+            """.trimIndent(),
+        )
+
+        val stylesheet = NovelEpubStyleBuilder.buildStylesheet(
+            settings = settings,
+            sourceId = 123L,
+            applyReaderTheme = false,
+            includeCustomCss = true,
+            linkColor = "#33AAFF",
+        ).orEmpty()
+
+        stylesheet.shouldContain("body {")
+        stylesheet.shouldContain("color: red")
+        stylesheet.shouldNotContain("@import")
+        stylesheet.shouldNotContain("example.org")
+        stylesheet.shouldNotContain("position: fixed")
+        stylesheet.shouldNotContain("100vw")
+        stylesheet.shouldNotContain("animation:")
     }
 
     @Test

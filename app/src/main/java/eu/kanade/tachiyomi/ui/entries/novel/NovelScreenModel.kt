@@ -37,8 +37,10 @@ import eu.kanade.tachiyomi.data.download.novel.NovelQueuedDownloadStatus
 import eu.kanade.tachiyomi.data.download.novel.NovelQueuedDownloadType
 import eu.kanade.tachiyomi.data.download.novel.NovelTranslatedDownloadFormat
 import eu.kanade.tachiyomi.data.download.novel.NovelTranslatedDownloadManager
+import eu.kanade.tachiyomi.data.export.novel.NovelEpubExportFailure
 import eu.kanade.tachiyomi.data.export.novel.NovelEpubExportOptions
 import eu.kanade.tachiyomi.data.export.novel.NovelEpubExportProgress
+import eu.kanade.tachiyomi.data.export.novel.NovelEpubExportResult
 import eu.kanade.tachiyomi.data.export.novel.NovelEpubExporter
 import eu.kanade.tachiyomi.data.suggestions.SuggestionCoordinator
 import eu.kanade.tachiyomi.data.suggestions.SuggestionItem
@@ -130,7 +132,6 @@ import tachiyomi.domain.track.novel.model.NovelTrack
 import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
-import java.io.File
 import java.time.Instant
 import java.util.LinkedHashMap
 import java.util.concurrent.atomic.AtomicLong
@@ -2273,8 +2274,8 @@ class NovelScreenModel(
         includeCustomCss: Boolean,
         includeCustomJs: Boolean,
         onProgress: (NovelEpubExportProgress) -> Unit = {},
-    ): File? {
-        val state = successState ?: return null
+    ): NovelEpubExportResult {
+        val state = successState ?: return NovelEpubExportResult.Failure(NovelEpubExportFailure.UNKNOWN)
         val readerSettings = resolveReaderSettings(state.novel.source)
         val stylesheet = NovelEpubStyleBuilder.buildStylesheet(
             settings = readerSettings,
@@ -2290,7 +2291,7 @@ class NovelScreenModel(
         )
 
         return withContext(Dispatchers.IO) {
-            novelEpubExporter.export(
+            novelEpubExporter.exportWithResult(
                 novel = state.novel,
                 chapters = state.chapters,
                 options = NovelEpubExportOptions(
@@ -2300,6 +2301,7 @@ class NovelScreenModel(
                     destinationTreeUri = destinationTreeUri.trim().ifBlank { null },
                     stylesheet = stylesheet,
                     javaScript = javaScript,
+                    failOnMissingChapters = downloadedOnly,
                 ),
                 onProgress = onProgress,
             )

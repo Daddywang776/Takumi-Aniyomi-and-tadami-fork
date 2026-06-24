@@ -5,18 +5,21 @@ import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import eu.kanade.domain.items.novelchapter.model.toSNovelChapter
 import eu.kanade.tachiyomi.data.download.novel.NovelDownloadManager
+import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.util.storage.DiskUtil
-import org.jsoup.Jsoup
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import org.jsoup.nodes.Document
 import tachiyomi.domain.entries.novel.model.Novel
 import tachiyomi.domain.items.novelchapter.model.NovelChapter
 import tachiyomi.domain.source.novel.service.NovelSourceManager
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.io.File
-import java.net.URI
-import java.net.URL
-import java.net.URLConnection
 import java.security.MessageDigest
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 import java.util.zip.CRC32
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -28,7 +31,40 @@ data class NovelEpubExportOptions(
     val destinationTreeUri: String? = null,
     val stylesheet: String? = null,
     val javaScript: String? = null,
+    val failOnMissingChapters: Boolean = false,
 )
+
+data class NovelEpubExportReport(
+    val totalSelected: Int,
+    val includedChapters: Int,
+    val skippedChapters: List<String> = emptyList(),
+    val embeddedImages: Int = 0,
+    val skippedImages: Int = 0,
+    val warnings: List<String> = emptyList(),
+    val validationStatus: String? = null,
+    val outputSizeBytes: Long = 0L,
+)
+
+sealed interface NovelEpubExportResult {
+    data class Success(
+        val cacheFile: File,
+        val destinationUri: Uri?,
+        val report: NovelEpubExportReport,
+    ) : NovelEpubExportResult
+
+    data class Failure(
+        val reason: NovelEpubExportFailure,
+        val report: NovelEpubExportReport? = null,
+    ) : NovelEpubExportResult
+}
+
+enum class NovelEpubExportFailure {
+    NO_CHAPTERS_SELECTED,
+    NO_READABLE_CHAPTERS,
+    MISSING_SELECTED_CHAPTERS,
+    DESTINATION_PERMISSION_DENIED,
+    UNKNOWN,
+}
 
 sealed interface NovelEpubExportProgress {
     data class Preparing(val totalChapters: Int) : NovelEpubExportProgress
@@ -47,7 +83,9 @@ class NovelEpubExporter(
     private val application: Application? = runCatching { Injekt.get<Application>() }.getOrNull(),
     private val sourceManager: NovelSourceManager? = runCatching { Injekt.get<NovelSourceManager>() }.getOrNull(),
     private val downloadManager: NovelDownloadManager = NovelDownloadManager(),
+    networkHelper: NetworkHelper? = runCatching { Injekt.get<NetworkHelper>() }.getOrNull(),
 ) {
+    private val assetResolver = EpubAssetResolver(networkHelper)
 
     suspend fun export(
         novel: Novel,
@@ -55,25 +93,78 @@ class NovelEpubExporter(
         options: NovelEpubExportOptions = NovelEpubExportOptions(),
         onProgress: (NovelEpubExportProgress) -> Unit = {},
     ): File? {
+        return when (val result = exportWithResult(novel, chapters, options, onProgress)) {
+            is NovelEpubExportResult.Success -> result.cacheFile
+            is NovelEpubExportResult.Failure -> null
+        }
+    }
+
+    suspend fun exportWithResult(
+        novel: Novel,
+        chapters: List<NovelChapter>,
+        options: NovelEpubExportOptions = NovelEpubExportOptions(),
+        onProgress: (NovelEpubExportProgress) -> Unit = {},
+    ): NovelEpubExportResult {
         val sorted = chapters.sortedBy { it.sourceOrder }
         val selected = applyRange(sorted, options.startChapter, options.endChapter)
-        if (selected.isEmpty()) return null
+        if (selected.isEmpty()) {
+            return NovelEpubExportResult.Failure(
+                NovelEpubExportFailure.NO_CHAPTERS_SELECTED,
+                NovelEpubExportReport(totalSelected = 0, includedChapters = 0),
+            )
+        }
         onProgress(NovelEpubExportProgress.Preparing(totalChapters = selected.size))
 
+        assetResolver.resetSession()
+        val warnings = mutableListOf<String>()
+        if (!options.javaScript.isNullOrBlank()) {
+            warnings += "Custom JavaScript is experimental and may be ignored by EPUB readers."
+        }
+        var embeddedImages = 0
+        var skippedImages = 0
+
         val chapterPayloads = selected.mapNotNull { chapter ->
+            currentCoroutineContext().ensureActive()
             val html = loadChapterHtml(novel, chapter, options.downloadedOnly) ?: return@mapNotNull null
             ChapterPayload(
                 chapter = chapter,
                 html = html,
             )
         }
-        if (chapterPayloads.isEmpty()) return null
+        val skippedChapters = selected
+            .filterNot { selectedChapter -> chapterPayloads.any { it.chapter.id == selectedChapter.id } }
+            .map { it.name.ifBlank { it.url } }
+        if (chapterPayloads.isEmpty()) {
+            return NovelEpubExportResult.Failure(
+                NovelEpubExportFailure.NO_READABLE_CHAPTERS,
+                NovelEpubExportReport(
+                    totalSelected = selected.size,
+                    includedChapters = 0,
+                    skippedChapters = skippedChapters,
+                ),
+            )
+        }
+        if (options.failOnMissingChapters && skippedChapters.isNotEmpty()) {
+            return NovelEpubExportResult.Failure(
+                NovelEpubExportFailure.MISSING_SELECTED_CHAPTERS,
+                NovelEpubExportReport(
+                    totalSelected = selected.size,
+                    includedChapters = chapterPayloads.size,
+                    skippedChapters = skippedChapters,
+                ),
+            )
+        }
 
-        val exportDir = File(application?.cacheDir ?: return null, "exports/novel")
+        val exportDir = File(
+            application?.cacheDir ?: return NovelEpubExportResult.Failure(NovelEpubExportFailure.UNKNOWN),
+            "exports/novel",
+        )
         exportDir.mkdirs()
         val filename = DiskUtil.buildValidFilename("${novel.title}_${System.currentTimeMillis()}.epub")
         val epubFile = File(exportDir, filename)
         val epubLanguage = resolveLanguage(novel)
+        val bookId = stableBookIdentifier(novel)
+        val modified = formatEpubModifiedTimestamp(Instant.now())
 
         ZipOutputStream(epubFile.outputStream().buffered()).use { zip ->
             writeStoredEntry(
@@ -132,7 +223,14 @@ class NovelEpubExporter(
                     path
                 }
 
-            val coverAsset = resolveCoverAsset(novel)?.let { cover ->
+            val resolvedCoverAsset = resolveCoverAsset(novel)
+            if (!novel.thumbnailUrl.isNullOrBlank() && resolvedCoverAsset.asset == null) {
+                skippedImages += 1
+                warnings += resolvedCoverAsset.warning ?: "Cover image could not be embedded."
+            }
+
+            val coverAsset = resolvedCoverAsset.asset?.let { cover ->
+                embeddedImages += 1
                 val path = "images/cover.${cover.extension}"
                 writeEntryBytes(
                     zip = zip,
@@ -147,14 +245,51 @@ class NovelEpubExporter(
                 ).also { manifestAssets[path] = it }
             }
 
+            val frontMatterItem = if (coverAsset != null) {
+                val page = EpubFrontMatterItem(
+                    id = "cover_page",
+                    fileName = "cover.xhtml",
+                    landmarkType = "cover",
+                    landmarkTitle = "Cover",
+                )
+                writeEntry(
+                    zip = zip,
+                    path = "OEBPS/${page.fileName}",
+                    content = buildCoverDocument(
+                        title = novel.title,
+                        coverHref = coverAsset.href,
+                        language = epubLanguage,
+                    ),
+                )
+                page
+            } else {
+                val page = EpubFrontMatterItem(
+                    id = "title_page",
+                    fileName = "title.xhtml",
+                    landmarkType = "titlepage",
+                    landmarkTitle = "Title page",
+                )
+                writeEntry(
+                    zip = zip,
+                    path = "OEBPS/${page.fileName}",
+                    content = buildTitleDocument(
+                        novel = novel,
+                        language = epubLanguage,
+                        modified = modified,
+                    ),
+                )
+                page
+            }
+
             val chapterItems = chapterPayloads.mapIndexed { index, payload ->
+                currentCoroutineContext().ensureActive()
                 val fileName = "chapter_${index + 1}.xhtml"
                 val chapterId = "chapter_${index + 1}"
                 val chapterTitle = payload.chapter.name.ifBlank {
                     "Chapter ${index + 1}"
                 }
-                val chapterDocument = Jsoup.parseBodyFragment(payload.html)
-                embedChapterImages(
+                val chapterDocument = EpubXhtmlSanitizer.parseBodyFragment(payload.html)
+                val imageReport = embedChapterImages(
                     zip = zip,
                     chapterDocument = chapterDocument,
                     chapterIndex = index + 1,
@@ -163,7 +298,10 @@ class NovelEpubExporter(
                     manifestAssets = manifestAssets,
                     imageAssetsByHash = imageAssetsByHash,
                 )
-                val chapterBody = chapterDocument.body().html()
+                embeddedImages += imageReport.newAssets
+                skippedImages += imageReport.skippedImages
+                warnings += imageReport.warnings
+                val chapterBody = EpubXhtmlSanitizer.bodyHtml(chapterDocument)
                 val styleLink = stylesheetPath?.let { path ->
                     """<link rel="stylesheet" href="$path" type="text/css"/>"""
                 }.orEmpty()
@@ -173,21 +311,13 @@ class NovelEpubExporter(
                 writeEntry(
                     zip = zip,
                     path = "OEBPS/$fileName",
-                    content = """
-                        <?xml version="1.0" encoding="UTF-8"?>
-                        <html xmlns="http://www.w3.org/1999/xhtml">
-                            <head>
-                                <title>${escapeXml(chapterTitle)}</title>
-                                <meta charset="UTF-8"/>
-                                $styleLink
-                            </head>
-                            <body>
-                                <h1>${escapeXml(chapterTitle)}</h1>
-                                $chapterBody
-                                $scriptTag
-                            </body>
-                        </html>
-                    """.trimIndent(),
+                    content = buildChapterDocument(
+                        title = chapterTitle,
+                        body = chapterBody,
+                        styleLink = styleLink,
+                        scriptTag = scriptTag,
+                        language = epubLanguage,
+                    ),
                 )
                 val chapterItem = EpubChapterItem(
                     id = chapterId,
@@ -207,12 +337,17 @@ class NovelEpubExporter(
             writeEntry(
                 zip = zip,
                 path = "OEBPS/nav.xhtml",
-                content = buildNavDocument(novel.title, chapterItems),
+                content = buildNavDocument(novel.title, chapterItems, epubLanguage, frontMatterItem),
             )
             writeEntry(
                 zip = zip,
                 path = "OEBPS/toc.ncx",
-                content = buildTocDocument(novel.title, chapterItems),
+                content = buildTocDocument(
+                    title = novel.title,
+                    chapterItems = chapterItems,
+                    bookId = bookId,
+                    language = epubLanguage,
+                ),
             )
             writeEntry(
                 zip = zip,
@@ -221,6 +356,9 @@ class NovelEpubExporter(
                     novel = novel,
                     chapterItems = chapterItems,
                     language = epubLanguage,
+                    bookId = bookId,
+                    modified = modified,
+                    frontMatterItem = frontMatterItem,
                     additionalAssets = manifestAssets.values.toList(),
                     hasCover = coverAsset != null,
                 ),
@@ -233,11 +371,50 @@ class NovelEpubExporter(
                 epubFile = epubFile,
                 destinationTreeUri = destinationTreeUri,
             )
-            if (!copied) return null
+            if (copied == null) {
+                return NovelEpubExportResult.Failure(
+                    NovelEpubExportFailure.DESTINATION_PERMISSION_DENIED,
+                    NovelEpubExportReport(
+                        totalSelected = selected.size,
+                        includedChapters = chapterPayloads.size,
+                        skippedChapters = skippedChapters,
+                        embeddedImages = embeddedImages,
+                        skippedImages = skippedImages,
+                        warnings = warnings,
+                        outputSizeBytes = epubFile.length(),
+                    ),
+                )
+            }
+            onProgress(NovelEpubExportProgress.Done(epubFile))
+            return NovelEpubExportResult.Success(
+                cacheFile = epubFile,
+                destinationUri = copied,
+                report = NovelEpubExportReport(
+                    totalSelected = selected.size,
+                    includedChapters = chapterPayloads.size,
+                    skippedChapters = skippedChapters,
+                    embeddedImages = embeddedImages,
+                    skippedImages = skippedImages,
+                    warnings = warnings,
+                    outputSizeBytes = epubFile.length(),
+                ),
+            )
         }
 
         onProgress(NovelEpubExportProgress.Done(epubFile))
-        return epubFile.takeIf { it.exists() }
+        return NovelEpubExportResult.Success(
+            cacheFile = epubFile,
+            destinationUri = null,
+            report = NovelEpubExportReport(
+                totalSelected = selected.size,
+                includedChapters = chapterPayloads.size,
+                skippedChapters = skippedChapters,
+                embeddedImages = embeddedImages,
+                skippedImages = skippedImages,
+                warnings = warnings,
+                outputSizeBytes = epubFile.length(),
+            ),
+        )
     }
 
     private suspend fun loadChapterHtml(
@@ -268,18 +445,24 @@ class NovelEpubExporter(
         novel: Novel,
         chapterItems: List<EpubChapterItem>,
         language: String,
+        bookId: String,
+        modified: String,
+        frontMatterItem: EpubFrontMatterItem,
         additionalAssets: List<EpubAssetItem>,
         hasCover: Boolean,
     ): String {
         val manifestItems = buildString {
             appendLine("""<item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/>""")
             appendLine("""<item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>""")
+            appendLine(
+                """<item id="${frontMatterItem.id}" href="${frontMatterItem.fileName}" media-type="application/xhtml+xml"/>""",
+            )
             chapterItems.forEach { chapter ->
                 appendLine(
                     """<item id="${chapter.id}" href="${chapter.fileName}" media-type="application/xhtml+xml"/>""",
                 )
             }
-            additionalAssets.forEach { asset ->
+            additionalAssets.distinctBy { it.href }.forEach { asset ->
                 val propertiesAttr = asset.properties?.let { """ properties="$it"""" }.orEmpty()
                 appendLine(
                     """<item id="${asset.id}" href="${asset.href}" media-type="${asset.mediaType}"$propertiesAttr/>""",
@@ -292,11 +475,13 @@ class NovelEpubExporter(
 
         return """
             <?xml version="1.0" encoding="UTF-8"?>
-            <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid">
+            <package xmlns="http://www.idpf.org/2007/opf" version="3.0" unique-identifier="bookid" prefix="dcterms: http://purl.org/dc/terms/ rendition: http://www.idpf.org/vocab/rendition/#">
                 <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
-                    <dc:identifier id="bookid">novel-${novel.id}</dc:identifier>
+                    <dc:identifier id="bookid">${escapeXml(bookId)}</dc:identifier>
                     <dc:title>${escapeXml(novel.title)}</dc:title>
-                    <dc:language>$language</dc:language>
+                    <dc:language>${escapeXml(language)}</dc:language>
+                    <meta property="dcterms:modified">$modified</meta>
+                    <meta property="rendition:layout">reflowable</meta>
                     ${if (hasCover) """<meta name="cover" content="cover_image"/>""" else ""}
                     ${novel.author?.takeIf {
             it.isNotBlank()
@@ -309,6 +494,7 @@ class NovelEpubExporter(
                     $manifestItems
                 </manifest>
                 <spine toc="ncx">
+                    <itemref idref="${frontMatterItem.id}"/>
                     $spineItems
                 </spine>
             </package>
@@ -322,23 +508,37 @@ class NovelEpubExporter(
         return raw.replace('_', '-')
     }
 
-    private fun embedChapterImages(
+    private suspend fun embedChapterImages(
         zip: ZipOutputStream,
-        chapterDocument: org.jsoup.nodes.Document,
+        chapterDocument: Document,
         chapterIndex: Int,
         chapterUrl: String?,
         novelUrl: String?,
         manifestAssets: MutableMap<String, EpubAssetItem>,
         imageAssetsByHash: MutableMap<String, EpubAssetItem>,
-    ) {
+    ): EpubImageEmbeddingReport {
+        var skippedImages = 0
+        var newAssets = 0
+        val warnings = mutableListOf<String>()
         val baseUrls = buildList {
             chapterUrl?.trim()?.takeIf { it.isNotBlank() }?.let { add(it) }
             novelUrl?.trim()?.takeIf { it.isNotBlank() }?.let { add(it) }
         }
         chapterDocument.select("img[src]").forEachIndexed { imageIndex, image ->
+            currentCoroutineContext().ensureActive()
             val src = image.attr("src").trim()
-            if (src.isBlank()) return@forEachIndexed
-            val resolved = resolveBinaryAsset(src, baseUrls) ?: return@forEachIndexed
+            if (src.isBlank()) {
+                skippedImages += 1
+                warnings += "Image in chapter $chapterIndex skipped: empty src attribute."
+                return@forEachIndexed
+            }
+            val resolution = assetResolver.resolveBinaryAssetWithReport(src, baseUrls)
+            val resolved = resolution.asset
+            if (resolved == null) {
+                skippedImages += 1
+                resolution.warning?.let { warnings += it }
+                return@forEachIndexed
+            }
             val hash = sha256Hex(resolved.bytes)
             val existing = imageAssetsByHash[hash]
             if (existing != null) {
@@ -353,93 +553,26 @@ class NovelEpubExporter(
                 bytes = resolved.bytes,
             )
             val asset = EpubAssetItem(
-                id = "img_${manifestAssets.size + 1}",
+                id = "img_${chapterIndex}_${imageIndex + 1}",
                 href = path,
                 mediaType = resolved.mediaType,
             )
             imageAssetsByHash[hash] = asset
             manifestAssets[path] = asset
             image.attr("src", path)
+            newAssets += 1
         }
+        return EpubImageEmbeddingReport(
+            newAssets = newAssets,
+            skippedImages = skippedImages,
+            warnings = warnings,
+        )
     }
 
-    private fun resolveCoverAsset(novel: Novel): BinaryAsset? {
+    private fun resolveCoverAsset(novel: Novel): EpubAssetResolutionReport {
         val src = novel.thumbnailUrl?.trim().orEmpty()
-        if (src.isBlank()) return null
-        return resolveBinaryAsset(src, emptyList())
-    }
-
-    private fun resolveBinaryAsset(
-        src: String,
-        baseUrls: List<String>,
-    ): BinaryAsset? {
-        val directUri = runCatching { URI(src) }.getOrNull()
-        val isAbsolute = directUri?.isAbsolute == true
-        val candidates = buildList {
-            if (isAbsolute) {
-                add(src)
-            } else {
-                baseUrls.forEach { base ->
-                    runCatching {
-                        val baseUri = URI(base)
-                        if (baseUri.isAbsolute) {
-                            add(baseUri.resolve(src).toString())
-                        }
-                    }
-                }
-            }
-        }.ifEmpty { listOf(src) }
-
-        candidates.forEach { candidate ->
-            resolveAbsoluteBinaryAsset(candidate)?.let { return it }
-        }
-        return null
-    }
-
-    private fun resolveAbsoluteBinaryAsset(src: String): BinaryAsset? {
-        val uri = runCatching { URI(src) }.getOrNull()
-        return when {
-            src.startsWith("http://", ignoreCase = true) || src.startsWith("https://", ignoreCase = true) -> {
-                runCatching {
-                    URL(src).openConnection().getInputStream().use { stream ->
-                        val bytes = stream.readBytes()
-                        if (bytes.isEmpty()) return@use null
-                        val mediaType = URLConnection.guessContentTypeFromStream(bytes.inputStream())
-                            ?: URLConnection.guessContentTypeFromName(src)
-                            ?: "image/jpeg"
-                        val ext = extensionFromMediaType(mediaType)
-                        BinaryAsset(bytes = bytes, mediaType = mediaType, extension = ext)
-                    }
-                }.getOrNull()
-            }
-            uri?.scheme.equals("file", ignoreCase = true) -> {
-                runCatching {
-                    val fileUri = uri ?: return@runCatching null
-                    val file = File(fileUri)
-                    if (!file.exists()) return@runCatching null
-                    val bytes = file.readBytes()
-                    if (bytes.isEmpty()) return@runCatching null
-                    val mediaType = URLConnection.guessContentTypeFromName(file.name) ?: "image/jpeg"
-                    val ext = extensionFromMediaType(mediaType, file.extension)
-                    BinaryAsset(bytes = bytes, mediaType = mediaType, extension = ext)
-                }.getOrNull()
-            }
-            else -> null
-        }
-    }
-
-    private fun extensionFromMediaType(
-        mediaType: String,
-        fallback: String? = null,
-    ): String {
-        return when (mediaType.substringBefore(';').trim().lowercase()) {
-            "image/jpeg", "image/jpg" -> "jpg"
-            "image/png" -> "png"
-            "image/gif" -> "gif"
-            "image/webp" -> "webp"
-            "image/svg+xml" -> "svg"
-            else -> fallback?.ifBlank { null } ?: "jpg"
-        }
+        if (src.isBlank()) return EpubAssetResolutionReport(asset = null)
+        return assetResolver.resolveBinaryAssetWithReport(src, emptyList())
     }
 
     private fun sha256Hex(bytes: ByteArray): String {
@@ -448,26 +581,125 @@ class NovelEpubExporter(
             .joinToString("") { b -> "%02x".format(b) }
     }
 
+    private fun buildChapterDocument(
+        title: String,
+        body: String,
+        styleLink: String,
+        scriptTag: String,
+        language: String,
+    ): String {
+        return """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <html xmlns="http://www.w3.org/1999/xhtml" lang="${escapeXml(language)}" xml:lang="${escapeXml(language)}">
+                <head>
+                    <title>${escapeXml(title)}</title>
+                    <meta charset="UTF-8"/>
+                    $styleLink
+                </head>
+                <body>
+                    <h1>${escapeXml(title)}</h1>
+                    $body
+                    $scriptTag
+                </body>
+            </html>
+        """.trimIndent()
+    }
+
+    private fun buildCoverDocument(
+        title: String,
+        coverHref: String,
+        language: String,
+    ): String {
+        return """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <html xmlns="http://www.w3.org/1999/xhtml" lang="${escapeXml(language)}" xml:lang="${escapeXml(language)}">
+                <head>
+                    <title>${escapeXml(title)}</title>
+                    <meta charset="UTF-8"/>
+                </head>
+                <body>
+                    <section>
+                        <h1>${escapeXml(title)}</h1>
+                        <img src="${escapeXml(coverHref)}" alt="${escapeXml(title)} cover"/>
+                    </section>
+                </body>
+            </html>
+        """.trimIndent()
+    }
+
+    private fun buildTitleDocument(
+        novel: Novel,
+        language: String,
+        modified: String,
+    ): String {
+        val creator = novel.author
+            ?.takeIf { it.isNotBlank() }
+            ?.let { "<p>${escapeXml(it)}</p>" }
+            .orEmpty()
+        val description = novel.description
+            ?.takeIf { it.isNotBlank() }
+            ?.let { "<section><h2>Description</h2><p>${escapeXml(it)}</p></section>" }
+            .orEmpty()
+        return """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <html xmlns="http://www.w3.org/1999/xhtml" lang="${escapeXml(language)}" xml:lang="${escapeXml(language)}">
+                <head>
+                    <title>${escapeXml(novel.title)}</title>
+                    <meta charset="UTF-8"/>
+                </head>
+                <body>
+                    <section>
+                        <h1>${escapeXml(novel.title)}</h1>
+                        $creator
+                        <p>Exported: ${escapeXml(modified)}</p>
+                        $description
+                    </section>
+                </body>
+            </html>
+        """.trimIndent()
+    }
+
     private fun buildNavDocument(
         title: String,
         chapterItems: List<EpubChapterItem>,
+        language: String,
+        frontMatterItem: EpubFrontMatterItem,
     ): String {
         val navItems = chapterItems.joinToString(separator = "\n") { chapter ->
             """<li><a href="${chapter.fileName}">${escapeXml(chapter.title)}</a></li>"""
         }
+        val bodymatterHref = chapterItems.firstOrNull()?.fileName.orEmpty()
+        val landmarks = if (bodymatterHref.isNotBlank()) {
+            """
+                <nav epub:type="landmarks" id="landmarks">
+                    <h2>Landmarks</h2>
+                    <ol>
+                        <li><a epub:type="${frontMatterItem.landmarkType}" href="${frontMatterItem.fileName}">${escapeXml(
+                frontMatterItem.landmarkTitle,
+            )}</a></li>
+                        <li><a epub:type="bodymatter" href="$bodymatterHref">Start reading</a></li>
+                    </ol>
+                </nav>
+            """.trimIndent()
+        } else {
+            ""
+        }
         return """
             <?xml version="1.0" encoding="UTF-8"?>
-            <html xmlns="http://www.w3.org/1999/xhtml">
+            <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="${escapeXml(
+            language,
+        )}" xml:lang="${escapeXml(language)}">
                 <head>
                     <title>${escapeXml(title)}</title>
                 </head>
                 <body>
-                    <nav epub:type="toc" xmlns:epub="http://www.idpf.org/2007/ops">
+                    <nav epub:type="toc" id="toc">
                         <h1>${escapeXml(title)}</h1>
                         <ol>
                             $navItems
                         </ol>
                     </nav>
+                    $landmarks
                 </body>
             </html>
         """.trimIndent()
@@ -476,6 +708,8 @@ class NovelEpubExporter(
     private fun buildTocDocument(
         title: String,
         chapterItems: List<EpubChapterItem>,
+        bookId: String,
+        language: String,
     ): String {
         val navPoints = chapterItems.mapIndexed { index, chapter ->
             """
@@ -489,9 +723,9 @@ class NovelEpubExporter(
         }.joinToString(separator = "\n")
         return """
             <?xml version="1.0" encoding="UTF-8"?>
-            <ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+            <ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1" xml:lang="${escapeXml(language)}">
                 <head>
-                    <meta name="dtb:uid" content="$title"/>
+                    <meta name="dtb:uid" content="${escapeXml(bookId)}"/>
                     <meta name="dtb:depth" content="1"/>
                     <meta name="dtb:totalPageCount" content="0"/>
                     <meta name="dtb:maxPageNumber" content="0"/>
@@ -511,10 +745,13 @@ class NovelEpubExporter(
         path: String,
         content: String,
     ) {
+        val normalizedContent = content.trimStart().let { trimmed ->
+            if (trimmed.startsWith("<?xml")) trimmed else content
+        }
         writeEntryBytes(
             zip = zip,
             path = path,
-            bytes = content.toByteArray(Charsets.UTF_8),
+            bytes = normalizedContent.toByteArray(Charsets.UTF_8),
         )
     }
 
@@ -540,10 +777,20 @@ class NovelEpubExporter(
             size = bytes.size.toLong()
             compressedSize = bytes.size.toLong()
             crc = crc32.value
+            extra = null
+            comment = null
         }
         zip.putNextEntry(entry)
         zip.write(bytes)
         zip.closeEntry()
+    }
+
+    private fun stableBookIdentifier(novel: Novel): String {
+        return "novel-${novel.id}"
+    }
+
+    private fun formatEpubModifiedTimestamp(instant: Instant): String {
+        return EPUB_MODIFIED_FORMATTER.format(instant)
     }
 
     private fun escapeXml(text: String): String {
@@ -558,25 +805,33 @@ class NovelEpubExporter(
     private fun copyToDestinationTree(
         epubFile: File,
         destinationTreeUri: String,
-    ): Boolean {
-        val context = application ?: return false
-        val treeUri = runCatching { Uri.parse(destinationTreeUri) }.getOrNull() ?: return false
-        val root = DocumentFile.fromTreeUri(context, treeUri) ?: return false
-        val target = root.createFile("application/epub+zip", epubFile.name) ?: return false
+    ): Uri? {
+        val context = application ?: return null
+        val treeUri = runCatching { Uri.parse(destinationTreeUri) }.getOrNull() ?: return null
+        val root = DocumentFile.fromTreeUri(context, treeUri) ?: return null
+        val target = root.createFile("application/epub+zip", epubFile.name) ?: return null
 
-        return runCatching {
+        val copied = runCatching {
             context.contentResolver.openOutputStream(target.uri, "w")?.use { output ->
                 epubFile.inputStream().use { input ->
                     input.copyTo(output)
                 }
             } != null
         }.getOrDefault(false)
+        return target.uri.takeIf { copied }
     }
 
     private data class EpubChapterItem(
         val id: String,
         val fileName: String,
         val title: String,
+    )
+
+    private data class EpubFrontMatterItem(
+        val id: String,
+        val fileName: String,
+        val landmarkType: String,
+        val landmarkTitle: String,
     )
 
     private data class ChapterPayload(
@@ -591,9 +846,15 @@ class NovelEpubExporter(
         val properties: String? = null,
     )
 
-    private data class BinaryAsset(
-        val bytes: ByteArray,
-        val mediaType: String,
-        val extension: String,
+    private data class EpubImageEmbeddingReport(
+        val newAssets: Int,
+        val skippedImages: Int,
+        val warnings: List<String> = emptyList(),
     )
+
+    private companion object {
+        val EPUB_MODIFIED_FORMATTER: DateTimeFormatter = DateTimeFormatter
+            .ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'")
+            .withZone(ZoneOffset.UTC)
+    }
 }
