@@ -1,6 +1,5 @@
 package eu.kanade.presentation.library.manga
 
-import eu.kanade.presentation.library.AURORA_LARGE_GRID_PERFORMANCE_THRESHOLD
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -17,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import eu.kanade.presentation.components.AuroraCard
+import eu.kanade.presentation.library.AURORA_LARGE_GRID_PERFORMANCE_THRESHOLD
 import eu.kanade.presentation.library.components.GlobalSearchItem
 import eu.kanade.presentation.library.components.GlowContourLibraryGridItem
 import eu.kanade.presentation.library.components.LazyLibraryGrid

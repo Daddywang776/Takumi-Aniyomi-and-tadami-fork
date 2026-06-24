@@ -194,14 +194,14 @@ class NovelLibraryScreenModel(
                                 hasActiveFilters = hasActiveFilters,
                                 library = library
                                     .applyFilters(
-                                    effectiveDownloadedFilter = effectiveDownloadedFilter,
-                                    downloadedNovelIds = downloadedNovelIds,
-                                    unreadFilter = filterPrefs.unreadFilter,
-                                    startedFilter = filterPrefs.startedFilter,
-                                    bookmarkedFilter = filterPrefs.bookmarkedFilter,
-                                    completedFilter = filterPrefs.completedFilter,
-                                    filterIntervalCustom = filterPrefs.filterIntervalCustom,
-                                )
+                                        effectiveDownloadedFilter = effectiveDownloadedFilter,
+                                        downloadedNovelIds = downloadedNovelIds,
+                                        unreadFilter = filterPrefs.unreadFilter,
+                                        startedFilter = filterPrefs.startedFilter,
+                                        bookmarkedFilter = filterPrefs.bookmarkedFilter,
+                                        completedFilter = filterPrefs.completedFilter,
+                                        filterIntervalCustom = filterPrefs.filterIntervalCustom,
+                                    )
                                     .applySort(sortPrefs.sortMode, sortPrefs.randomSortSeed)
                                     .applyGrouping(groupType, tracks)
                                     .withFilteredEmptyPlaceholder(sourceCategories, hasActiveFilters)
@@ -852,14 +852,15 @@ class NovelLibraryScreenModel(
     }
 
     private fun FilterPreferences.hasActiveFilters(): Boolean {
-        return downloadedOnly || listOf(
-            downloadedFilter,
-            unreadFilter,
-            startedFilter,
-            bookmarkedFilter,
-            completedFilter,
-            filterIntervalCustom,
-        ).any { it != TriState.DISABLED }
+        return downloadedOnly ||
+            listOf(
+                downloadedFilter,
+                unreadFilter,
+                startedFilter,
+                bookmarkedFilter,
+                completedFilter,
+                filterIntervalCustom,
+            ).any { it != TriState.DISABLED }
     }
 
     private fun NovelLibraryMap.withBadgeMetadata(

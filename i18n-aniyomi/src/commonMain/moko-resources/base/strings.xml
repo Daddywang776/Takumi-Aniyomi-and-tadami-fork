@@ -670,6 +670,8 @@
     <string name="novel_reader_auto_scroll_interval">Auto-scroll interval (sec)</string>
     <string name="novel_reader_auto_scroll_offset">Auto-scroll offset (px)</string>
     <string name="novel_reader_auto_scroll_chapter_end_behavior">Auto-scroll chapter end behavior</string>
+    <string name="novel_reader_auto_scroll_end_pause">Chapter end pause</string>
+    <string name="novel_reader_auto_scroll_end_pause_value">%1$d sec</string>
     <string name="novel_reader_auto_scroll_adaptive_delay">Adjust delay based on page text length</string>
     <string name="novel_reader_auto_scroll_adaptive_delay_summary">Automatically scale page turn delay based on character count</string>
     <string name="novel_reader_auto_scroll_chapter_end_stop">Stop at chapter end</string>

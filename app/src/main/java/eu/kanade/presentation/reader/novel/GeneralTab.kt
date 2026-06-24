@@ -657,6 +657,30 @@ fun GeneralTab(
                     )
                 },
             )
+            if (settings.autoScrollChapterEndBehavior != NovelAutoScrollChapterEndBehavior.StopAtEnd) {
+                val endPauseLabel = stringResource(AYMR.strings.novel_reader_auto_scroll_end_pause_value)
+                LnReaderSliderRow(
+                    label = stringResource(AYMR.strings.novel_reader_auto_scroll_end_pause),
+                    valueText = {
+                        endPauseLabel.replace(
+                            "%1\$d",
+                            it.roundToInt().toString(),
+                        ).replace("%d", it.roundToInt().toString())
+                    },
+                    committedValue = (settings.autoScrollEndPauseMs / 1000f).coerceIn(0f, 10f),
+                    range = 0f..10f,
+                    steps = 10,
+                    enabled = true,
+                    onCommit = {
+                        val seconds = it.roundToInt().coerceIn(0, 10)
+                        update(
+                            seconds * 1000L,
+                            { o, v -> o.copy(autoScrollEndPauseMs = v) },
+                            { preferences.autoScrollEndPauseMs().set(it) },
+                        )
+                    },
+                )
+            }
             LnReaderSliderRow(
                 label = stringResource(AYMR.strings.novel_reader_auto_scroll_speed),
                 valueText = { it.roundToInt().toString() },

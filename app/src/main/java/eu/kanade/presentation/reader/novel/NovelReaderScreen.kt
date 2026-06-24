@@ -69,6 +69,8 @@ import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.SettingsVoice
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -142,6 +144,7 @@ import eu.kanade.tachiyomi.ui.reader.novel.encodeNativeScrollProgress
 import eu.kanade.tachiyomi.ui.reader.novel.encodePageReaderProgress
 import eu.kanade.tachiyomi.ui.reader.novel.encodeWebScrollProgressPercent
 import eu.kanade.tachiyomi.ui.reader.novel.setting.GeminiPromptMode
+import eu.kanade.tachiyomi.ui.reader.novel.setting.NovelAutoScrollChapterEndBehavior
 import eu.kanade.tachiyomi.ui.reader.novel.setting.NovelBookFlipAnimationSpeed
 import eu.kanade.tachiyomi.ui.reader.novel.setting.NovelPageTransitionStyle
 import eu.kanade.tachiyomi.ui.reader.novel.setting.NovelPageTurnActivationZone
@@ -469,6 +472,7 @@ fun NovelReaderScreen(
     var speedFactor by remember(state.chapter.id) { mutableFloatStateOf(1f) }
     var autoScrollEndStableFrames by remember(state.chapter.id) { mutableIntStateOf(0) }
     var autoScrollEndDwellActive by remember(state.chapter.id) { mutableStateOf(false) }
+    var autoScrollEndDwellRemainingSeconds by remember(state.chapter.id) { mutableIntStateOf(0) }
     var showGeminiDialog by remember(state.chapter.id) { mutableStateOf(false) }
     var showGoogleDialog by remember(state.chapter.id) { mutableStateOf(false) }
     var translationSwitchRequest by remember(state.chapter.id) {
@@ -526,6 +530,32 @@ fun NovelReaderScreen(
             }
         } else {
             readerPreferences.autoScrollAdaptiveDelay().set(enabled)
+        }
+    }
+    fun persistAutoScrollChapterEndBehaviorPreference(
+        behavior: NovelAutoScrollChapterEndBehavior,
+    ) {
+        if (hasSourceOverride) {
+            readerPreferences.updateSourceOverride(sourceId) { override ->
+                override.copy(
+                    autoScrollChapterEndBehavior = behavior,
+                )
+            }
+        } else {
+            readerPreferences.autoScrollChapterEndBehavior().set(behavior)
+        }
+    }
+    fun persistAutoScrollEndPauseMsPreference(
+        pauseMs: Long,
+    ) {
+        if (hasSourceOverride) {
+            readerPreferences.updateSourceOverride(sourceId) { override ->
+                override.copy(
+                    autoScrollEndPauseMs = pauseMs,
+                )
+            }
+        } else {
+            readerPreferences.autoScrollEndPauseMs().set(pauseMs)
         }
     }
     fun reportReadingProgress(
@@ -1633,10 +1663,28 @@ fun NovelReaderScreen(
     }
 
     suspend fun handleAutoScrollStableChapterEndAfterDwell() {
+        val behavior = state.readerSettings.autoScrollChapterEndBehavior
+        if (behavior == NovelAutoScrollChapterEndBehavior.StopAtEnd) {
+            autoScrollEnabled = false
+            autoScrollEndStableFrames = 0
+            autoScrollEndDwellActive = false
+            onCancelAutoScrollHandoff()
+            return
+        }
+
         autoScrollEndStableFrames = 0
+        val endPauseMs = state.readerSettings.autoScrollEndPauseMs
+        val totalSeconds = ((endPauseMs + 999L) / 1000L).toInt()
+        autoScrollEndDwellRemainingSeconds = totalSeconds
         autoScrollEndDwellActive = true
-        delay(AUTO_SCROLL_END_DWELL_MS)
-        if (!autoScrollEnabled || showReaderUi || !autoScrollEndDwellActive) return
+
+        for (sec in totalSeconds downTo 1) {
+            autoScrollEndDwellRemainingSeconds = sec
+            delay(1000L)
+            if (!autoScrollEnabled || showReaderUi || !autoScrollEndDwellActive) return
+        }
+
+        autoScrollEndDwellRemainingSeconds = 0
         autoScrollEndDwellActive = false
         handleAutoScrollChapterEnd()
     }
@@ -3699,6 +3747,90 @@ fun NovelReaderScreen(
                                 }
                             }
 
+                            // Chapter End Behavior Settings
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        text = stringResource(
+                                            AYMR.strings.novel_reader_auto_scroll_chapter_end_behavior,
+                                        ),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = MaterialTheme.colorScheme.secondary,
+                                    )
+                                    var dropdownExpanded by remember { mutableStateOf(false) }
+                                    val behaviorEntries = novelAutoScrollChapterEndBehaviorEntries()
+                                    Box {
+                                        Text(
+                                            text =
+                                            behaviorEntries[state.readerSettings.autoScrollChapterEndBehavior] ?: "",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier
+                                                .clickable { dropdownExpanded = true }
+                                                .padding(8.dp),
+                                        )
+                                        DropdownMenu(
+                                            expanded = dropdownExpanded,
+                                            onDismissRequest = { dropdownExpanded = false },
+                                        ) {
+                                            behaviorEntries.forEach { (behavior, label) ->
+                                                DropdownMenuItem(
+                                                    text = {
+                                                        Text(text = label, style = MaterialTheme.typography.bodyMedium)
+                                                    },
+                                                    onClick = {
+                                                        dropdownExpanded = false
+                                                        persistAutoScrollChapterEndBehaviorPreference(behavior)
+                                                    },
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (state.readerSettings.autoScrollChapterEndBehavior !=
+                                    NovelAutoScrollChapterEndBehavior.StopAtEnd
+                                ) {
+                                    val currentPauseSec = (state.readerSettings.autoScrollEndPauseMs / 1000L).toInt()
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                                    ) {
+                                        Text(
+                                            text = stringResource(AYMR.strings.novel_reader_auto_scroll_end_pause),
+                                            style = MaterialTheme.typography.labelMedium,
+                                            color = MaterialTheme.colorScheme.secondary,
+                                        )
+                                        Text(
+                                            text = stringResource(
+                                                AYMR.strings.novel_reader_auto_scroll_end_pause_value,
+                                                currentPauseSec,
+                                            ),
+                                            style = MaterialTheme.typography.labelLarge,
+                                            color = MaterialTheme.colorScheme.onSurface,
+                                        )
+                                    }
+                                    Slider(
+                                        value = currentPauseSec.toFloat().coerceIn(0f, 10f),
+                                        onValueChange = {
+                                            val seconds = it.roundToInt().coerceIn(0, 10)
+                                            persistAutoScrollEndPauseMsPreference(seconds * 1000L)
+                                        },
+                                        valueRange = 0f..10f,
+                                        steps = 10,
+                                        modifier = Modifier.padding(top = 4.dp),
+                                    )
+                                }
+                            }
+
                             // Play/Pause + FAB toggle
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -3995,6 +4127,7 @@ fun NovelReaderScreen(
             NovelReaderAutoScrollEndOverlay(
                 visible = autoScrollEndDwellActive && autoScrollEnabled && !showReaderUi,
                 nextChapterName = state.nextChapterName,
+                remainingSeconds = autoScrollEndDwellRemainingSeconds,
                 isEInkMode = eInkProfile.isEnabled || isEInkMode,
                 onGoNow = {
                     autoScrollEndDwellActive = false
@@ -4257,6 +4390,7 @@ fun NovelReaderScreen(
 private fun NovelReaderAutoScrollEndOverlay(
     visible: Boolean,
     nextChapterName: String?,
+    remainingSeconds: Int,
     isEInkMode: Boolean,
     onGoNow: () -> Unit,
     onStop: () -> Unit,
@@ -4292,7 +4426,7 @@ private fun NovelReaderAutoScrollEndOverlay(
                     } else {
                         stringResource(
                             AYMR.strings.novel_reader_auto_scroll_next_countdown,
-                            ((AUTO_SCROLL_END_DWELL_MS + 999L) / 1000L).toInt(),
+                            remainingSeconds,
                         )
                     },
                     style = MaterialTheme.typography.titleSmall,

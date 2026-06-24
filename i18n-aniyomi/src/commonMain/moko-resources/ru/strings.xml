@@ -2044,6 +2044,8 @@
     <string name="novel_reader_auto_scroll_interval">Интервал автопрокрутки (сек)</string>
     <string name="novel_reader_auto_scroll_offset">Смещение автопрокрутки (px)</string>
     <string name="novel_reader_auto_scroll_chapter_end_behavior">Поведение автопрокрутки в конце главы</string>
+    <string name="novel_reader_auto_scroll_end_pause">Задержка в конце главы</string>
+    <string name="novel_reader_auto_scroll_end_pause_value">%1$d сек</string>
     <string name="novel_reader_auto_scroll_adaptive_delay">Адаптировать задержку под объём текста</string>
     <string name="novel_reader_auto_scroll_adaptive_delay_summary">Автоматически масштабировать задержку перелистывания страниц на основе количества символов</string>
     <string name="novel_reader_auto_scroll_chapter_end_stop">Остановиться в конце главы</string>

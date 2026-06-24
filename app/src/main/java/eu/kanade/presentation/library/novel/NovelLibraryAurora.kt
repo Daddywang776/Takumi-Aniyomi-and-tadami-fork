@@ -1,6 +1,5 @@
 package eu.kanade.presentation.library.novel
 
-import eu.kanade.presentation.library.AURORA_LARGE_GRID_PERFORMANCE_THRESHOLD
 import android.content.res.Configuration
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -66,6 +65,7 @@ import eu.kanade.presentation.components.resolveAuroraCoverModel
 import eu.kanade.presentation.entries.components.AuroraEntryDropdownMenu
 import eu.kanade.presentation.entries.components.AuroraEntryDropdownMenuItem
 import eu.kanade.presentation.entries.components.aurora.rememberAuroraPosterColorFilter
+import eu.kanade.presentation.library.AURORA_LARGE_GRID_PERFORMANCE_THRESHOLD
 import eu.kanade.presentation.library.components.EntryCompactGridItem
 import eu.kanade.presentation.library.components.GlobalSearchItem
 import eu.kanade.presentation.library.components.GlowContourLibraryGridItem
