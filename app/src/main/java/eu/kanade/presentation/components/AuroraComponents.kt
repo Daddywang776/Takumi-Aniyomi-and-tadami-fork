@@ -2,7 +2,6 @@ package eu.kanade.presentation.components
 
 import android.animation.ValueAnimator
 import android.graphics.Paint
-import android.graphics.RuntimeShader
 import android.graphics.Typeface
 import android.os.Build
 import androidx.compose.animation.core.RepeatMode
@@ -27,7 +26,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.withTransform
@@ -43,71 +41,6 @@ import tachiyomi.presentation.core.util.collectAsState
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import kotlin.math.pow
-
-// Event Horizon — optimized AGSL shader (Android 13+). One full-screen GPU pass.
-private const val EVENT_HORIZON_AGSL = """
-uniform float2 uResolution;
-uniform float  iTime;
-layout(color) uniform half4 uAccent;
-uniform float uHorizon;
-uniform float uTilt;
-uniform float uBright;
-uniform float uTurb;
-uniform float uSpeed;
-uniform float uGlow;
-uniform float uLens;
-uniform float uTemp;
-
-half3 plasma(float t) {
-    t = clamp(t + uTemp, 0.0, 1.0);
-    half3 white  = half3(1.0, 0.96, 0.88);
-    half3 orange = half3(1.0, 0.52, 0.10);
-    half3 ember  = half3(0.80, 0.16, 0.02);
-    return t < 0.5 ? mix(white, orange, t * 2.0) : mix(orange, ember, t * 2.0 - 1.0);
-}
-
-half4 main(float2 fragCoord) {
-    float m = min(uResolution.x, uResolution.y);
-    float2 uv = (fragCoord - 0.5 * uResolution) / m;
-    uv.y = -uv.y;
-    float sr = length(uv);
-    float horizon = uHorizon;
-    half3 col = half3(0.0);
-
-    float2 dp = float2(uv.x, uv.y / uTilt);
-    float r = length(dp);
-    float innerR = horizon * 1.18;
-    float t = (r - innerR) / (0.62 - innerR);
-    float db = 0.0;
-    half3 dc = half3(0.0);
-    if (t > 0.0 && t < 1.0) {
-        float ang = atan(dp.y, dp.x);
-        float rot = iTime * uSpeed;
-        float pat = 0.55 + 0.45 * sin(ang * 6.0 + r * 16.0 - rot * 3.0) * sin(ang * 3.0 + rot * 1.7);
-        float radial = smoothstep(0.0, 0.12, t) * smoothstep(1.0, 0.45, t);
-        float dopp = 1.0 + 0.6 * (-uv.x / max(r, 0.06));
-        db = max(radial * mix(1.0, pat, uTurb) * uBright * dopp, 0.0);
-        dc = mix(plasma(t), uAccent.rgb, 0.12);
-    }
-    float nearMask = step(uv.y, 0.0);
-
-    col += dc * db * (1.0 - nearMask);
-    col *= 1.0 - smoothstep(horizon * 1.02, horizon * 0.96, sr);
-
-    float ring = 1.0 - smoothstep(0.0, horizon * 0.06, abs(sr - horizon * 1.03));
-    col += mix(half3(1.0, 0.78, 0.47), uAccent.rgb, 0.10) * ring * uGlow;
-
-    col += dc * db * nearMask;
-
-    float halo = 1.0 - smoothstep(0.0, horizon * 0.16, abs(sr - horizon * 1.22));
-    float topW = 0.5 + 0.5 * (-uv.y / max(sr, 0.06));
-    col += mix(plasma(0.18), uAccent.rgb, 0.15) * halo * (0.35 + 0.9 * topW) * uLens;
-
-    col *= 1.0 - smoothstep(0.30, 0.95, sr) * 0.5;
-    col = col / (col + half3(0.6));
-    return half4(col, 1.0);
-}
-"""
 
 @Composable
 fun AuroraBackground(
@@ -747,15 +680,15 @@ private fun AuroraSpecialBackgroundCanvas(
         }
     }
 
-    val eventHorizonShader = remember {
+    // RuntimeShader (AGSL) only exists on API 33+. Keep all references isolated in
+    // AuroraEventHorizonShader so the class is never loaded/verified on older devices
+    // (otherwise ART throws NoClassDefFoundError on e.g. Android 9 - see crash report).
+    val eventHorizon = remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            RuntimeShader(EVENT_HORIZON_AGSL)
+            AuroraEventHorizonShader()
         } else {
             null
         }
-    }
-    val eventHorizonBrush = remember(eventHorizonShader) {
-        eventHorizonShader?.let { ShaderBrush(it) }
     }
 
     Canvas(modifier = Modifier.fillMaxSize()) {
@@ -999,23 +932,11 @@ private fun AuroraSpecialBackgroundCanvas(
             }
             "event_horizon_library" -> {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-                    eventHorizonShader != null &&
-                    eventHorizonBrush != null
+                    eventHorizon != null
                 ) {
                     // GPU path (Android 13+): one full-screen AGSL pass.
                     val time = if (animate) elapsedSeconds else 0f
-                    eventHorizonShader.setFloatUniform("uResolution", size.width, size.height)
-                    eventHorizonShader.setFloatUniform("iTime", time)
-                    eventHorizonShader.setColorUniform("uAccent", colors.accent.toArgb())
-                    eventHorizonShader.setFloatUniform("uHorizon", 0.125f)
-                    eventHorizonShader.setFloatUniform("uTilt", 0.26f)
-                    eventHorizonShader.setFloatUniform("uBright", 0.35f)
-                    eventHorizonShader.setFloatUniform("uTurb", 0.97f)
-                    eventHorizonShader.setFloatUniform("uSpeed", 0.1f)
-                    eventHorizonShader.setFloatUniform("uGlow", 0.45f)
-                    eventHorizonShader.setFloatUniform("uLens", 0.3f)
-                    eventHorizonShader.setFloatUniform("uTemp", -0.09f)
-                    drawRect(brush = eventHorizonBrush)
+                    with(eventHorizon) { drawEventHorizon(colors.accent, time) }
                 } else {
                     // Fallback (< Android 13): static OLED-black -> violet ember gradient.
                     drawRect(
