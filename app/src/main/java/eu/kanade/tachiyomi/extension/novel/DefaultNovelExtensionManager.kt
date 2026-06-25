@@ -153,12 +153,14 @@ class DefaultNovelExtensionManager(
             val installed = requireNotNull(kotlinInstaller) { "Kotlin novel extension installer is not available" }
                 .install(plugin)
                 .withNormalizedLang()
+            enableLanguageOf(installed)
             reloadInstalledKotlinExtensions()
             return installed
         }
 
         val installed = installer.install(plugin).withNormalizedLang()
         saveInstalledRepo(installed)
+        enableLanguageOf(installed)
         installedJsPluginsSnapshot = installedJsPluginsSnapshot
             .filterNot { it.id == installed.id } + installed
         applyInstalledSnapshots()
@@ -209,6 +211,7 @@ class DefaultNovelExtensionManager(
     override suspend fun trustPlugin(plugin: NovelPlugin.Untrusted) {
         requireNotNull(trustExtension) { "Novel extension trust service is not available" }
             .trust(plugin.pkgName, plugin.versionCode.toLong(), plugin.signatureHash)
+        enableLanguageOf(plugin)
         reloadInstalledKotlinExtensions()
     }
 
@@ -372,6 +375,19 @@ class DefaultNovelExtensionManager(
             pkgName = pkgName,
             isKotlinExtension = true,
         )
+    }
+
+    // ponytail: Auto-enable languages of the newly installed novel plugin
+    private fun enableLanguageOf(plugin: NovelPlugin) {
+        val lang = plugin.lang
+        if (lang.isNotBlank()) {
+            sourcePreferences?.enabledLanguages()?.let { enabledLanguagesPref ->
+                val currentLangs = enabledLanguagesPref.get()
+                if (lang !in currentLangs) {
+                    enabledLanguagesPref.set(currentLangs + lang)
+                }
+            }
+        }
     }
 
     private fun NovelPlugin.packageNameOrId(): String {

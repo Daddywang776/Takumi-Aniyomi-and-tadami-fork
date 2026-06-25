@@ -353,6 +353,15 @@ class MangaExtensionManager(
         saveInstalledRepo(extensionWithRepo)
         iconMap[extension.pkgName] = extension.icon
         rebuildSourcePackageIndex()
+
+        // ponytail: Auto-enable languages of the newly installed extension
+        val langs = extension.sources.map { it.lang }.toSet()
+        if (langs.isNotEmpty()) {
+            val currentLangs = preferences.enabledLanguages().get()
+            if (!currentLangs.containsAll(langs)) {
+                preferences.enabledLanguages().set(currentLangs + langs)
+            }
+        }
     }
 
     /**
