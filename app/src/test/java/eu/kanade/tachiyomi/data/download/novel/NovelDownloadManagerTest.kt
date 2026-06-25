@@ -48,6 +48,32 @@ class NovelDownloadManagerTest {
     }
 
     @Test
+    fun `readable download dir uses stable source name, not volatile toString()`() {
+        runBlocking {
+            // Regression: novel sources do not override toString(), so using
+            // source.toString() produced folder names like
+            // "NovelConfigurableJsSource@19c96ed" whose identityHashCode changes per
+            // app restart -> reindex failed and duplicate per-extension folders were
+            // created. The readable dir must use the stable source.name instead.
+            val source = MutableNovelSource(id = 10L, label = "Novel Ninja")
+            val manager = createManager(source = source, chapterText = "x")
+            val novel = Novel.create().copy(id = 1L, source = 10L, title = "Novel Title")
+            val chapter = NovelChapter.create().copy(id = 2L, novelId = 1L, url = "/chapter-2")
+
+            manager.downloadChapter(novel = novel, chapter = chapter) shouldBe true
+
+            val downloadsDir = tempDir.resolve("downloads").toFile()
+            // Folder is named after the human-readable source name...
+            readableChapterFile(downloadsDir, "Novel Ninja", novel.title, chapter.id)
+                .exists() shouldBe true
+            // ...and never after the volatile default toString().
+            val sourceDirs = File(downloadsDir, "novels").listFiles()?.map { it.name }.orEmpty()
+            sourceDirs.any { it.contains("@") } shouldBe false
+            sourceDirs.contains(source.toString()) shouldBe false
+        }
+    }
+
+    @Test
     fun `downloaded chapter is written under readable source and novel directories`() {
         runBlocking {
             val source = MutableNovelSource(id = 10L, label = "Source A")
@@ -65,7 +91,7 @@ class NovelDownloadManagerTest {
             )
 
             downloaded shouldBe true
-            readableChapterFile(tempDir.resolve("downloads").toFile(), source.label, novel.title, chapter.id)
+            readableChapterFile(tempDir.resolve("downloads").toFile(), source.name, novel.title, chapter.id)
                 .exists() shouldBe true
             manager.getDownloadedChapterText(novel, chapter.id) shouldBe expectedText
         }
@@ -87,7 +113,7 @@ class NovelDownloadManagerTest {
                     writeText("stable")
                 }
             val readableFile =
-                readableChapterFile(tempDir.resolve("downloads").toFile(), source.label, novel.title, chapterId)
+                readableChapterFile(tempDir.resolve("downloads").toFile(), source.name, novel.title, chapterId)
 
             manager.isChapterDownloaded(novel, chapterId) shouldBe true
 
@@ -244,7 +270,8 @@ class NovelDownloadManagerTest {
         override val id: Long,
         var label: String,
     ) : eu.kanade.tachiyomi.novelsource.NovelSource {
-        override val name: String = "Novel"
+        // The readable, stable source name (e.g. "Novel Ninja").
+        override val name: String get() = label
         override val lang: String = "en"
 
         override suspend fun getNovelDetails(novel: eu.kanade.tachiyomi.novelsource.model.SNovel) = novel
@@ -253,6 +280,10 @@ class NovelDownloadManagerTest {
         ) = emptyList<eu.kanade.tachiyomi.novelsource.model.SNovelChapter>()
         override suspend fun getChapterText(chapter: eu.kanade.tachiyomi.novelsource.model.SNovelChapter) = ""
 
-        override fun toString(): String = label
+        // Real novel sources (NovelConfigurableJsSource, NovelHttpSource, ...) do NOT
+        // override toString(), so it yields the volatile default "ClassName@identityHashCode".
+        // Mirror that here so the download-dir naming is forced to rely on name, not toString().
+        override fun toString(): String =
+            "NovelConfigurableJsSource@" + Integer.toHexString(System.identityHashCode(this))
     }
 }

@@ -332,7 +332,13 @@ class NovelDownloadManager(
 
     private fun getReadableSourceDirName(novel: Novel): String {
         val source = sourceManager?.getOrStub(novel.source)
-        val sourceName = source?.toString()?.ifBlank { null } ?: novel.source.toString()
+        // Use the stable, human-readable source name (e.g. "Novel Ninja").
+        // NOTE: novel sources do NOT override toString(), so source.toString()
+        // returns "ClassName@identityHashCode" (e.g. NovelConfigurableJsSource@19c96ed).
+        // identityHashCode changes per instance/app restart, producing a *different*
+        // folder name for the same extension every run -> reindex can't match existing
+        // downloads and new duplicate folders get created. source.name is stable.
+        val sourceName = source?.name?.ifBlank { null } ?: novel.source.toString()
         return DiskUtil.buildValidFilename(sourceName)
     }
 
