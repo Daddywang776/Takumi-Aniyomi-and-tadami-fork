@@ -8,8 +8,8 @@ class AnimeHeroContentTest {
     @Test
     fun `anime hero primary action layout keeps explicit height and horizontal padding`() {
         resolveAnimeHeroPrimaryActionLayoutSpec() shouldBe AnimeHeroPrimaryActionLayoutSpec(
-            heightDp = 52,
-            horizontalPaddingDp = 14,
+            heightDp = 54,
+            horizontalPaddingDp = 18,
         )
     }
 }

@@ -2,6 +2,7 @@ package eu.kanade.presentation.library.novel
 
 import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import io.kotest.matchers.shouldBe
+import io.mockk.mockk
 import org.junit.jupiter.api.Test
 import tachiyomi.domain.entries.novel.model.Novel
 import tachiyomi.domain.library.novel.LibraryNovel
@@ -27,7 +28,10 @@ class NovelLibraryBadgeStateTest {
         )
 
         val state = resolveNovelLibraryBadgeState(
-            item = NovelLibraryItem.Single(libraryNovel),
+            item = NovelLibraryItem.Single(
+                libraryNovel = libraryNovel,
+                sourceManager = mockk(relaxed = true),
+            ),
             showDownloadBadge = true,
             downloadedNovelIds = setOf(7L),
             showUnreadBadge = true,

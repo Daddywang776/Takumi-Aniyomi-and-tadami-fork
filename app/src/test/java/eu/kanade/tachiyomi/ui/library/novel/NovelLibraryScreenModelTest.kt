@@ -52,6 +52,9 @@ import tachiyomi.domain.series.novel.interactor.UpdateNovelSeries
 import tachiyomi.domain.source.novel.service.NovelSourceManager
 import tachiyomi.domain.track.novel.interactor.GetTracksPerNovel
 import tachiyomi.domain.track.novel.model.NovelTrack
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.fullType
+import uy.kohesive.injekt.api.get
 
 class NovelLibraryScreenModelTest {
 
@@ -100,6 +103,10 @@ class NovelLibraryScreenModelTest {
         downloadedIdsFlow = MutableStateFlow(emptySet())
         every { downloadCache.downloadedIds } returns downloadedIdsFlow
         sourceManager = mockk(relaxed = true)
+        runCatching { Injekt.get<NovelSourceManager>() }
+            .getOrElse {
+                Injekt.addSingleton(fullType<NovelSourceManager>(), sourceManager)
+            }
         getVisibleNovelCategories = mockk()
         getTracksPerNovel = mockk()
         trackerManager = mockk(relaxed = true)
