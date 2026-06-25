@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.data.backup.models
 
+import eu.kanade.tachiyomi.source.model.UpdateStrategy
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.protobuf.ProtoNumber
 import tachiyomi.domain.source.anime.service.AnimeSourceManager
@@ -8,7 +9,7 @@ import tachiyomi.domain.source.novel.service.NovelSourceManager
 
 @Serializable
 data class MihonBackup(
-    @ProtoNumber(1) val backupManga: List<BackupManga> = emptyList(),
+    @ProtoNumber(1) val backupManga: List<MihonBackupManga> = emptyList(),
     @ProtoNumber(2) var backupCategories: List<BackupCategory> = emptyList(),
     @ProtoNumber(101) var backupSources: List<BackupSource> = emptyList(),
     @ProtoNumber(104) var backupPreferences: List<BackupPreference> = emptyList(),
@@ -42,7 +43,7 @@ data class MihonBackup(
         animeSourceClassifier: (Long) -> Boolean,
     ): Backup {
         return Backup(
-            backupManga = backupManga,
+            backupManga = backupManga.map { it.toBackupManga() },
             backupCategories = backupCategories,
             backupSources = backupSources,
             backupPreferences = backupPreferences,
@@ -59,7 +60,8 @@ data class MihonBackup(
 
 internal fun Backup.toMihonBackup(): MihonBackup {
     return MihonBackup(
-        backupManga = backupManga + backupNovel.map { it.toBackupManga() },
+        backupManga = (backupManga + backupNovel.map { it.toBackupManga() })
+            .map { it.toMihonBackupManga() },
         backupCategories = backupCategories,
         backupSources = backupSources,
         backupPreferences = backupPreferences,
@@ -236,3 +238,101 @@ fun BackupManga.toBackupAnime(): BackupAnime {
         version = this.version,
     )
 }
+
+/**
+ * Manga entry as serialized by Mihon / Tachiyomi(-derived) apps.
+ *
+ * IMPORTANT: Mihon and Tadami/Aniyomi diverge on a few ProtoNumbers in the manga
+ * model. Decoding a Mihon backup with Tadami's [BackupManga] would either throw a
+ * wire-type mismatch (e.g. field 108 is a varint `version` in Mihon but a
+ * repeated-string `excludedScanlators` in Tadami) or silently drop data. This
+ * dedicated model carries Mihon's real numbering so the fallback path in
+ * BackupDecoder can parse such backups losslessly.
+ *
+ * Divergences vs [BackupManga]:
+ *   108 -> version            (Tadami: excludedScanlators)
+ *   109 -> notes              (Tadami: version)
+ *   600 -> excludedScanlators (Tadami: 108)
+ * Fields 1..107 are identical between both formats.
+ */
+@Serializable
+data class MihonBackupManga(
+    @ProtoNumber(1) var source: Long,
+    @ProtoNumber(2) var url: String,
+    @ProtoNumber(3) var title: String = "",
+    @ProtoNumber(4) var artist: String? = null,
+    @ProtoNumber(5) var author: String? = null,
+    @ProtoNumber(6) var description: String? = null,
+    @ProtoNumber(7) var genre: List<String> = emptyList(),
+    @ProtoNumber(8) var status: Int = 0,
+    @ProtoNumber(9) var thumbnailUrl: String? = null,
+    @ProtoNumber(13) var dateAdded: Long = 0,
+    @ProtoNumber(14) var viewer: Int = 0,
+    @ProtoNumber(16) var chapters: List<BackupChapter> = emptyList(),
+    @ProtoNumber(17) var categories: List<Long> = emptyList(),
+    @ProtoNumber(18) var tracking: List<BackupTracking> = emptyList(),
+    @ProtoNumber(100) var favorite: Boolean = true,
+    @ProtoNumber(101) var chapterFlags: Int = 0,
+    @ProtoNumber(103) var viewer_flags: Int? = null,
+    @ProtoNumber(104) var history: List<BackupHistory> = emptyList(),
+    @ProtoNumber(105) var updateStrategy: UpdateStrategy = UpdateStrategy.ALWAYS_UPDATE,
+    @ProtoNumber(106) var lastModifiedAt: Long = 0,
+    @ProtoNumber(107) var favoriteModifiedAt: Long? = null,
+    @ProtoNumber(108) var version: Long = 0,
+    @ProtoNumber(109) var notes: String = "",
+    @ProtoNumber(600) var excludedScanlators: List<String> = emptyList(),
+) {
+    fun toBackupManga(): BackupManga = BackupManga(
+        source = this.source,
+        url = this.url,
+        title = this.title,
+        artist = this.artist,
+        author = this.author,
+        description = this.description,
+        genre = this.genre,
+        status = this.status,
+        thumbnailUrl = this.thumbnailUrl,
+        dateAdded = this.dateAdded,
+        viewer = this.viewer,
+        chapters = this.chapters,
+        categories = this.categories,
+        tracking = this.tracking,
+        favorite = this.favorite,
+        chapterFlags = this.chapterFlags,
+        viewer_flags = this.viewer_flags,
+        history = this.history,
+        updateStrategy = this.updateStrategy,
+        lastModifiedAt = this.lastModifiedAt,
+        favoriteModifiedAt = this.favoriteModifiedAt,
+        excludedScanlators = this.excludedScanlators,
+        version = this.version,
+        notes = this.notes.ifBlank { null },
+    )
+}
+
+fun BackupManga.toMihonBackupManga(): MihonBackupManga = MihonBackupManga(
+    source = this.source,
+    url = this.url,
+    title = this.title,
+    artist = this.artist,
+    author = this.author,
+    description = this.description,
+    genre = this.genre,
+    status = this.status,
+    thumbnailUrl = this.thumbnailUrl,
+    dateAdded = this.dateAdded,
+    viewer = this.viewer,
+    chapters = this.chapters,
+    categories = this.categories,
+    tracking = this.tracking,
+    favorite = this.favorite,
+    chapterFlags = this.chapterFlags,
+    viewer_flags = this.viewer_flags,
+    history = this.history,
+    updateStrategy = this.updateStrategy,
+    lastModifiedAt = this.lastModifiedAt,
+    favoriteModifiedAt = this.favoriteModifiedAt,
+    version = this.version,
+    notes = this.notes.orEmpty(),
+    excludedScanlators = this.excludedScanlators,
+)

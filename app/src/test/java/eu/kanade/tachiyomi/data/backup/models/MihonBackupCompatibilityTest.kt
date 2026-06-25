@@ -1,10 +1,15 @@
 package eu.kanade.tachiyomi.data.backup.models
 
+import eu.kanade.tachiyomi.data.backup.BackupDetector
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.protobuf.ProtoBuf
 import kotlinx.serialization.protobuf.ProtoNumber
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 class MihonBackupCompatibilityTest {
 
@@ -35,9 +40,9 @@ class MihonBackupCompatibilityTest {
     fun `Mihon shaped backup decoded as Tadami schema routes entries by source section`() {
         val mihonBackup = MihonBackup(
             backupManga = listOf(
-                sampleManga().copy(source = 1, title = "Manga title"),
-                sampleManga().copy(source = 2, title = "Novel title"),
-                sampleManga().copy(source = 3, title = "Anime title"),
+                sampleManga().copy(source = 1, title = "Manga title").toMihonBackupManga(),
+                sampleManga().copy(source = 2, title = "Novel title").toMihonBackupManga(),
+                sampleManga().copy(source = 3, title = "Anime title").toMihonBackupManga(),
             ),
             backupCategories = listOf(BackupCategory(name = "Default", order = 0)),
             backupSources = listOf(
@@ -69,7 +74,7 @@ class MihonBackupCompatibilityTest {
     @Test
     fun `Mihon backup extension repos use proto field 106 and restore into Tadami manga repos`() {
         val mihonBackup = MihonBackup(
-            backupManga = listOf(sampleManga()),
+            backupManga = listOf(sampleManga().toMihonBackupManga()),
             backupExtensionRepo = listOf(sampleRepo()),
         )
 
@@ -179,5 +184,112 @@ class MihonBackupCompatibilityTest {
         @ProtoNumber(3) var title: String = "",
         @ProtoNumber(16) var chapters: List<BackupChapter> = emptyList(),
         @ProtoNumber(600) var mergedMangaReferences: List<String> = emptyList(),
+    )
+
+    @Test
+    fun `Mihon diverging fields 108, 109, 600 decode losslessly via Mihon schema`() {
+        val realMihonBytes = ProtoBuf.encodeToByteArray(
+            RealMihonBackup.serializer(),
+            RealMihonBackup(
+                backupManga = listOf(
+                    RealMihonManga(
+                        source = 1,
+                        url = "/manga",
+                        title = "Manga title",
+                        version = 7,
+                        notes = "My note",
+                        excludedScanlators = listOf("BadGroup"),
+                    ),
+                ),
+            ),
+        )
+
+        // The dedicated Mihon schema preserves every diverging field.
+        val viaMihon = ProtoBuf.decodeFromByteArray(MihonBackup.serializer(), realMihonBytes)
+            .toTadamiBackup(
+                mangaSourceClassifier = { true },
+                novelSourceClassifier = { false },
+                animeSourceClassifier = { false },
+            )
+        val manga = viaMihon.backupManga.single()
+        assertEquals("Manga title", manga.title)
+        assertEquals(7L, manga.version)
+        assertEquals("My note", manga.notes)
+        assertEquals(listOf("BadGroup"), manga.excludedScanlators)
+
+        // Decoding the same bytes with the Tadami schema fails on the wire-type
+        // mismatch at field 108/109 - this is precisely why BackupDecoder falls
+        // back to the Mihon schema instead of trusting a direct Tadami decode.
+        assertFailsWith<SerializationException> {
+            ProtoBuf.decodeFromByteArray(Backup.serializer(), realMihonBytes)
+        }
+    }
+
+    @Test
+    fun `Mihon manga round-trips through MihonBackupManga mapper`() {
+        val original = sampleManga().copy(
+            version = 3,
+            notes = "Note",
+            excludedScanlators = listOf("Group A", "Group B"),
+        )
+        val restored = original.toMihonBackupManga().toBackupManga()
+        assertEquals(original.title, restored.title)
+        assertEquals(original.version, restored.version)
+        assertEquals(original.notes, restored.notes)
+        assertEquals(original.excludedScanlators, restored.excludedScanlators)
+    }
+
+    @Test
+    fun `isMihonBackup detects a Mihon-shaped backup`() {
+        val bytes = ProtoBuf.encodeToByteArray(
+            MihonBackup.serializer(),
+            MihonBackup(
+                backupManga = listOf(sampleManga().toMihonBackupManga()),
+                backupExtensionRepo = listOf(sampleRepo()),
+            ),
+        )
+        assertTrue(BackupDetector.isMihonBackup(bytes))
+    }
+
+    @Test
+    fun `isMihonBackup rejects a native Tadami backup (isLegacy field 500 present)`() {
+        // BackupCreator always writes isLegacy=false, which is a non-default value
+        // and therefore serialized at field 500 - the native marker.
+        val bytes = ProtoBuf.encodeToByteArray(
+            Backup.serializer(),
+            Backup(backupManga = listOf(sampleManga()), isLegacy = false),
+        )
+        assertFalse(BackupDetector.isMihonBackup(bytes))
+    }
+
+    @Test
+    fun `isMihonBackup rejects a Tadami backup containing novel entries (field 5)`() {
+        val bytes = ProtoBuf.encodeToByteArray(
+            Backup.serializer(),
+            Backup(
+                backupManga = listOf(sampleManga()),
+                backupNovel = listOf(sampleNovel()),
+                isLegacy = false,
+            ),
+        )
+        assertFalse(BackupDetector.isMihonBackup(bytes))
+    }
+
+    // Mirrors Mihon / Tachiyomi(-derived) real manga numbering, which diverges
+    // from Tadami's BackupManga on fields 108/109/600.
+    @Serializable
+    private data class RealMihonBackup(
+        @ProtoNumber(1) val backupManga: List<RealMihonManga> = emptyList(),
+    )
+
+    @Serializable
+    private data class RealMihonManga(
+        @ProtoNumber(1) var source: Long,
+        @ProtoNumber(2) var url: String,
+        @ProtoNumber(3) var title: String = "",
+        @ProtoNumber(16) var chapters: List<BackupChapter> = emptyList(),
+        @ProtoNumber(108) var version: Long = 0,
+        @ProtoNumber(109) var notes: String = "",
+        @ProtoNumber(600) var excludedScanlators: List<String> = emptyList(),
     )
 }

@@ -6,7 +6,6 @@ import eu.kanade.tachiyomi.data.backup.models.Backup
 import eu.kanade.tachiyomi.data.backup.models.LegacyBackup
 import eu.kanade.tachiyomi.data.backup.models.MihonBackup
 import eu.kanade.tachiyomi.data.backup.models.routeSharedMangaEntriesBySource
-import kotlinx.serialization.SerializationException
 import kotlinx.serialization.protobuf.ProtoBuf
 import okio.buffer
 import okio.gzip
@@ -47,18 +46,32 @@ class BackupDecoder(
             }.use { it.readByteArray() }
 
             try {
-                if (BackupDetector.isLegacyBackup(backupString)) {
-                    parser.decodeFromByteArray(LegacyBackup.serializer(), backupString)
-                        .toBackup()
-                } else {
-                    parser.decodeFromByteArray(Backup.serializer(), backupString)
-                        .routeSharedMangaEntriesBySource(
-                            mangaSourceClassifier = ::isMangaSource,
-                            novelSourceClassifier = ::isNovelSource,
-                            animeSourceClassifier = ::isAnimeSource,
-                        )
+                when {
+                    BackupDetector.isLegacyBackup(backupString) -> {
+                        parser.decodeFromByteArray(LegacyBackup.serializer(), backupString)
+                            .toBackup()
+                    }
+                    BackupDetector.isMihonBackup(backupString) -> {
+                        // Positively detected Mihon / Tachiyomi(-derived) backup: decode with
+                        // the dedicated Mihon schema directly so diverging manga fields and
+                        // Mihon-only data (e.g. excludedScanlators) are preserved, instead of
+                        // relying on a Tadami decode that may silently misread or drop them.
+                        parser.decodeFromByteArray(MihonBackup.serializer(), backupString)
+                            .toTadamiBackup(mangaSourceManager, novelSourceManager, animeSourceManager)
+                    }
+                    else -> {
+                        parser.decodeFromByteArray(Backup.serializer(), backupString)
+                            .routeSharedMangaEntriesBySource(
+                                mangaSourceClassifier = ::isMangaSource,
+                                novelSourceClassifier = ::isNovelSource,
+                                animeSourceClassifier = ::isAnimeSource,
+                            )
+                    }
                 }
-            } catch (e: SerializationException) {
+            } catch (e: Exception) {
+                // Safety net: detection is heuristic, so if the chosen schema fails
+                // (e.g. a wire-type mismatch on diverging manga fields 108/109), retry with
+                // the dedicated Mihon schema before giving up.
                 try {
                     parser.decodeFromByteArray(MihonBackup.serializer(), backupString)
                         .toTadamiBackup(mangaSourceManager, novelSourceManager, animeSourceManager)
