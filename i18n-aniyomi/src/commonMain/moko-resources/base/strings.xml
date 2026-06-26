@@ -2456,4 +2456,32 @@
     <string name="player_subtitle_translation_progress">%1$d%%, %2$d/%3$d cues</string>
     <string name="player_subtitle_translation_from_to">%1$s → %2$s</string>
 
+    <!-- Anixart import -->
+    <string name="anixart_import_title">Import from Anixart</string>
+    <string name="anixart_import_summary">Import your bookmarks from an Anixart CSV export</string>
+    <string name="anixart_import_pick_file">Select CSV file</string>
+    <string name="anixart_import_pick_file_hint">In Anixart: Data Management → Export Bookmarks → CSV</string>
+    <string name="anixart_import_select_sources">Select sources to match against</string>
+    <string name="anixart_import_searching">Matching titles…</string>
+    <string name="anixart_import_review_title">Review matches</string>
+    <string name="anixart_import_group_exact">Exact matches</string>
+    <string name="anixart_import_group_review">Needs review</string>
+    <string name="anixart_import_group_nomatch">Not found</string>
+    <string name="anixart_import_action_import">Import (%1$d)</string>
+    <string name="anixart_import_importing">Importing…</string>
+    <string name="anixart_import_done">Import complete</string>
+    <string name="anixart_import_report">Added %1$d, already in library %2$d, failed %3$d</string>
+    <string name="anixart_import_error_invalid">This file is not a valid Anixart CSV export</string>
+    <string name="anixart_import_empty">No entries found in the file</string>
+    <string name="anixart_import_legal_notice">Only import bookmarks you are legally entitled to access. This tool only reads a file you exported yourself.</string>
+    <string name="anixart_import_category_mapping_title">Category Mapping</string>
+    <string name="anixart_import_status_watching">Watching</string>
+    <string name="anixart_import_status_completed">Completed</string>
+    <string name="anixart_import_status_plan_to_watch">Plan to Watch</string>
+    <string name="anixart_import_status_dropped">Dropped</string>
+    <string name="anixart_import_status_favorite">Starred (Favorites)</string>
+    <string name="anixart_import_category_none">Default Library (No Category)</string>
+    <string name="anixart_import_change_match">Change Match</string>
+    <string name="anixart_import_score_match">Match score: %1$d%%</string>
+    <string name="anixart_import_preference_group_title">Import</string>
 </resources>

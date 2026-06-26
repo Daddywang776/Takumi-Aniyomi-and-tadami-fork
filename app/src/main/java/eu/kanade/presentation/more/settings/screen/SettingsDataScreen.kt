@@ -70,6 +70,7 @@ import eu.kanade.presentation.more.settings.LocalSettingsUiStyle
 import eu.kanade.presentation.more.settings.Preference
 import eu.kanade.presentation.more.settings.SettingsUiStyle
 import eu.kanade.presentation.more.settings.rememberResolvedSettingsUiStyle
+import eu.kanade.presentation.more.settings.screen.anixart.AnixartImportScreen
 import eu.kanade.presentation.more.settings.screen.data.CloudSyncOptionsScreen
 import eu.kanade.presentation.more.settings.screen.data.CreateBackupScreen
 import eu.kanade.presentation.more.settings.screen.data.RestoreBackupScreen
@@ -161,6 +162,7 @@ object SettingsDataScreen : SearchableSettings {
             getBackupAndRestoreGroup(backupPreferences = backupPreferences),
             getCloudSyncGroup(),
             getDataGroup(),
+            getImportGroup(),
             getExportGroup(),
         )
     }
@@ -708,6 +710,37 @@ object SettingsDataScreen : SearchableSettings {
                 Preference.PreferenceItem.SwitchPreference(
                     preference = libraryPreferences.autoClearItemCache(),
                     title = stringResource(AYMR.strings.pref_auto_clear_chapter_cache),
+                ),
+            ),
+        )
+    }
+
+    @Composable
+    private fun getImportGroup(): Preference.PreferenceGroup {
+        val context = LocalContext.current
+        val navigator = LocalNavigator.currentOrThrow
+
+        val anixartImportLauncher = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.GetContent(),
+        ) { uri ->
+            if (uri != null) {
+                navigator.push(
+                    AnixartImportScreen {
+                        context.contentResolver.openInputStream(uri)
+                            ?: throw IllegalStateException("Cannot open selected file")
+                    },
+                )
+            }
+        }
+
+        return Preference.PreferenceGroup(
+            title = stringResource(AYMR.strings.anixart_import_preference_group_title),
+            preferenceItems = persistentListOf(
+                Preference.PreferenceItem.TextPreference(
+                    title = stringResource(AYMR.strings.anixart_import_title),
+                    subtitle = stringResource(AYMR.strings.anixart_import_summary),
+                    icon = Icons.Outlined.CloudDownload,
+                    onClick = { anixartImportLauncher.launch("*/*") },
                 ),
             ),
         )

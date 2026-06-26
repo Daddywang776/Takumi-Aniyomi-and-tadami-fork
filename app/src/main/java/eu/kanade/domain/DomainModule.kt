@@ -406,6 +406,9 @@ class DomainModule : InjektModule {
         addFactory { SetAnimeDefaultSeasonFlags(get(), get(), get()) }
         addFactory { SetAnimeViewerFlags(get()) }
         addFactory { NetworkToLocalAnime(get(), get()) }
+        addFactory {
+            eu.kanade.tachiyomi.data.anixart.ImportAnixartEntries(get(), get(), get(), get(), get())
+        }
         addFactory { UpdateAnime(get(), get()) }
         addFactory { SetAnimeCategories(get()) }
         addFactory { ShouldUpdateDbSeason() }

@@ -2472,4 +2472,32 @@
     <string name="achievement_event_horizon_cartographer_title">Картограф горизонта событий</string>
     <string name="achievement_event_horizon_cartographer_desc">Соберите 12 манг, 12 аниме, 12 ранобэ и 12 разных источников</string>
 
+    <!-- Anixart import -->
+    <string name="anixart_import_title">Импорт из Anixart</string>
+    <string name="anixart_import_summary">Импорт ваших закладок из CSV-файла экспорта Anixart</string>
+    <string name="anixart_import_pick_file">Выбрать CSV-файл</string>
+    <string name="anixart_import_pick_file_hint">В Anixart: Управление данными → Экспорт закладок → CSV</string>
+    <string name="anixart_import_select_sources">Выберите источники для поиска совпадений</string>
+    <string name="anixart_import_searching">Поиск совпадений…</string>
+    <string name="anixart_import_review_title">Проверка совпадений</string>
+    <string name="anixart_import_group_exact">Точное совпадение</string>
+    <string name="anixart_import_group_review">Требует проверки</string>
+    <string name="anixart_import_group_nomatch">Не найдено</string>
+    <string name="anixart_import_action_import">Импортировать (%1$d)</string>
+    <string name="anixart_import_importing">Импортирование…</string>
+    <string name="anixart_import_done">Импорт завершен</string>
+    <string name="anixart_import_report">Добавлено %1$d, уже в библиотеке %2$d, не удалось %3$d</string>
+    <string name="anixart_import_error_invalid">Этот файл не является корректным экспортом CSV от Anixart</string>
+    <string name="anixart_import_empty">В файле не найдено записей</string>
+    <string name="anixart_import_legal_notice">Импортируйте только те закладки, к которым у вас есть законный доступ. Этот инструмент считывает только файл, экспортированный вами самостоятельно.</string>
+    <string name="anixart_import_category_mapping_title">Маппинг категорий</string>
+    <string name="anixart_import_status_watching">Смотрю</string>
+    <string name="anixart_import_status_completed">Просмотрено</string>
+    <string name="anixart_import_status_plan_to_watch">В планах</string>
+    <string name="anixart_import_status_dropped">Брошено</string>
+    <string name="anixart_import_status_favorite">Избранное (со звездой)</string>
+    <string name="anixart_import_category_none">Библиотека по умолчанию (без категории)</string>
+    <string name="anixart_import_change_match">Изменить совпадение</string>
+    <string name="anixart_import_score_match">Схожесть: %1$d%%</string>
+    <string name="anixart_import_preference_group_title">Импорт</string>
 </resources>
