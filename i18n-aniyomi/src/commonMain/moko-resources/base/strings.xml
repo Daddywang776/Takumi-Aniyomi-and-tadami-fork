@@ -1847,7 +1847,7 @@
     <string name="aurora_no_description">No description</string>
 
     <!-- Metadata Integration -->
-    <string name="pref_category_metadata">Anime Metadata</string>
+    <string name="pref_category_metadata">Anime and Manga Metadata</string>
     <string name="pref_anime_metadata_source">Metadata source</string>
     <string name="pref_anime_metadata_source_summary">Source for anime posters, ratings, and status</string>
 

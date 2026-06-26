@@ -89,11 +89,11 @@ class UiPreferences(
 
     /**
      * Source for external metadata (posters, ratings, type, status).
-     * Default is ANILIST for better coverage and quality.
+     * Default is NONE (Off).
      */
     fun metadataSource() = preferenceStore.getEnum(
         "anime_metadata_source",
-        MetadataSource.ANILIST,
+        MetadataSource.NONE,
     )
 
     @Deprecated("Use metadataSource() instead", ReplaceWith("metadataSource()"))

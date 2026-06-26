@@ -1430,6 +1430,7 @@
     <string name="support_project">Support project</string>
     <string name="support_project_summary">Voluntary donations to support the development</string>
     <string name="support_info">Donations are completely voluntary and do not unlock any premium features, content, or advantages. The app remains fully free and accessible.</string>
+    <string name="support_legal_disclaimer">Donations support the development of this app only. They are not a payment for, and are unrelated to, any content, sources, extensions or third-party repositories. This app does not host or provide any content; all sources are added and used by users at their own discretion.</string>
     <string name="copied_to_clipboard">Copied to clipboard: %s</string>
     <string name="open_link">Open link</string>
     <string name="copy_address">Copy address</string>
