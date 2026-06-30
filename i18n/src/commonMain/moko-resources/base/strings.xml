@@ -520,6 +520,8 @@
     <string name="pref_join_double_pages_summary">Show two single pages side-by-side in landscape mode</string>
     <string name="pref_shift_double_pages">Shift double pages</string>
     <string name="pref_shift_double_pages_summary">Shift the pairing of double pages by one page</string>
+    <string name="pref_webtoon_smart_fit">Webtoon Smart-Fit</string>
+    <string name="pref_webtoon_smart_fit_summary">Automatically zoom to fit the content width by cropping empty side margins</string>
     <string name="pref_adaptive_preload">Adaptive preloading</string>
     <string name="pref_adaptive_preload_summary">Dynamically adjusts the forward page buffer (2-6 pages) and next chapter preload threshold based on reading speed and network type. Overrides the manual forward preload setting when active.</string>
     <string name="pref_sharpening">Sharpening</string>
