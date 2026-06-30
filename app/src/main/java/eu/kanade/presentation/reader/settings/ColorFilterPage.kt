@@ -150,6 +150,16 @@ internal fun ColumnScope.ColorFilterPage(screenModel: ReaderSettingsScreenModel)
         onChange = { screenModel.preferences.denoise().set(it) },
         pillColor = MaterialTheme.colorScheme.surfaceContainerHighest,
     )
+
+    val binarization by screenModel.preferences.binarization().collectAsState()
+    SliderItem(
+        value = binarization,
+        valueRange = 0..100,
+        steps = 0,
+        label = stringResource(MR.strings.pref_binarization),
+        onChange = { screenModel.preferences.binarization().set(it) },
+        pillColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+    )
 }
 
 private fun getColorValue(currentColor: Int, color: Int, mask: Long, bitShift: Int): Int {

@@ -76,7 +76,7 @@ object WebtoonBorderDetector {
                 if (y >= height) continue
                 val rect = Rect(0, y, width, y + 1)
                 val rowBitmap = decoder.decodeRegion(rect, options) ?: continue
-                
+
                 // Skip first/last 5 pixels to avoid 1-pixel borders or edge noise
                 val leftColor = rowBitmap.getPixel(5, 0)
                 val rightColor = rowBitmap.getPixel(width - 6, 0)
@@ -107,7 +107,9 @@ object WebtoonBorderDetector {
         } catch (e: Exception) {
             Rect()
         } finally {
-            try { inputStream.close() } catch (ignored: Exception) {}
+            try {
+                inputStream.close()
+            } catch (ignored: Exception) {}
         }
     }
 

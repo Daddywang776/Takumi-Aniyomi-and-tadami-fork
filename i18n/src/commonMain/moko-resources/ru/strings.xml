@@ -560,6 +560,7 @@
     <string name="pref_adaptive_preload_summary">Динамически настраивает буфер страниц вперед (2–6 стр.) и порог загрузки следующей главы на основе темпа чтения и типа сети. Переопределяет ручную настройку буфера страниц вперед при включении.</string>
     <string name="pref_sharpening">Резкость</string>
     <string name="pref_denoise">Шумоподавление</string>
+    <string name="pref_binarization">Адаптивная бинаризация (E-Ink)</string>
     <string name="notification_incognito_text">Выключить режим инкогнито</string>
     <string name="automatic_background">Автоматически</string>
     <string name="cancel_all_for_series">Отменить всё для этой серии</string>

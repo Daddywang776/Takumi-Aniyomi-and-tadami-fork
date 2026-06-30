@@ -222,6 +222,8 @@ class ReaderPreferences(
 
     fun denoise() = preferenceStore.getInt("pref_denoise", 0)
 
+    fun binarization() = preferenceStore.getInt("pref_binarization", 0)
+
     fun dualPageSplitWebtoon() = preferenceStore.getBoolean("pref_dual_page_split_webtoon", false)
 
     fun dualPageInvertWebtoon() = preferenceStore.getBoolean("pref_dual_page_invert_webtoon", false)
