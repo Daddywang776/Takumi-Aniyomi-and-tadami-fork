@@ -696,8 +696,23 @@ class ReaderViewModel @JvmOverloads constructor(
         val pageIndex = page.index
         val totalPages = readerChapter.pages?.size ?: 0
 
+        val averageSpeed = speedTracker.getAverageSpeedSeconds()
+        val estimatedMinutes = if (averageSpeed != null) {
+            val remainingPages = totalPages - (pageIndex + 1)
+            if (remainingPages > 0) {
+                (remainingPages * averageSpeed / 60.0).toInt()
+            } else {
+                null
+            }
+        } else {
+            null
+        }
+
         mutableState.update {
-            it.copy(currentPage = pageIndex + 1)
+            it.copy(
+                currentPage = pageIndex + 1,
+                estimatedMinutesLeft = estimatedMinutes,
+            )
         }
         readerChapter.requestedPage = pageIndex
         readerChapter.requestedPageOffset = 0
@@ -1401,6 +1416,7 @@ class ReaderViewModel @JvmOverloads constructor(
         val bookmarked: Boolean = false,
         val isLoadingAdjacentChapter: Boolean = false,
         val currentPage: Int = -1,
+        val estimatedMinutesLeft: Int? = null,
 
         /**
          * Viewer used to display the pages (pager, webtoon, ...).

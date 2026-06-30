@@ -498,6 +498,9 @@
     <string name="pref_flash_style_white_black">White and Black</string>
     <string name="pref_double_tap_anim_speed">Double tap animation speed</string>
     <string name="pref_show_page_number">Show page number</string>
+    <string name="pref_show_reading_time_left">Show estimated reading time</string>
+    <string name="reading_time_left_minute">%1$d min left</string>
+    <string name="reading_time_left_less_than_minute">&lt; 1 min left</string>
     <string name="pref_show_reading_mode">Show reading mode</string>
     <string name="pref_show_reading_mode_summary">Briefly show current mode when reader is opened</string>
     <string name="pref_auto_webtoon_mode">Auto Webtoon Mode</string>

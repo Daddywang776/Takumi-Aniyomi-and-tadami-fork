@@ -28,6 +28,8 @@ class ReaderPreferences(
 
     fun showPageNumber() = preferenceStore.getBoolean("pref_show_page_number_key", true)
 
+    fun showReadingTimeLeft() = preferenceStore.getBoolean("pref_show_reading_time_left_key", true)
+
     fun showReadingMode() = preferenceStore.getBoolean("pref_show_reading_mode", true)
 
     // region Bottom bar button visibility

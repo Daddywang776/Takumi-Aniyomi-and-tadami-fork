@@ -93,6 +93,11 @@ internal fun ColumnScope.GeneralPage(screenModel: ReaderSettingsScreenModel) {
     )
 
     CheckboxItem(
+        label = stringResource(MR.strings.pref_show_reading_time_left),
+        pref = screenModel.preferences.showReadingTimeLeft(),
+    )
+
+    CheckboxItem(
         label = stringResource(MR.strings.pref_auto_webtoon_mode),
         pref = screenModel.preferences.useAutoWebtoon(),
     )

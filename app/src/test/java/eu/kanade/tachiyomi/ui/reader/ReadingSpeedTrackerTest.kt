@@ -7,8 +7,8 @@ import org.junit.jupiter.api.Test
 class ReadingSpeedTrackerTest {
 
     @Test
-    fun `should return null when there are fewer than 2 transitions`() {
-        val tracker = ReadingSpeedTracker(maxHistorySize = 5, maxGapMs = 120_000)
+    fun `should return null when there are less than 2 transitions`() {
+        val tracker = ReadingSpeedTracker(maxHistorySize = 5)
         tracker.getAverageSpeedSeconds().shouldBeNull()
 
         tracker.addPageTransition(1000L)
@@ -16,40 +16,47 @@ class ReadingSpeedTrackerTest {
     }
 
     @Test
-    fun `should calculate average speed from transitions`() {
-        val tracker = ReadingSpeedTracker(maxHistorySize = 5, maxGapMs = 120_000)
-        tracker.addPageTransition(1000L)
-        tracker.addPageTransition(3000L) // 2s
-        tracker.addPageTransition(7000L) // 4s
+    fun `should calculate correct average speed for valid transitions`() {
+        val tracker = ReadingSpeedTracker(maxHistorySize = 5)
 
-        // Average of 2s and 4s is 3s
-        tracker.getAverageSpeedSeconds() shouldBe 3.0
-    }
+        // Page 1 at 0s
+        tracker.addPageTransition(0L)
+        // Page 2 at 10s (duration = 10s)
+        tracker.addPageTransition(10000L)
+        // Page 3 at 22s (duration = 12s)
+        tracker.addPageTransition(22000L)
 
-    @Test
-    fun `should only keep up to max history transitions`() {
-        val tracker = ReadingSpeedTracker(maxHistorySize = 2, maxGapMs = 120_000)
-        tracker.addPageTransition(1000L)
-        tracker.addPageTransition(3000L) // 2s
-        tracker.addPageTransition(7000L) // 4s
-        tracker.addPageTransition(12000L) // 5s
-
-        // With maxHistorySize = 2, we only keep the last 2 transitions: (7000 to 12000 -> 5s) and (3000 to 7000 -> 4s)
-        // Average of 4s and 5s is 4.5s
-        tracker.getAverageSpeedSeconds() shouldBe 4.5
+        // Average should be (10 + 12) / 2 = 11.0 seconds
+        tracker.getAverageSpeedSeconds() shouldBe 11.0
     }
 
     @Test
     fun `should ignore transitions exceeding maxGapMs`() {
-        val tracker = ReadingSpeedTracker(maxHistorySize = 5, maxGapMs = 10_000)
-        tracker.addPageTransition(1000L)
-        tracker.addPageTransition(3000L) // 2s
-        tracker.addPageTransition(20000L) // 17s (ignored!)
-        tracker.addPageTransition(24000L) // 4s
+        val tracker = ReadingSpeedTracker(maxHistorySize = 5, maxGapMs = 120000L)
 
-        // The transition from 3000 to 20000 is 17s (exceeds 10s), so we ignore it.
-        // The valid transitions are: 1000->3000 (2s) and 20000->24000 (4s).
-        // Average of 2s and 4s is 3s.
-        tracker.getAverageSpeedSeconds() shouldBe 3.0
+        // Page 1 at 0s
+        tracker.addPageTransition(0L)
+        // Page 2 at 10s (duration = 10s - valid)
+        tracker.addPageTransition(10000L)
+        // Page 3 at 150s (duration = 140s - invalid, exceeds 120s)
+        tracker.addPageTransition(150000L)
+        // Page 4 at 165s (duration = 15s - valid)
+        tracker.addPageTransition(165000L)
+
+        // Valid transitions: 10s and 15s. Average: (10 + 15) / 2 = 12.5 seconds
+        tracker.getAverageSpeedSeconds() shouldBe 12.5
+    }
+
+    @Test
+    fun `should respect maxHistorySize`() {
+        val tracker = ReadingSpeedTracker(maxHistorySize = 2)
+
+        tracker.addPageTransition(0L)
+        tracker.addPageTransition(10000L) // 10s
+        tracker.addPageTransition(20000L) // 10s
+        tracker.addPageTransition(45000L) // 25s - now history has [10000, 20000, 45000]
+
+        // Average of last 2 transitions: (10s + 25s) / 2 = 17.5 seconds
+        tracker.getAverageSpeedSeconds() shouldBe 17.5
     }
 }

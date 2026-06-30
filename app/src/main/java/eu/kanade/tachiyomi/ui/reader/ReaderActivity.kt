@@ -397,11 +397,14 @@ class ReaderActivity : BaseActivity() {
             ) {
                 val state by viewModel.state.collectAsStateWithLifecycle()
                 val showPageNumber by viewModel.readerPreferences.showPageNumber().collectAsStateWithLifecycle()
+                val showReadingTimeLeft by viewModel.readerPreferences.showReadingTimeLeft()
+                    .collectAsStateWithLifecycle()
 
                 if (!state.menuVisible && showPageNumber) {
                     PageIndicatorText(
                         currentPage = state.currentPage,
                         totalPages = state.totalPages,
+                        estimatedMinutesLeft = if (showReadingTimeLeft) state.estimatedMinutesLeft else null,
                     )
                 }
             }
