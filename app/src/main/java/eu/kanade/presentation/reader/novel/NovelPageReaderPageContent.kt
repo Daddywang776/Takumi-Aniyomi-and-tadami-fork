@@ -282,7 +282,6 @@ private class NovelPageReaderUrlClickableSpan(
     }
 
     override fun updateDrawState(ds: TextPaint) {
-        Unit
     }
 }
 

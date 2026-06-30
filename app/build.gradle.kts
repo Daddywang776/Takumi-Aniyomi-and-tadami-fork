@@ -284,6 +284,7 @@ dependencies {
 
     // HTML parser
     implementation(libs.jsoup)
+    compileOnly(libs.jspecify)
 
     // Disk
     implementation(libs.disklrucache)
