@@ -206,11 +206,17 @@ class ReaderPreferences(
 
     // endregion
 
-    // region Split two page spread
-
     fun dualPageSplitPaged() = preferenceStore.getBoolean("pref_dual_page_split", false)
 
     fun dualPageInvertPaged() = preferenceStore.getBoolean("pref_dual_page_invert", false)
+
+    fun joinDoublePages() = preferenceStore.getBoolean("pref_join_double_pages", false)
+
+    fun adaptivePreload() = preferenceStore.getBoolean("pref_adaptive_preload", false)
+
+    fun sharpening() = preferenceStore.getInt("pref_sharpening", 0)
+
+    fun denoise() = preferenceStore.getInt("pref_denoise", 0)
 
     fun dualPageSplitWebtoon() = preferenceStore.getBoolean("pref_dual_page_split_webtoon", false)
 

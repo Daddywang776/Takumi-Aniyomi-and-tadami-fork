@@ -516,6 +516,12 @@
     <string name="pref_custom_brightness">Custom brightness</string>
     <string name="pref_grayscale">Grayscale</string>
     <string name="pref_inverted_colors">Inverted</string>
+    <string name="pref_join_double_pages">Join double pages</string>
+    <string name="pref_join_double_pages_summary">Show two single pages side-by-side in landscape mode</string>
+    <string name="pref_adaptive_preload">Adaptive preloading</string>
+    <string name="pref_adaptive_preload_summary">Dynamically adjusts the forward page buffer (2-6 pages) and next chapter preload threshold based on reading speed and network type. Overrides the manual forward preload setting when active.</string>
+    <string name="pref_sharpening">Sharpening</string>
+    <string name="pref_denoise">Denoise (Noise Reduction)</string>
     <string name="pref_custom_color_filter">Custom color filter</string>
     <string name="pref_color_filter_mode">Color filter blend mode</string>
     <string name="filter_mode_overlay">Overlay</string>

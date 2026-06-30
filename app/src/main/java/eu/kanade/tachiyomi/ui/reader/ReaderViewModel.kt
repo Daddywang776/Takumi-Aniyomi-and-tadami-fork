@@ -49,6 +49,7 @@ import eu.kanade.tachiyomi.util.lang.byteSize
 import eu.kanade.tachiyomi.util.lang.takeBytes
 import eu.kanade.tachiyomi.util.storage.DiskUtil
 import eu.kanade.tachiyomi.util.storage.cacheImageDir
+import eu.kanade.tachiyomi.util.system.connectivityManager
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -174,6 +175,8 @@ class ReaderViewModel @JvmOverloads constructor(
     private var seriesInterstitialShownForChapterId: Long? = null
 
     private var chapterToDownload: MangaDownload? = null
+
+    private val speedTracker = ReadingSpeedTracker()
 
     /**
      * Full chapter list for gap detection. This intentionally ignores reader skip filters, so
@@ -592,6 +595,13 @@ class ReaderViewModel @JvmOverloads constructor(
         if (page is InsertPage) {
             return
         }
+
+        // Track reading speed and update dynamic preloading
+        speedTracker.addPageTransition(System.currentTimeMillis())
+        val context = Injekt.get<Application>()
+        val isMetered = context.connectivityManager.isActiveNetworkMetered
+        val bufferSize = calculatePreloadBufferSize(speedTracker.getAverageSpeedSeconds(), isMetered)
+        ReaderPreloadManager.dynamicPreloadPagesAfter = bufferSize
 
         val selectedChapter = page.chapter
         val pages = selectedChapter.pages ?: return
@@ -1472,4 +1482,17 @@ internal fun persistAutoScrollSpeed(
     val clampedSpeed = speed.coerceIn(1, 100)
     readerPreferences.autoScrollSpeed().set(clampedSpeed)
     return clampedSpeed
+}
+
+internal fun calculatePreloadBufferSize(
+    averageSpeedSeconds: Double?,
+    isMetered: Boolean,
+): Int {
+    if (isMetered) return 2
+    if (averageSpeedSeconds == null) return 3 // Default buffer
+    return when {
+        averageSpeedSeconds < 4.0 -> 6
+        averageSpeedSeconds > 15.0 -> 2
+        else -> 3
+    }
 }

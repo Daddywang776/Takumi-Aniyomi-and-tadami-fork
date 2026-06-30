@@ -550,6 +550,12 @@
     <string name="pref_reader_actions">Действия</string>
     <string name="rotation_type">Ориентация</string>
     <string name="pref_grayscale">Оттенки серого</string>
+    <string name="pref_join_double_pages">Объединять одиночные страницы</string>
+    <string name="pref_join_double_pages_summary">Показывать две одиночные страницы бок о бок в ландшафтном режиме</string>
+    <string name="pref_adaptive_preload">Адаптивная предзагрузка</string>
+    <string name="pref_adaptive_preload_summary">Динамически настраивает буфер страниц вперед (2–6 стр.) и порог загрузки следующей главы на основе темпа чтения и типа сети. Переопределяет ручную настройку буфера страниц вперед при включении.</string>
+    <string name="pref_sharpening">Резкость</string>
+    <string name="pref_denoise">Шумоподавление</string>
     <string name="notification_incognito_text">Выключить режим инкогнито</string>
     <string name="automatic_background">Автоматически</string>
     <string name="cancel_all_for_series">Отменить всё для этой серии</string>
