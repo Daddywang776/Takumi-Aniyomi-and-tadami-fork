@@ -526,8 +526,7 @@ class NovelReaderScreenModel(
         }
         val chapter = snapshot.chapter
         val novel = snapshot.novel
-        val source = sourceManager.get(novel.source)
-            ?: return setError("Source not found")
+        val source = sourceManager.getOrStub(novel.source)
         clearChapterTransientState()
         currentNovel = novel
         currentChapter = chapter
@@ -1209,7 +1208,7 @@ class NovelReaderScreenModel(
 
     private suspend fun resolveTtsChapter(targetChapterId: Long): NovelTtsResolvedChapter? {
         val snapshot = ttsChapterRepository.loadChapterSnapshot(targetChapterId)
-        val source = sourceManager.get(snapshot.novel.source) ?: return null
+        val source = sourceManager.getOrStub(snapshot.novel.source)
         val normalizedHtml = withContext(Dispatchers.Default) {
             val withHeading = prependChapterHeadingIfMissing(
                 rawHtml = snapshot.rawHtml.normalizeStructuredChapterPayload(),
