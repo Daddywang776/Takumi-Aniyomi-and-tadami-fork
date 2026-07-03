@@ -8,6 +8,7 @@ import android.os.IBinder
 import com.tadami.aurora.R
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.tachiyomi.data.notification.Notifications
+import eu.kanade.tachiyomi.extension.anime.installer.DhizukuInstallerAnime
 import eu.kanade.tachiyomi.extension.anime.installer.InstallerAnime
 import eu.kanade.tachiyomi.extension.anime.installer.PackageInstallerInstallerAnime
 import eu.kanade.tachiyomi.extension.anime.installer.ShizukuInstallerAnime
@@ -52,6 +53,7 @@ class AnimeExtensionInstallService : Service() {
                     this,
                 )
                 BasePreferences.ExtensionInstaller.SHIZUKU -> ShizukuInstallerAnime(this)
+                BasePreferences.ExtensionInstaller.DHIZUKU -> DhizukuInstallerAnime(this)
                 else -> {
                     logcat(LogPriority.ERROR) { "Not implemented for installer $installerUsed" }
                     stopSelf()

@@ -24,7 +24,7 @@ kotlin {
     }
 
     sourceSets {
-        val commonMain by getting {
+        getByName("commonMain") {
             dependencies {
                 api(kotlinx.serialization.json)
                 api(kotlinx.reflect)
@@ -37,14 +37,14 @@ kotlin {
                 implementation(compose.runtime)
             }
         }
-        val commonTest by getting {
+        getByName("commonTest") {
             dependencies {
                 implementation(libs.bundles.test)
                 implementation(libs.kotlin.test)
                 implementation(kotlinx.coroutines.test)
             }
         }
-        val androidMain by getting {
+        getByName("androidMain") {
             dependencies {
                 implementation(projects.core.common)
                 api(libs.preferencektx)

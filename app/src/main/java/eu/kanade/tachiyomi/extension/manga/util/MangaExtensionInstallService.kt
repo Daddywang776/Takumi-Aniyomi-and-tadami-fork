@@ -8,6 +8,7 @@ import android.os.IBinder
 import com.tadami.aurora.R
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.tachiyomi.data.notification.Notifications
+import eu.kanade.tachiyomi.extension.manga.installer.DhizukuInstallerManga
 import eu.kanade.tachiyomi.extension.manga.installer.InstallerManga
 import eu.kanade.tachiyomi.extension.manga.installer.PackageInstallerInstallerManga
 import eu.kanade.tachiyomi.extension.manga.installer.ShizukuInstallerManga
@@ -52,6 +53,7 @@ class MangaExtensionInstallService : Service() {
                     this,
                 )
                 BasePreferences.ExtensionInstaller.SHIZUKU -> ShizukuInstallerManga(this)
+                BasePreferences.ExtensionInstaller.DHIZUKU -> DhizukuInstallerManga(this)
                 else -> {
                     logcat(LogPriority.ERROR) { "Not implemented for installer $installerUsed" }
                     stopSelf()

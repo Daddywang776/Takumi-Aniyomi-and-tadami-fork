@@ -37,7 +37,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -103,6 +102,7 @@ import eu.kanade.tachiyomi.network.PREF_DOH_SHECAN
 import eu.kanade.tachiyomi.ui.more.OnboardingScreen
 import eu.kanade.tachiyomi.util.CrashLogUtil
 import eu.kanade.tachiyomi.util.system.GLUtil
+import eu.kanade.tachiyomi.util.system.isDhizukuInstalled
 import eu.kanade.tachiyomi.util.system.isReleaseBuildType
 import eu.kanade.tachiyomi.util.system.isShizukuInstalled
 import eu.kanade.tachiyomi.util.system.powerManager
@@ -219,9 +219,17 @@ object SettingsAdvancedScreen : SearchableSettings {
                             onTap = {
                                 scope.launch {
                                     try {
-                                        val vibrator = context.getSystemService(
-                                            Context.VIBRATOR_SERVICE,
-                                        ) as? android.os.Vibrator
+                                        val vibrator = if (android.os.Build.VERSION.SDK_INT >=
+                                            android.os.Build.VERSION_CODES.S
+                                        ) {
+                                            val manager = context.getSystemService(
+                                                android.os.VibratorManager::class.java,
+                                            )
+                                            manager?.defaultVibrator
+                                        } else {
+                                            @Suppress("DEPRECATION")
+                                            context.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+                                        }
                                         if (vibrator != null && vibrator.hasVibrator()) {
                                             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                                                 vibrator.vibrate(
@@ -531,7 +539,8 @@ object SettingsAdvancedScreen : SearchableSettings {
         val context = LocalContext.current
         val uriHandler = LocalUriHandler.current
         val extensionInstallerPref = basePreferences.extensionInstaller()
-        var shizukuMissing by rememberSaveable { mutableStateOf(false) }
+        var shizukuMissing by remember { mutableStateOf(false) }
+        var dhizukuMissing by remember { mutableStateOf(false) }
         val trustAnimeExtension = remember { Injekt.get<TrustAnimeExtension>() }
         val trustMangaExtension = remember { Injekt.get<TrustMangaExtension>() }
         val novelPluginKeyValueStore = remember { Injekt.get<NovelPluginKeyValueStore>() }
@@ -564,6 +573,33 @@ object SettingsAdvancedScreen : SearchableSettings {
                 },
             )
         }
+        if (dhizukuMissing) {
+            val dismiss = { dhizukuMissing = false }
+            AlertDialog(
+                onDismissRequest = dismiss,
+                title = { Text(text = stringResource(MR.strings.ext_installer_dhizuku)) },
+                text = {
+                    Text(
+                        text = stringResource(MR.strings.ext_installer_dhizuku_unavailable_dialog),
+                    )
+                },
+                dismissButton = {
+                    TextButton(onClick = dismiss) {
+                        Text(text = stringResource(MR.strings.action_cancel))
+                    }
+                },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            dismiss()
+                            uriHandler.openUri("https://github.com/iamr0s/Dhizuku")
+                        },
+                    ) {
+                        Text(text = stringResource(MR.strings.action_ok))
+                    }
+                },
+            )
+        }
         return Preference.PreferenceGroup(
             title = stringResource(MR.strings.label_extensions),
             preferenceItems = persistentListOf(
@@ -586,6 +622,11 @@ object SettingsAdvancedScreen : SearchableSettings {
                             !context.isShizukuInstalled
                         ) {
                             shizukuMissing = true
+                            false
+                        } else if (it == BasePreferences.ExtensionInstaller.DHIZUKU &&
+                            !context.isDhizukuInstalled
+                        ) {
+                            dhizukuMissing = true
                             false
                         } else {
                             true

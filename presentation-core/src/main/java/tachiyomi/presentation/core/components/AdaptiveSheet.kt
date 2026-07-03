@@ -370,4 +370,4 @@ private fun AnchoredDraggableState<Int>.preUpPostDownNestedScrollConnection(
         private fun Velocity.toFloat() = y
 
         private fun Offset.toFloat(): Float = y
-    }
+    }

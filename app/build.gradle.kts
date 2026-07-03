@@ -44,12 +44,12 @@ android {
     }
 
     buildTypes {
-        val debug by getting {
+        getByName("debug") {
             applicationIdSuffix = ".localdev"
             versionNameSuffix = "-${getCommitCount()}"
             isPseudoLocalesEnabled = true
         }
-        val release by getting {
+        getByName("release") {
             isMinifyEnabled = Config.enableCodeShrink
             isShrinkResources = Config.enableCodeShrink
 
@@ -58,29 +58,29 @@ android {
             buildConfigField("String", "BUILD_TIME", "\"${getBuildTime(useLastCommitTime = true)}\"")
         }
 
-        val commonMatchingFallbacks = listOf(release.name)
+        val commonMatchingFallbacks = listOf(named("release").get().name)
 
         create("preview") {
-            initWith(release)
+            initWith(named("release").get())
 
             applicationIdSuffix = ".debug"
 
-            versionNameSuffix = debug.versionNameSuffix
-            signingConfig = debug.signingConfig
+            versionNameSuffix = named("debug").get().versionNameSuffix
+            signingConfig = named("debug").get().signingConfig
 
             matchingFallbacks.addAll(commonMatchingFallbacks)
 
             buildConfigField("String", "BUILD_TIME", "\"${getBuildTime(useLastCommitTime = false)}\"")
         }
         create("benchmark") {
-            initWith(release)
+            initWith(named("release").get())
 
             isDebuggable = false
             isProfileable = true
             versionNameSuffix = "-benchmark"
             applicationIdSuffix = ".benchmark"
 
-            signingConfig = debug.signingConfig
+            signingConfig = named("debug").get().signingConfig
 
             matchingFallbacks.addAll(commonMatchingFallbacks)
         }
@@ -329,6 +329,9 @@ dependencies {
 
     // Shizuku
     implementation(libs.bundles.shizuku)
+
+    // Dhizuku
+    implementation(libs.dhizuku.api)
 
     // Google Drive API
     implementation(libs.google.api.services.drive)

@@ -173,6 +173,8 @@ val Context.hasMiuiPackageInstaller get() = DeviceUtil.isMiui || isPackageInstal
 
 val Context.isShizukuInstalled get() = isPackageInstalled("moe.shizuku.privileged.api") || Sui.isSui()
 
+val Context.isDhizukuInstalled get() = isPackageInstalled("com.rosan.dhizuku")
+
 fun Context.launchRequestPackageInstallsPermission() {
     val intent = Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES).apply {
         data = "package:$packageName".toUri()

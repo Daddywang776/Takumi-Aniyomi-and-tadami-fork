@@ -620,6 +620,8 @@
     <string name="ext_app_info">О приложении</string>
     <string name="ext_installer_shizuku_unavailable_dialog">Установите и запустите Shizuku, чтобы использовать его как установщик расширений.</string>
     <string name="ext_installer_shizuku_stopped">Shizuku не работает</string>
+    <string name="ext_installer_dhizuku_stopped">Dhizuku не работает</string>
+    <string name="ext_installer_dhizuku_unavailable_dialog">Установите и активируйте Dhizuku в качестве Владельца устройства (Device Owner), чтобы использовать его как установщик расширений.</string>
     <string name="ext_installer_legacy">По умолчанию</string>
     <string name="ext_installer_pref">Установщик</string>
     <string name="ext_install_service_notif">Установка расширения…</string>

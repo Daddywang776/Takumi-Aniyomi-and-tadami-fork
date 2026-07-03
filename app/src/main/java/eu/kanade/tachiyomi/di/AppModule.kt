@@ -43,6 +43,7 @@ import eu.kanade.tachiyomi.data.translation.TranslationQueueManager
 import eu.kanade.tachiyomi.extension.anime.AnimeExtensionManager
 import eu.kanade.tachiyomi.extension.installer.ApkInstallBackend
 import eu.kanade.tachiyomi.extension.installer.ApkInstallStateStore
+import eu.kanade.tachiyomi.extension.installer.DhizukuApkInstallBackendAdapter
 import eu.kanade.tachiyomi.extension.installer.PendingApkInstallStore
 import eu.kanade.tachiyomi.extension.installer.PrivateApkInstallBackendAdapter
 import eu.kanade.tachiyomi.extension.installer.ShizukuApkInstallBackendAdapter
@@ -719,6 +720,7 @@ class AppModule(val app: Application) : InjektModule {
                     SystemIntentApkInstallBackendAdapter(app, get(), ApkInstallBackend.PACKAGE_INSTALLER),
                     SystemIntentApkInstallBackendAdapter(app, get(), ApkInstallBackend.LEGACY),
                     ShizukuApkInstallBackendAdapter(app),
+                    DhizukuApkInstallBackendAdapter(app),
                 ),
             )
         }
