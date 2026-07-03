@@ -149,8 +149,9 @@ class WebtoonViewer(val activity: ReaderActivity, val isContinuous: Boolean = tr
 
                     val lastIndex = layoutManager.findLastEndVisibleItemPosition()
                     val lastItem = adapter.items.getOrNull(lastIndex)
-                    if (lastItem is ChapterTransition.Next && lastItem.to == null) {
+                    if (dy > 0 && lastItem is ChapterTransition.Next && lastItem.to == null) {
                         activity.showMenu()
+                        activity.onMeltdownTransitionActivated()
                     }
                 }
             },
@@ -346,6 +347,8 @@ class WebtoonViewer(val activity: ReaderActivity, val isContinuous: Boolean = tr
         if (toChapter != null) {
             logcat { "Request preload destination chapter because we're on the transition" }
             activity.requestPreloadChapter(toChapter)
+        } else if (transition is ChapterTransition.Next) {
+            activity.onMeltdownTransitionActivated()
         }
     }
 

@@ -1,5 +1,11 @@
 package eu.kanade.presentation.library.components
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
@@ -31,6 +37,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,6 +55,7 @@ import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathOperation
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asComposePath
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
@@ -702,6 +710,48 @@ private fun GlowContourLibraryCard(
     val auraColors = remember(enabledAuras) {
         resolveActiveAuraPalette(enabledAuras)?.gradientColors
     }
+    val isVoidRedAura = remember(enabledAuras) { enabledAuras.contains("aura_void_broadcast_red") }
+    val voidRedTransition = rememberInfiniteTransition(label = "void_red_aura")
+    val timeState: androidx.compose.runtime.State<Float> = if (isVoidRedAura) {
+        voidRedTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(6000, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart,
+            ),
+            label = "void_red_time",
+        )
+    } else {
+        remember { mutableStateOf(0f) }
+    }
+
+    val burstState = remember(isVoidRedAura) {
+        derivedStateOf {
+            if (!isVoidRedAura) {
+                Triple(false, 0f, 1f)
+            } else {
+                val time = timeState.value
+                val (isBurst, intensity) = when {
+                    time in 0.20f..0.23f -> {
+                        val progress = (time - 0.20f) / 0.03f
+                        true to (1f - kotlin.math.abs(progress - 0.5f) * 2f)
+                    }
+                    time in 0.65f..0.68f -> {
+                        val progress = (time - 0.65f) / 0.03f
+                        true to (1f - kotlin.math.abs(progress - 0.5f) * 2f)
+                    }
+                    time in 0.92f..0.97f -> {
+                        val progress = (time - 0.92f) / 0.05f
+                        true to (1f - kotlin.math.abs(progress - 0.5f) * 2f)
+                    }
+                    else -> false to 0f
+                }
+                val flicker = if (isBurst && (time * 100f).toInt() % 4 == 0) 0.15f else 1.0f
+                Triple(isBurst, intensity, flicker)
+            }
+        }
+    }
 
     BoxWithConstraints(
         modifier = modifier
@@ -729,11 +779,70 @@ private fun GlowContourLibraryCard(
                             startX = zones.shellPath.getBounds().left,
                             endX = size.width,
                         )
+                        val (isBurst, intensity, flicker) = burstState.value
+                        val flickerAlpha = if (isVoidRedAura) {
+                            auraGlowAlpha * flicker
+                        } else {
+                            auraGlowAlpha
+                        }
+
+                        if (isVoidRedAura && isBurst) {
+                            val frame = (timeState.value * 100f).toInt()
+                            val rng = kotlin.random.Random(frame.toLong())
+                            val dxRed = (-2f - rng.nextFloat() * 2f).dp.toPx() * intensity
+                            val dxCrimson = (2f + rng.nextFloat() * 2f).dp.toPx() * intensity
+                            val dy = (rng.nextFloat() * 1.5f - 0.75f).dp.toPx() * intensity
+
+                            // Left chromatic aberration copy (Red)
+                            drawContext.canvas.save()
+                            drawContext.canvas.translate(dxRed, dy)
+                            drawPath(
+                                path = zones.shellPath,
+                                brush = SolidColor(Color(0xFFFF003C)),
+                                alpha = flickerAlpha * 0.5f,
+                                style = Stroke(width = auraGlowStrokeWidth),
+                            )
+                            drawPath(
+                                path = zones.shellPath,
+                                brush = SolidColor(Color(0xFFFF003C)),
+                                alpha = 0.45f,
+                                style = Stroke(width = 1.5.dp.toPx()),
+                            )
+                            drawContext.canvas.restore()
+
+                            // Right chromatic aberration copy (Crimson)
+                            drawContext.canvas.save()
+                            drawContext.canvas.translate(dxCrimson, -dy)
+                            drawPath(
+                                path = zones.shellPath,
+                                brush = SolidColor(Color(0xFF8B0000)),
+                                alpha = flickerAlpha * 0.5f,
+                                style = Stroke(width = auraGlowStrokeWidth),
+                            )
+                            drawPath(
+                                path = zones.shellPath,
+                                brush = SolidColor(Color(0xFF8B0000)),
+                                alpha = 0.45f,
+                                style = Stroke(width = 1.5.dp.toPx()),
+                            )
+                            drawContext.canvas.restore()
+                        }
+
+                        // Main outline copy (always drawn, but with horizontal offset during burst)
+                        if (isVoidRedAura && isBurst) {
+                            val frame = (timeState.value * 100f).toInt()
+                            val rng = kotlin.random.Random(frame.toLong() + 555L)
+                            val dx = (rng.nextFloat() * 1.5f - 0.75f).dp.toPx() * intensity
+                            val dy = (rng.nextFloat() * 1f - 0.5f).dp.toPx() * intensity
+                            drawContext.canvas.save()
+                            drawContext.canvas.translate(dx, dy)
+                        }
+
                         // Diffused glow pass
                         drawPath(
                             path = zones.shellPath,
                             brush = auraStrokeBrush,
-                            alpha = auraGlowAlpha,
+                            alpha = flickerAlpha,
                             style = Stroke(width = auraGlowStrokeWidth),
                         )
                         // Core outline pass
@@ -743,6 +852,10 @@ private fun GlowContourLibraryCard(
                             alpha = 0.85f,
                             style = Stroke(width = 1.5.dp.toPx()),
                         )
+
+                        if (isVoidRedAura && isBurst) {
+                            drawContext.canvas.restore()
+                        }
                     }
 
                     if (isSelected) {

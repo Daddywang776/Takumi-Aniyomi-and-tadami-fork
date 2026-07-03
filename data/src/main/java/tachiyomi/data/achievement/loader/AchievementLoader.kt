@@ -37,7 +37,7 @@ class AchievementLoader(
         private const val KEY_PROGRESS_RULE_VERSION = "progress_rule_version"
         private const val CURRENT_PROGRESS_RULE_VERSION = 2
         private const val KEY_TREASURY_RECONCILIATION_VERSION = "treasury_reconciliation_version"
-        private const val CURRENT_TREASURY_RECONCILIATION_VERSION = 1
+        private const val CURRENT_TREASURY_RECONCILIATION_VERSION = 2
         private const val KEY_LOCALE_TAG = "locale_tag"
     }
 
@@ -255,7 +255,7 @@ class AchievementLoader(
             rewards = rewards,
             rarity = AchievementRarity.fromString(rarity),
             tags = tags,
-            hint = localizedText.hint ?: hint,
+            hint = localizedText.hint ?: localizedText.hintVague ?: hint,
             hintVague = localizedText.hintVague,
             hintDirect = localizedText.hintDirect,
             hintObvious = localizedText.hintObvious,

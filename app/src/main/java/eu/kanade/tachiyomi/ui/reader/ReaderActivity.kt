@@ -20,19 +20,37 @@ import android.view.View.LAYER_TYPE_HARDWARE
 import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.viewModels
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.core.content.getSystemService
 import androidx.core.net.toUri
@@ -95,6 +113,7 @@ import eu.kanade.tachiyomi.util.view.setComposeContent
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
@@ -107,12 +126,17 @@ import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNonCancellable
 import tachiyomi.core.common.util.lang.withUIContext
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.data.achievement.UnlockableManager
+import tachiyomi.domain.achievement.model.AchievementProgress
+import tachiyomi.domain.achievement.repository.AchievementRepository
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.util.AppHapticsProvider
 import tachiyomi.presentation.core.util.collectAsStateWithLifecycle
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.io.ByteArrayOutputStream
+import tachiyomi.presentation.core.i18n.stringResource as composeStringResource
 
 // Legacy bridge: this activity still hosts the reader while the Compose migration remains partial.
 class ReaderActivity : BaseActivity() {
@@ -1332,6 +1356,308 @@ class ReaderActivity : BaseActivity() {
             defaultLightStatusBars = resources.getBoolean(R.bool.lightStatusBar),
         )
         windowInsetsController.isAppearanceLightStatusBars = lightStatusBars
+    }
+
+    private var meltdownSwipeCount = 0
+    private var meltdownLastActivatedMs = 0L
+    private val meltdownSwipeState = mutableStateOf(0)
+    private var meltdownEscalationView: android.view.View? = null
+
+    fun onMeltdownTransitionActivated() {
+        // Throttle: count at most once per 800 ms so WebtoonViewer scroll events
+        // (called every frame) don't increment the counter hundreds of times per swipe.
+        val now = System.currentTimeMillis()
+        if (now - meltdownLastActivatedMs < 800L) return
+        meltdownLastActivatedMs = now
+
+        val uiPreferences = Injekt.get<eu.kanade.domain.ui.UiPreferences>()
+        val currentStage = uiPreferences.meltdownStage().get()
+        if (currentStage != 2) return
+
+        // Check offline: use NetworkCapabilities for API 23+ reliability
+        val isOffline = runCatching {
+            val connectivityManager = getSystemService(
+                android.content.Context.CONNECTIVITY_SERVICE,
+            ) as? android.net.ConnectivityManager
+            if (connectivityManager == null) return@runCatching true
+            val activeNetwork = connectivityManager.activeNetwork
+            if (activeNetwork == null) return@runCatching true
+            val capabilities = connectivityManager.getNetworkCapabilities(activeNetwork)
+            capabilities == null ||
+                (
+                    !capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) &&
+                        !capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) &&
+                        !capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_ETHERNET)
+                    )
+        }.getOrDefault(true)
+        if (!isOffline) return
+
+        // Check AMOLED dark theme via app preference, not system uiMode
+        // User must have AMOLED mode enabled AND dark theme forced (not just system auto)
+        val isAmoledDark = uiPreferences.themeDarkAmoled().get()
+        val themeMode = uiPreferences.themeMode().get()
+        val isSystemNight = (
+            resources.configuration.uiMode and
+                android.content.res.Configuration.UI_MODE_NIGHT_MASK
+            ) ==
+            android.content.res.Configuration.UI_MODE_NIGHT_YES
+        val isDarkActive = when (themeMode) {
+            eu.kanade.domain.ui.model.ThemeMode.DARK -> true
+            eu.kanade.domain.ui.model.ThemeMode.LIGHT -> false
+            else -> isSystemNight
+        }
+        if (!isAmoledDark || !isDarkActive) return
+
+        // No need to check manga status: reaching the end of available chapters
+        // (transition.to == null, triggered by PagerViewer/WebtoonViewer) is sufficient.
+        // The user IS at the last available chapter — that's the ritual condition.
+
+        meltdownSwipeCount++
+        meltdownSwipeState.value = meltdownSwipeCount
+        ensureMeltdownEscalationOverlay()
+        if (meltdownSwipeCount >= 5) {
+            // Оверлей остаётся виден (дыра 100%) всё время паузы;
+            // убираем его непосредственно перед показом терминала.
+            lifecycleScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+                kotlinx.coroutines.delay(eu.kanade.presentation.components.BREACH_ACT_GAP_MS.toLong())
+                removeMeltdownEscalationOverlay()
+                triggerMeltdownFinalRitual()
+            }
+        }
+    }
+
+    private fun ensureMeltdownEscalationOverlay() {
+        if (meltdownEscalationView != null) return
+        val view = androidx.compose.ui.platform.ComposeView(this@ReaderActivity).apply {
+            layoutParams = android.view.ViewGroup.LayoutParams(
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+            )
+            setContent {
+                eu.kanade.presentation.components.MeltdownSwipeGlitch(
+                    swipe = meltdownSwipeState.value,
+                )
+                eu.kanade.presentation.components.MeltdownFractureOverlay(
+                    swipe = meltdownSwipeState.value,
+                )
+            }
+        }
+        meltdownEscalationView = view
+        binding.root.addView(view)
+    }
+
+    private fun removeMeltdownEscalationOverlay() {
+        meltdownEscalationView?.let { binding.root.removeView(it) }
+        meltdownEscalationView = null
+        meltdownSwipeCount = 0
+        meltdownSwipeState.value = 0
+    }
+
+    private fun triggerMeltdownFinalRitual() {
+        lifecycleScope.launch(kotlinx.coroutines.Dispatchers.Main) {
+            val composeView = androidx.compose.ui.platform.ComposeView(this@ReaderActivity).apply {
+                layoutParams = android.view.ViewGroup.LayoutParams(
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                    android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                )
+                setContent {
+                    androidx.compose.foundation.layout.Box(
+                        modifier = androidx.compose.ui.Modifier
+                            .fillMaxSize()
+                            .background(androidx.compose.ui.graphics.Color.Black),
+                    ) {
+                        var showGlitch by remember { mutableStateOf(true) }
+                        var showDialog by remember { mutableStateOf(false) }
+                        var showBreach by remember { mutableStateOf(false) }
+
+                        LaunchedEffect(Unit) {
+                            kotlinx.coroutines.delay(800)
+                            showDialog = true
+                        }
+
+                        if (showGlitch) {
+                            eu.kanade.presentation.components.VoidRitualGlitch()
+                        }
+
+                        if (showDialog) {
+                            eu.kanade.presentation.components.TerminalGlitchDialog(
+                                title = composeStringResource(AYMR.strings.meltdown_terminal_title),
+                                message = composeStringResource(AYMR.strings.meltdown_terminal_message),
+                                buttonText = composeStringResource(AYMR.strings.meltdown_terminal_confirm),
+                                dismissButtonText = composeStringResource(AYMR.strings.meltdown_terminal_dismiss),
+                                holdToConfirm = true,
+                                onConfirm = {
+                                    showDialog = false
+                                    showGlitch = false
+
+                                    // Разблокируем ачивку и награды в фоновом режиме перед запуском финала
+                                    lifecycleScope.launch {
+                                        val uiPreferences = Injekt.get<eu.kanade.domain.ui.UiPreferences>()
+                                        uiPreferences.meltdownStage().set(0)
+
+                                        runCatching {
+                                            val achievementRepository =
+                                                Injekt.get<AchievementRepository>()
+                                            val allAchievements = achievementRepository.getAll().first()
+                                            val achievement = allAchievements.firstOrNull {
+                                                it.id == "void_broadcast_unlocked"
+                                            }
+                                            if (achievement != null) {
+                                                val progressFlow = achievementRepository
+                                                    .getProgress("void_broadcast_unlocked").first()
+                                                if (progressFlow == null || !progressFlow.isUnlocked) {
+                                                    val newProgress = AchievementProgress.createStandard(
+                                                        achievementId = "void_broadcast_unlocked",
+                                                        progress = 1,
+                                                        maxProgress = 1,
+                                                        isUnlocked = true,
+                                                        unlockedAt = System.currentTimeMillis(),
+                                                    )
+                                                    achievementRepository.insertOrUpdateProgress(newProgress)
+
+                                                    val pointsManager =
+                                                        Injekt.get<tachiyomi.data.achievement.handler.PointsManager>()
+                                                    pointsManager.incrementUnlocked()
+
+                                                    val unlockableManager = Injekt.get<UnlockableManager>()
+                                                    unlockableManager.unlockAchievementRewards(achievement)
+                                                }
+                                            }
+                                        }
+
+                                        showBreach = true
+                                    }
+                                },
+                                onDismiss = {
+                                    binding.root.removeView(this@apply)
+                                },
+                            )
+                        }
+
+                        if (showBreach) {
+                            val revealUiPrefs = Injekt.get<eu.kanade.domain.ui.UiPreferences>()
+                            val revealProfilePrefs =
+                                Injekt.get<eu.kanade.domain.ui.UserProfilePreferences>()
+
+                            val voidRewards = listOf(
+                                eu.kanade.presentation.components.VoidReward(
+                                    tag = composeStringResource(AYMR.strings.meltdown_reward_theme_tag),
+                                    name = composeStringResource(AYMR.strings.meltdown_reward_theme_name),
+                                    lore = composeStringResource(AYMR.strings.meltdown_reward_theme_lore),
+                                    onApply = {
+                                        revealUiPrefs.appTheme()
+                                            .set(eu.kanade.domain.ui.model.AppTheme.VOID_RED)
+                                    },
+                                ),
+                                eu.kanade.presentation.components.VoidReward(
+                                    tag = composeStringResource(AYMR.strings.meltdown_reward_nick_tag),
+                                    name = composeStringResource(AYMR.strings.meltdown_reward_nick_name),
+                                    lore = composeStringResource(AYMR.strings.meltdown_reward_nick_lore),
+                                    onApply = {
+                                        revealProfilePrefs.nicknameEffect().set("glitch_rune_red")
+                                    },
+                                ),
+                                eu.kanade.presentation.components.VoidReward(
+                                    tag = composeStringResource(AYMR.strings.meltdown_reward_frame_tag),
+                                    name = composeStringResource(AYMR.strings.meltdown_reward_frame_name),
+                                    lore = composeStringResource(AYMR.strings.meltdown_reward_frame_lore),
+                                    onApply = {
+                                        revealProfilePrefs.avatarFrameStyle().set("glitch_red")
+                                    },
+                                ),
+                                eu.kanade.presentation.components.VoidReward(
+                                    tag = composeStringResource(AYMR.strings.meltdown_reward_aura_tag),
+                                    name = composeStringResource(AYMR.strings.meltdown_reward_aura_name),
+                                    lore = composeStringResource(AYMR.strings.meltdown_reward_aura_lore),
+                                    onApply = {
+                                        revealUiPrefs.enabledAuras().set(setOf("aura_void_broadcast_red"))
+                                    },
+                                ),
+                                eu.kanade.presentation.components.VoidReward(
+                                    tag = composeStringResource(AYMR.strings.meltdown_reward_background_tag),
+                                    name = composeStringResource(AYMR.strings.meltdown_reward_background_name),
+                                    lore = composeStringResource(AYMR.strings.meltdown_reward_background_lore),
+                                    onApply = {
+                                        revealUiPrefs.specialBackgroundStyle().set("void_weeping_red")
+                                    },
+                                ),
+                            )
+
+                            eu.kanade.presentation.components.VoidRealityBreachFinale(
+                                rewards = voidRewards,
+                                onEnterTreasury = {
+                                    val intent = Intent(this@ReaderActivity, MainActivity::class.java).apply {
+                                        action = MainActivity.INTENT_OPEN_TREASURY
+                                        flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+                                    }
+                                    startActivity(intent)
+                                    finish()
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+            binding.root.addView(composeView)
+        }
+    }
+}
+
+@Composable
+private fun CrtShutdownAnimation(onAnimationFinished: () -> Unit) {
+    val scaleY = remember { Animatable(1f) }
+    val scaleX = remember { Animatable(1f) }
+    val dotAlpha = remember { Animatable(1f) }
+    val flicker = rememberInfiniteTransition(label = "crt_flicker")
+    val flickerAlpha by flicker.animateFloat(
+        initialValue = 0.9f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(80, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "flicker",
+    )
+
+    LaunchedEffect(Unit) {
+        scaleY.animateTo(
+            targetValue = 0.008f,
+            animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
+        )
+        scaleX.animateTo(
+            targetValue = 0.01f,
+            animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+        )
+        dotAlpha.animateTo(
+            targetValue = 0f,
+            animationSpec = tween(durationMillis = 200, easing = LinearEasing),
+        )
+        onAnimationFinished()
+    }
+
+    androidx.compose.foundation.layout.Box(
+        modifier = androidx.compose.ui.Modifier
+            .fillMaxSize()
+            .background(androidx.compose.ui.graphics.Color.Black),
+        contentAlignment = androidx.compose.ui.Alignment.Center,
+    ) {
+        if (scaleY.value > 0.008f || scaleX.value > 0.01f) {
+            androidx.compose.foundation.layout.Box(
+                modifier = androidx.compose.ui.Modifier
+                    .fillMaxWidth(scaleX.value)
+                    .fillMaxHeight(scaleY.value)
+                    .background(androidx.compose.ui.graphics.Color(0xFFFF003C).copy(alpha = flickerAlpha)),
+            )
+        }
+        if (scaleY.value <= 0.008f && dotAlpha.value > 0f) {
+            androidx.compose.foundation.layout.Box(
+                modifier = androidx.compose.ui.Modifier
+                    .size(8.dp)
+                    .graphicsLayer(alpha = dotAlpha.value)
+                    .background(androidx.compose.ui.graphics.Color.White, CircleShape)
+                    .border(2.dp, androidx.compose.ui.graphics.Color(0xFFFF003C), CircleShape),
+            )
+        }
     }
 }
 

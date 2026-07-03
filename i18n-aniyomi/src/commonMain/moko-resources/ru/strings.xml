@@ -2513,4 +2513,119 @@
     <string name="achievement_time_paradox_title">Временной парадокс</string>
     <string name="achievement_time_paradox_desc">Почитайте или посмотрите что-то ровно в 11:11</string>
     <string name="achievement_time_paradox_hint">Симметрия времени</string>
+
+    <!-- Glitch Easter Egg & Red Sector -->
+    <string name="achievement_void_broadcast_unlocked_title">Сигнал потерян</string>
+    <string name="achievement_void_broadcast_unlocked_desc">Ева готова к запуску. Третий Удар свершился — сигнал человечества растворился в багровом море LCL. Предохранители ядра молчат. Остаётся только красный.</string>
+    <string name="achievement_void_broadcast_unlocked_hint_vague">Мир превратился в склеп, где ошметки человеческой воли тщетно цеплялись за свои хрупкие, изношенные тела. На остывающем экране слабо пульсировал шрам пустой строки — шлюз, ведущий прямиком в мертвую пустоту комнат Гафа. Стоило вверить этой темноте название завершающего триаду сокрушения, ради которого когда-то пролилась кровь Антарктиды, как кости и мысли превратились в единую кипящую багровую жижу. Стены сознания рухнули, захлебываясь в чужой боли, и терзаемый судорогами передатчик навсегда лишился несущей частоты.</string>
+    <string name="achievement_void_broadcast_unlocked_hint_direct">Багровое море ждёт зова. Произнеси имя катастрофы там, где ищут все миры.</string>
+    <string name="achievement_void_broadcast_unlocked_hint_obvious">Введи «Третий Удар» в глобальный поиск, чтобы сжечь предохранители ядра.</string>
+    <string name="theme_void_red">Терминальный Красный</string>
+    <string name="treasury_tagline_void_red">Сбой энергоблока Евы-01</string>
+    <string name="treasury_reward_glitch_rune_red_title">Эффект ника "Багровый глитч"</string>
+    <string name="treasury_reward_glitch_rune_red_description">Багровые цифровые помехи и руны ошибок</string>
+    <string name="unlockable_aura_void_broadcast_red">Плавление Ядра</string>
+    <string name="unlockable_aura_void_broadcast_red_desc">Вибрирующие линии развертки угасающего сигнала</string>
+    <string name="aurora_nickname_effect_glitch_rune_red">Глитч Руна (Красная)</string>
+    <string name="treasury_reward_glitch_frame_red_title">Багровая рамка аватара</string>
+    <string name="treasury_reward_glitch_frame_red_description">Вибрирующая рамка с багровым кольцом и искажениями белых блоков</string>
+
+    <!-- Meltdown Glitch System (Easter Egg & Ritual) -->
+    <string name="meltdown_initiation_title">[ СБОЙ СИСТЕМНОЙ ЦЕЛОСТНОСТИ ]</string>
+    <string name="meltdown_initiation_message">[CRITICAL_ERROR]: ТЕМПЕРАТУРА ЯДРА КРИТИЧЕСКАЯ. СТЕРЖНИ ОХЛАЖДЕНИЯ СКРЫТЫ ГЛУБЖЕ, КУДА ЗАХОДЯТ ЛИШЬ ИНЖЕНЕРЫ.</string>
+    <string name="meltdown_initiation_button">ОТКЛЮЧИТЬ СИСТЕМНОЕ УПРАВЛЕНИЕ</string>
+    
+    <string name="meltdown_rift_title">[ РАЗРУШЕНИЕ СИСТЕМЫ ]</string>
+    <string name="meltdown_rift_message">WARNING: SYNC RATE 400% EXCEEDED. LCL FUSION COMMENCING.\nДВЕРЬ ОТКРОЕТСЯ ЛИШЬ ТОМУ, КТО:\n— УТОНЕТ В АБСОЛЮТНОЙ ТЬМЕ,\n— ПЕРЕРЕЖЕТ ВСЕ НИТИ СВЯЗИ С МИРОМ,\n— ДОЧИТАЕТ ЧУЖУЮ ИСТОРИЮ ДО ПОСЛЕДНЕЙ СТРОКИ,\n— И ПЯТЬ РАЗ ШАГНЕТ В ПУСТОТУ ЗА ЕЁ КРАЕМ.</string>
+    <string name="meltdown_rift_button">УДЕРЖИВАТЬ :: ПРИНЯТЬ СБОЙ ЦЕЛОСТНОСТИ</string>
+    
+    <string name="meltdown_directive_title">// РАЗЛОМ ОТКРЫТ</string>
+    <string name="meltdown_directive_step_1">УТОНИ В АБСОЛЮТНОЙ ТЬМЕ.</string>
+    <string name="meltdown_directive_step_2">ОБОРВИ ВСЕ НИТИ СВЯЗИ С МИРОМ.</string>
+    <string name="meltdown_directive_step_3">ДОЙДИ ДО КОНЦА ЧУЖОЙ ИСТОРИИ.</string>
+    <string name="meltdown_directive_step_4">ШАГНИ ПЯТЬ РАЗ В ПУСТОТУ ЗА КРАЙ.</string>
+    <string name="meltdown_directive_enter_void">ВОЙТИ В ПУСТОТУ</string>
+    
+    <string name="meltdown_ritual_reveal_title">СИГНАЛ ПОТЕРЯН</string>
+    <string name="meltdown_ritual_achievement_unlocked">ДОСТИЖЕНИЕ РАЗБЛОКИРОВАНО</string>
+    <string name="meltdown_ritual_rewards_count">&gt; РАЗБЛОКИРОВАНО [%1$d]</string>
+    <string name="meltdown_ritual_apply_all">▶ ПРИМЕНИТЬ ВСЁ</string>
+    <string name="meltdown_ritual_enter_treasury">ВОЙТИ В СОКРОВИЩНИЦУ ▶</string>
+    <string name="meltdown_ritual_reward_active">✓ АКТИВНО</string>
+    <string name="meltdown_ritual_reward_apply">ПРИМЕНИТЬ</string>
+    <string name="meltdown_ritual_reveal_desc">Ты произнёс имя, которое не произносят. Третий Удар прошёл сквозь экран — сигнал человечества растворился в багровом море LCL. Из пепла остаётся лишь одно: КРАСНЫЙ СЕКТОР.</string>
+    <string name="unlockable_special_background_void_weeping_red">Плачущая Пустота</string>
+    <string name="treasury_reward_void_weeping_red_title">Плачущая Пустота</string>
+    <string name="treasury_reward_void_weeping_red_description">Живой плачущий глаз, роняющий багровые слезы цифровой крови в пустоту</string>
+
+    <!-- Meltdown Reward Screen Strings -->
+    <string name="meltdown_reward_theme_tag">[ ТЕМА ]</string>
+    <string name="meltdown_reward_theme_name">Терминальный Красный</string>
+    <string name="meltdown_reward_theme_lore">Интерфейс, выжженный сигналом бедствия.</string>
+    
+    <string name="meltdown_reward_nick_tag">[ НИК ]</string>
+    <string name="meltdown_reward_nick_name">Эффект ника "Багровый глитч"</string>
+    <string name="meltdown_reward_nick_lore">Твоё имя тонет в цифровом шуме.</string>
+    
+    <string name="meltdown_reward_frame_tag">[ РАМКА ]</string>
+    <string name="meltdown_reward_frame_name">Багровая рамка аватара</string>
+    <string name="meltdown_reward_frame_lore">Багровое кольцо и разрывы вокруг аватара.</string>
+    
+    <string name="meltdown_reward_aura_tag">[ АУРА ]</string>
+    <string name="meltdown_reward_aura_name">Плавление Ядра</string>
+    <string name="meltdown_reward_aura_lore">Вибрирующие алые скан-линии умирающего сигнала.</string>
+
+    <string name="meltdown_reward_background_tag">[ ФОН ]</string>
+    <string name="meltdown_reward_background_name">Плачущая Пустота</string>
+    <string name="meltdown_reward_background_lore">Живой плачущий глаз, роняющий багровые слезы цифровой крови.</string>
+    <!-- Meltdown Reality Breach — строки лор-кода сквозь дыру -->
+    <string name="meltdown_code_line_01">ТРЕТИЙ УДАР ИНИЦИИРОВАН</string>
+    <string name="meltdown_code_line_02">REALITY_INTEGRITY = 0.000</string>
+    <string name="meltdown_code_line_03">ты не должен был это видеть</string>
+    <string name="meltdown_code_line_04">0xVOID  0xDEAD  0x003C</string>
+    <string name="meltdown_code_line_05">КРАСНЫЙ СЕКТОР ОТКРЫТ</string>
+    <string name="meltdown_code_line_06">беги. // нет, поздно</string>
+    <string name="meltdown_code_line_07">обратного пути нет</string>
+    <string name="meltdown_code_line_08">она уже внутри тебя</string>
+    <string name="meltdown_code_line_09">kill(reality); spawn(VOID)</string>
+    <string name="meltdown_code_line_10">кровь на костях</string>
+    <string name="meltdown_code_line_11">не моргай</string>
+    <string name="meltdown_code_line_12">void.consume(you)</string>
+    <string name="meltdown_code_line_13">СТЕНА МЕЖДУ МИРАМИ ТРЕСНУЛА</string>
+    <string name="meltdown_code_line_14">we are the code beneath</string>
+    <string name="meltdown_code_line_15">ОНО ЗНАЕТ ЧТО ТЫ ЗДЕСЬ</string>
+    <string name="meltdown_code_line_16">ЗАКРОЙ ГЛАЗА</string>
+    <string name="meltdown_code_line_17">третий удар. последний.</string>
+    <string name="meltdown_code_line_18">ПРИМИ ПУСТОТУ</string>
+    <string name="meltdown_code_line_19">слышишь? это твоё имя</string>
+    <string name="meltdown_code_line_20">пустота.принять()</string>
+    <string name="meltdown_code_line_21">///</string>
+    <string name="meltdown_code_line_22">...</string>
+    <string name="meltdown_code_line_23">x5>></string>
+    <string name="meltdown_code_line_24">---</string>
+    <!-- Meltdown terminal dialog strings -->
+    <string name="meltdown_terminal_title">[ КРИТИЧЕСКИЙ СБОЙ: РАЗРЫВ СВЯЗИ ]</string>
+    <string name="meltdown_terminal_message">Внимание: Вы достигли абсолютной границы.\nЧеловечество всегда искало способ стереть стены между душами, уйти от страха одиночества и боли взаимопонимания. Третий Удар сотрет границы твоего разума, растворив твое «Я» в багровом океане LCL.\n\nНо готов ли ты действительно исчезнуть? Отдать свою индивидуальность пустоте? Стать всем и ничем одновременно?\n\nНазад дороги нет. Выбор за тобой.\n\n[ ПРИНЯТЬ ЛИ ПУСТОТУ? ]</string>
+    <string name="meltdown_terminal_confirm">ПРИНЯТЬ ПУСТОТУ</string>
+    <string name="meltdown_terminal_dismiss">СБРОС СИСТЕМЫ</string>
+    <!-- Meltdown Phase 2 screen strings -->
+    <string name="meltdown_system_compromised">// ЦЕЛОСТНОСТЬ СИСТЕМЫ НАРУШЕНА</string>
+    <string name="meltdown_sync_rate">СИНХРОНИЗАЦИЯ %1$d%%</string>
+    <string name="meltdown_inhibitors_disengaged">// ИНГИБИТОРЫ ОТКЛЮЧЕНЫ — БРЕШЬ</string>
+    <string name="meltdown_breaching">// ПРОРЫВ… %1$d%%</string>
+    <string name="meltdown_hold_rift">УДЕРЖИВАЙТЕ РАЗЛОМ ДЛЯ ОТКЛЮЧЕНИЯ ИНГИБИТОРОВ</string>
+
+    <!-- Hints for Secret Achievements -->
+    <string name="achievement_secret_hall_unlocked_hint">Тайный зал открывается для тех, кто знает путь.</string>
+    <string name="achievement_secret_crybaby_hint">Истории, заставляющие плакать, оставляют след в вашей библиотеке.</string>
+    <string name="achievement_secret_chad_hint">Настоящая сила не требует объяснений.</string>
+    <string name="achievement_secret_deku_hint">Причуда для будущих героев.</string>
+    <string name="achievement_secret_eren_hint">Борьба. За свободу за стенами.</string>
+    <string name="achievement_secret_lelouch_hint">Всё идёт по плану.</string>
+    <string name="achievement_secret_saitama_hint">Достаточно одного удара.</string>
+    <string name="achievement_secret_jojo_hint">Невероятное приключение с угрожающей аурой.</string>
+    <string name="achievement_secret_shadow_monarch_hint">Повелевай тенями. Собери достаточно темного фэнтези.</string>
 </resources>
+
+
+

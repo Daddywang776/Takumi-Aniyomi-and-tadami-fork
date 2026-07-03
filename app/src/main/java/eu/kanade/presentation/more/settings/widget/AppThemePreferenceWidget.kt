@@ -113,11 +113,15 @@ private fun AppThemesList(
 
     val unlockableManager = remember { Injekt.get<tachiyomi.data.achievement.UnlockableManager>() }
 
-    val appThemes = remember(userProfile, debugBypassLocks) {
+    val rawUnlockedUnlockables by remember {
+        unlockableManager.observeUnlockedUnlockables()
+    }.collectAsStateWithLifecycle(initialValue = unlockableManager.getUnlockedUnlockables())
+
+    val appThemes = remember(userProfile, debugBypassLocks, rawUnlockedUnlockables) {
         val unlockedThemes = userProfile?.unlockedThemes?.toSet() ?: emptySet()
         val unlockedUnlockables = visibleUnlockablesForTreasuryPreview(
             debugBypassLocks = debugBypassLocks,
-            unlockedUnlockables = unlockableManager.getUnlockedUnlockables(),
+            unlockedUnlockables = rawUnlockedUnlockables,
         )
 
         AppTheme.entries

@@ -604,6 +604,7 @@ internal enum class NicknameEffectPreset(val key: String) {
     Sakura("sakura"),
     AuroraCrown("aurora_crown"),
     GlitchRune("glitch_rune"),
+    GlitchRuneRed("glitch_rune_red"),
     Cipher("cipher"),
     TrinityPrism("trinity_prism"),
     ShadowCrown("shadow_crown"),
@@ -1134,6 +1135,7 @@ private fun applyNicknameEffect(text: String, effect: NicknameEffectPreset): Str
         NicknameEffectPreset.Sakura -> "❀ $text ❀"
         NicknameEffectPreset.AuroraCrown -> text
         NicknameEffectPreset.GlitchRune -> text
+        NicknameEffectPreset.GlitchRuneRed -> text
         NicknameEffectPreset.Cipher -> text
         NicknameEffectPreset.TrinityPrism -> text
         NicknameEffectPreset.ShadowCrown -> text
@@ -1180,6 +1182,7 @@ private fun NicknameEffectPreset.label(): String {
         NicknameEffectPreset.Sakura -> stringResource(AYMR.strings.aurora_nickname_effect_sakura)
         NicknameEffectPreset.AuroraCrown -> "Aurora Crown (Treasury)"
         NicknameEffectPreset.GlitchRune -> "Glitch Rune (Treasury)"
+        NicknameEffectPreset.GlitchRuneRed -> stringResource(AYMR.strings.aurora_nickname_effect_glitch_rune_red)
         NicknameEffectPreset.Cipher -> "Cipher Sigil (Treasury)"
         NicknameEffectPreset.TrinityPrism -> "Trinity Prism (Treasury)"
         NicknameEffectPreset.ShadowCrown -> "Shadow Crown (Treasury)"
@@ -1202,6 +1205,7 @@ private fun nicknameEffectPickerPresets(): List<NicknameEffectPreset> {
         NicknameEffectPreset.Sakura,
         NicknameEffectPreset.AuroraCrown,
         NicknameEffectPreset.GlitchRune,
+        NicknameEffectPreset.GlitchRuneRed,
         NicknameEffectPreset.Cipher,
         NicknameEffectPreset.TrinityPrism,
         NicknameEffectPreset.ShadowCrown,

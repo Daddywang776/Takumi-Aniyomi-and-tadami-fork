@@ -1460,6 +1460,7 @@
     <string name="unlockable_special_background_petal_storm">«Шторм лепестков»</string>
     <string name="unlockable_special_background_neon_orbit">«Неоновая орбита»</string>
     <string name="unlockable_special_background_event_horizon_library">«Библиотека горизонта событий»</string>
+    <string name="unlockable_special_background_void_weeping_red">«Плачущая Пустота»</string>
     <string name="unlockable_aura_trinity_orbit">Аура «Орбита Триединства»</string>
     <string name="unlockable_aura_trinity_orbit_desc">Три орбиты манги, аниме и ранобэ вокруг карточек</string>
     <string name="unlockable_aura_deep_focus">Аура «Глубокий фокус»</string>
@@ -1468,6 +1469,10 @@
     <string name="unlockable_aura_shadow_monarch_desc">Фиолетово-чёрная мифическая тень</string>
     <string name="unlockable_aura_ascendant_gold">Аура «Восходящее золото»</string>
     <string name="unlockable_aura_ascendant_gold_desc">Белое золото для рангового престижа</string>
+    <string name="unlockable_theme_void_red">Тема «Терминальный Красный»</string>
+    <string name="unlockable_aura_void_broadcast_red">Аура «Плавление Ядра»</string>
+    <string name="unlockable_profile_nickname_effect_glitch_rune_red">Эффект ника "Багровый глитч"</string>
+    <string name="unlockable_avatar_frame_glitch_red">Багровая рамка аватара</string>
 
     <!-- Onboarding: legal disclaimer step -->
     <string name="onboarding_disclaimer_title">Прежде чем начать</string>

@@ -39,6 +39,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -95,6 +96,8 @@ import eu.kanade.presentation.more.settings.widget.AppThemePreviewItem
 import eu.kanade.presentation.theme.AuroraTheme
 import eu.kanade.presentation.theme.TachiyomiTheme
 import eu.kanade.tachiyomi.ui.home.components.AvatarFrameDecorations
+import eu.kanade.tachiyomi.ui.home.components.avatarGlitch
+import kotlinx.coroutines.flow.first
 import tachiyomi.data.achievement.UnlockableManager
 import tachiyomi.domain.achievement.model.Achievement
 import tachiyomi.i18n.MR
@@ -106,6 +109,8 @@ import uy.kohesive.injekt.api.get
 import androidx.compose.ui.graphics.drawscope.scale as drawScopeScale
 
 object SettingsTreasuryScreen : SearchableSettings {
+
+    var shouldShowVoidBroadcastBanner: Boolean = false
 
     @ReadOnlyComposable
     @Composable
@@ -128,13 +133,27 @@ object SettingsTreasuryScreen : SearchableSettings {
         val amoled by uiPreferences.themeDarkAmoled().collectAsStateWithLifecycle()
         val showTabGlow by uiPreferences.showTabGlow().collectAsStateWithLifecycle()
 
+        val rawUnlockedUnlockables by remember {
+            unlockableManager.observeUnlockedUnlockables()
+        }.collectAsStateWithLifecycle(initialValue = unlockableManager.getUnlockedUnlockables())
+
         val unlockedUnlockables = visibleUnlockablesForTreasuryPreview(
             debugBypassLocks = debugBypassLocks,
-            unlockedUnlockables = unlockableManager.getUnlockedUnlockables(),
+            unlockedUnlockables = rawUnlockedUnlockables,
         )
 
         val achievementRepository = remember {
             Injekt.get<tachiyomi.domain.achievement.repository.AchievementRepository>()
+        }
+        LaunchedEffect(Unit) {
+            if (shouldShowVoidBroadcastBanner) {
+                shouldShowVoidBroadcastBanner = false
+                val allAchievements = achievementRepository.getAll().first()
+                val achievement = allAchievements.firstOrNull { it.id == "void_broadcast_unlocked" }
+                if (achievement != null) {
+                    eu.kanade.presentation.achievement.components.AchievementBannerManager.showAchievement(achievement)
+                }
+            }
         }
         val achievements by achievementRepository.getAll().collectAsStateWithLifecycle(initialValue = emptyList())
 
@@ -235,6 +254,20 @@ object SettingsTreasuryScreen : SearchableSettings {
                 },
             ),
             TreasuryPreset(
+                unlockableId = "profile_nickname_effect_glitch_rune_red",
+                title = stringResource(AYMR.strings.treasury_reward_glitch_rune_red_title),
+                description = stringResource(AYMR.strings.treasury_reward_glitch_rune_red_description),
+                lockedRiddle = stringResource(AYMR.strings.achievement_void_broadcast_unlocked_hint_vague),
+                accentColor = Color(0xFFFF003C),
+                isActive = { nicknameEffectKey == "glitch_rune_red" },
+                onApply = {
+                    userProfilePreferences.nicknameEffect().set("glitch_rune_red")
+                },
+                onDeactivate = {
+                    userProfilePreferences.nicknameEffect().set("none")
+                },
+            ),
+            TreasuryPreset(
                 unlockableId = "profile_nickname_effect_cipher",
                 title =
                 unlockableManager.getUnlockableNameRes("profile_nickname_effect_cipher")?.let { stringResource(it) }
@@ -279,6 +312,20 @@ object SettingsTreasuryScreen : SearchableSettings {
         )
 
         val avatarFramePresets = listOf(
+            TreasuryPreset(
+                unlockableId = "avatar_frame_glitch_red",
+                title = stringResource(AYMR.strings.treasury_reward_glitch_frame_red_title),
+                description = stringResource(AYMR.strings.treasury_reward_glitch_frame_red_description),
+                lockedRiddle = stringResource(AYMR.strings.achievement_void_broadcast_unlocked_hint_vague),
+                accentColor = Color(0xFFFF003C),
+                isActive = { avatarFrameStyleKey == "glitch_red" },
+                onApply = {
+                    userProfilePreferences.avatarFrameStyle().set("glitch_red")
+                },
+                onDeactivate = {
+                    userProfilePreferences.avatarFrameStyle().set("none")
+                },
+            ),
             TreasuryPreset(
                 unlockableId = "avatar_frame_neon",
                 title = unlockableManager.getUnlockableNameRes("avatar_frame_neon")?.let { stringResource(it) }
@@ -507,6 +554,16 @@ object SettingsTreasuryScreen : SearchableSettings {
                 onApply = { uiPreferences.specialBackgroundStyle().set("event_horizon_library") },
                 onDeactivate = { uiPreferences.specialBackgroundStyle().set("none") },
             ),
+            TreasuryPreset(
+                unlockableId = "special_background_void_weeping_red",
+                title = stringResource(AYMR.strings.treasury_reward_void_weeping_red_title),
+                description = stringResource(AYMR.strings.treasury_reward_void_weeping_red_description),
+                accentColor = Color(0xFFFF1E27),
+                lockedRiddle = stringResource(AYMR.strings.achievement_void_broadcast_unlocked_hint_vague),
+                isActive = { specialBackgroundStyleKey == "void_weeping_red" },
+                onApply = { uiPreferences.specialBackgroundStyle().set("void_weeping_red") },
+                onDeactivate = { uiPreferences.specialBackgroundStyle().set("none") },
+            ),
         )
 
         val tabCustomizationPresets = listOf(
@@ -723,6 +780,7 @@ object SettingsTreasuryScreen : SearchableSettings {
                                 val avatarModifier = Modifier
                                     .size(if (avatarFrameStyleKey != "none") 62.dp else 70.dp)
                                     .clip(CircleShape)
+                                    .avatarGlitch(avatarFrameStyleKey)
 
                                 if (avatarUrl.isNotEmpty()) {
                                     AsyncImage(
@@ -1651,6 +1709,8 @@ private data class TreasuryPreset(
     val unlockableId: String,
     val title: String,
     val description: String,
+    // Загадка-подсказка, показываемая вместо сухого "Requires: ...", пока награда заблокирована.
+    val lockedRiddle: String? = null,
     val accentColor: Color,
     val isActive: () -> Boolean,
     val onApply: () -> Unit,
@@ -1698,6 +1758,12 @@ private fun TreasuryThemeSelector(
             rarity = AYMR.strings.treasury_exclusive_rarity_mythic,
             tagline = AYMR.strings.treasury_tagline_event_horizon,
             accentColor = Color(0xFFFF6F00),
+        ),
+        TreasuryExclusiveThemeSpec(
+            theme = AppTheme.VOID_RED,
+            rarity = AYMR.strings.treasury_exclusive_rarity_mythic,
+            tagline = AYMR.strings.treasury_tagline_void_red,
+            accentColor = Color(0xFFFF003C),
         ),
     )
 
@@ -2384,7 +2450,8 @@ private fun TreasuryToggleSelector(
                     description = if (isUnlocked) {
                         preset.description
                     } else {
-                        stringResource(AYMR.strings.treasury_requires_achievement, achievementTitle)
+                        preset.lockedRiddle
+                            ?: stringResource(AYMR.strings.treasury_requires_achievement, achievementTitle)
                     },
                     amoled = amoled,
                     onToggle = {
@@ -2781,6 +2848,7 @@ private fun getRewardIconResourceId(rewardId: String, context: android.content.C
         "title_rank_4" -> "ic_reward_nickname_rank_sigils"
         "profile_nickname_effect_aurora_crown" -> "ic_reward_nickname_aurora_crown"
         "profile_nickname_effect_glitch_rune" -> "ic_reward_nickname_glitch_rune"
+        "profile_nickname_effect_glitch_rune_red" -> "ic_reward_nickname_glitch_rune_red"
         "profile_nickname_effect_cipher" -> "ic_reward_nickname_cipher"
         "profile_nickname_effect_trinity_prism" -> "ic_reward_nickname_trinity_prism"
         "profile_nickname_effect_shadow_crown" -> "ic_reward_nickname_shadow_crown"
@@ -2788,6 +2856,7 @@ private fun getRewardIconResourceId(rewardId: String, context: android.content.C
         "avatar_frame_neon" -> "ic_reward_frame_neon"
         "avatar_frame_hologram" -> "ic_reward_frame_hologram"
         "avatar_frame_prismatic" -> "ic_reward_frame_prismatic"
+        "avatar_frame_glitch_red" -> "ic_reward_frame_glitch_red"
         "home_badge_orbit" -> "ic_reward_badge_orbit"
         "home_badge_crown" -> "ic_reward_badge_crown"
         "home_badge_shuriken" -> "ic_reward_badge_shuriken"
@@ -2803,6 +2872,7 @@ private fun getRewardIconResourceId(rewardId: String, context: android.content.C
         "special_background_deep_space_archive" -> "ic_reward_background_deep_space_archive"
         "special_background_shadow_realm" -> "ic_reward_background_shadow_realm"
         "special_background_event_horizon_library" -> "ic_reward_background_event_horizon_library"
+        "special_background_void_weeping_red" -> "ic_reward_background_void_weeping_red"
         "special_tab_glow" -> "ic_reward_tab_glow"
         else -> "ic_reward_$rewardId"
     }

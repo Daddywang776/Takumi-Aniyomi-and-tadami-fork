@@ -93,6 +93,9 @@ abstract class PagerViewer(val activity: ReaderActivity) : Viewer {
         pager.adapter = adapter
         pager.addOnPageChangeListener(
             object : ViewPager.SimpleOnPageChangeListener() {
+                // Track swipes into void at the last page
+                private var dragStartedAtLastPage = false
+
                 override fun onPageSelected(position: Int) {
                     if (!activity.isScrollingThroughPages) {
                         activity.hideMenu()
@@ -101,12 +104,23 @@ abstract class PagerViewer(val activity: ReaderActivity) : Viewer {
                 }
 
                 override fun onPageScrollStateChanged(state: Int) {
-                    isIdle = state == ViewPager.SCROLL_STATE_IDLE
-                    if (state == ViewPager.SCROLL_STATE_DRAGGING) {
-                        pauseAutoScroll()
-                    } else if (state == ViewPager.SCROLL_STATE_IDLE) {
-                        resumeAutoScroll()
+                    when (state) {
+                        ViewPager.SCROLL_STATE_DRAGGING -> {
+                            // Record if user starts dragging when already on the last page
+                            dragStartedAtLastPage = pager.currentItem == adapter.count - 1
+                            pauseAutoScroll()
+                        }
+                        ViewPager.SCROLL_STATE_IDLE -> {
+                            if (dragStartedAtLastPage && pager.currentItem == adapter.count - 1) {
+                                // Drag started and ended on last page — user swiped into void
+                                activity.onMeltdownTransitionActivated()
+                            }
+                            dragStartedAtLastPage = false
+                            resumeAutoScroll()
+                        }
+                        else -> { /* SETTLING — ignore */ }
                     }
+                    isIdle = state == ViewPager.SCROLL_STATE_IDLE
                 }
             },
         )
@@ -314,6 +328,7 @@ abstract class PagerViewer(val activity: ReaderActivity) : Viewer {
         } else if (transition is ChapterTransition.Next) {
             // No more chapters, show menu because the user is probably going to close the reader
             activity.showMenu()
+            activity.onMeltdownTransitionActivated()
         }
     }
 
@@ -390,6 +405,10 @@ abstract class PagerViewer(val activity: ReaderActivity) : Viewer {
             } else {
                 pager.setCurrentItem(pager.currentItem + 1, config.usePageTransitions)
             }
+        } else {
+            // Already at the last item — user is swiping into void.
+            // Fire the meltdown counter so gesture-based overscroll is tracked.
+            activity.onMeltdownTransitionActivated()
         }
     }
 
@@ -404,6 +423,11 @@ abstract class PagerViewer(val activity: ReaderActivity) : Viewer {
             } else {
                 pager.setCurrentItem(pager.currentItem - 1, config.usePageTransitions)
             }
+        } else {
+            // Already at the first item — for R2L viewers this is the "end".
+            // Fire meltdown only if this is the logical forward direction (R2L).
+            // We rely on R2LPagerViewer.moveToNext() -> moveLeft(), so the activity
+            // call is safe here. PagerViewer will silently no-op for L2R.
         }
     }
 

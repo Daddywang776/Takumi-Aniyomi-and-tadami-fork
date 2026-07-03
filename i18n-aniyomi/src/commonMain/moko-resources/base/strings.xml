@@ -2497,4 +2497,116 @@
     <string name="achievement_time_paradox_title">Time Paradox</string>
     <string name="achievement_time_paradox_desc">Read or watch at exactly 11:11</string>
     <string name="achievement_time_paradox_hint">Symmetry of time</string>
+
+    <!-- Glitch Easter Egg & Red Sector -->
+    <string name="achievement_void_broadcast_unlocked_title">Transmission Lost</string>
+    <string name="achievement_void_broadcast_unlocked_desc">Eva is ready for launch. The Third Impact has come — the signal of humanity has dissolved into the crimson sea of LCL. The core fuses are silent. Only red remains.</string>
+    <string name="achievement_void_broadcast_unlocked_hint_vague">The world had turned into a crypt where the remnants of human will clung vainly to their fragile, worn-out bodies. On the cooling screen, the scar of an empty line throbbed faintly—a lock leading straight into the dead void of the Chambers of Guf. One had only to entrust to this darkness the name of that triad-completing crushing for which the blood of Antarctica was once spilled, and bones and thoughts turned into a single boiling crimson sludge. The walls of consciousness collapsed, drowning in the pain of others, and the convulsing transmitter was stripped of its carrier frequency forever.</string>
+    <string name="achievement_void_broadcast_unlocked_hint_direct">The crimson sea awaits its call. Speak the name of the catastrophe where all worlds are sought.</string>
+    <string name="achievement_void_broadcast_unlocked_hint_obvious">Type Third Impact into global search to burn out the core fuses.</string>
+    <string name="theme_void_red">Terminal Red</string>
+    <string name="treasury_tagline_void_red">Meltdown at core unit 01</string>
+    <string name="treasury_reward_glitch_rune_red_title">Crimson Glitch Nickname Effect</string>
+    <string name="treasury_reward_glitch_rune_red_description">Crimson digital noise and error runes</string>
+    <string name="unlockable_aura_void_broadcast_red">Core Melt</string>
+    <string name="unlockable_aura_void_broadcast_red_desc">Vibrating crimson scanlines of a dying signal</string>
+    <string name="aurora_nickname_effect_glitch_rune_red">Glitch Rune (Crimson)</string>
+    <string name="treasury_reward_glitch_frame_red_title">Crimson Avatar Frame</string>
+    <string name="treasury_reward_glitch_frame_red_description">Flickering red static ring with white horizontal block distortions</string>
+
+    <!-- Meltdown Glitch System (Easter Egg & Ritual) -->
+    <string name="meltdown_initiation_title">[ SYSTEM INTEGRITY COMPROMISED ]</string>
+    <string name="meltdown_initiation_message">[CRITICAL_ERROR]: CORE TEMPERATURE CRITICAL. COOLING RODS ARE HIDDEN DEEPER THAN A NORMAL EYE CAN SEE. DESCEND WHERE ONLY ENGINEERS GO.</string>
+    <string name="meltdown_initiation_button">DISENGAGE SYSTEM CONTROLS</string>
+
+    <string name="meltdown_rift_title">[ SYSTEM MELTDOWN ]</string>
+    <string name="meltdown_rift_message">WARNING: SYNC RATE 400% EXCEEDED. LCL FUSION COMMENCING.\nTHE DOOR WILL ONLY OPEN TO ONE WHO:\n— DROWNS IN ABSOLUTE DARKNESS,\n— CUTS ALL THREADS OF COMMUNICATION WITH THE WORLD,\n— FINISHES SOMEONE ELSE\'S STORY TO THE VERY LAST LINE,\n— AND STEPS FIVE TIMES INTO THE VOID BEYOND ITS EDGE.</string>
+    <string name="meltdown_rift_button">HOLD :: ACCEPT INTEGRITY BREACH</string>
+
+    <string name="meltdown_directive_title">// RIFT BREACHED</string>
+    <string name="meltdown_directive_step_1">DROWN IN ABSOLUTE DARKNESS.</string>
+    <string name="meltdown_directive_step_2">SEVER ALL THREADS OF COMMUNICATION WITH THE WORLD.</string>
+    <string name="meltdown_directive_step_3">FINISH SOMEONE ELSE\'S STORY TO THE VERY LAST LINE.</string>
+    <string name="meltdown_directive_step_4">STEP FIVE TIMES INTO THE VOID BEYOND ITS EDGE.</string>
+    <string name="meltdown_directive_enter_void">ENTER THE VOID</string>
+
+    <string name="meltdown_ritual_reveal_title">SIGNAL LOST</string>
+    <string name="meltdown_ritual_achievement_unlocked">ACHIEVEMENT UNLOCKED</string>
+    <string name="meltdown_ritual_rewards_count">&gt; UNLOCKED [%1$d]</string>
+    <string name="meltdown_ritual_apply_all">▶ APPLY ALL</string>
+    <string name="meltdown_ritual_enter_treasury">ENTER TREASURY ▶</string>
+    <string name="meltdown_ritual_reward_active">✓ ACTIVE</string>
+    <string name="meltdown_ritual_reward_apply">Apply</string>
+    <string name="meltdown_ritual_reveal_desc">You spoke the name that is never spoken. The Third Impact has breached the screen — the signal of humanity has dissolved into the crimson sea of LCL. From the ashes, only one thing remains: THE RED SECTOR.</string>
+    <string name="unlockable_special_background_void_weeping_red">Weeping Void</string>
+    <string name="treasury_reward_void_weeping_red_title">Weeping Void</string>
+    <string name="treasury_reward_void_weeping_red_description">A living weeping eye that drops crimson tears of digital blood into the void</string>
+
+    <!-- Meltdown Reward Screen Strings -->
+    <string name="meltdown_reward_theme_tag">[ THEME ]</string>
+    <string name="meltdown_reward_theme_name">Terminal Red</string>
+    <string name="meltdown_reward_theme_lore">An interface scorched by a distress signal.</string>
+
+    <string name="meltdown_reward_nick_tag">[ NICKNAME ]</string>
+    <string name="meltdown_reward_nick_name">Crimson Glitch Nickname Effect</string>
+    <string name="meltdown_reward_nick_lore">Your name dissolves in digital noise.</string>
+
+    <string name="meltdown_reward_frame_tag">[ FRAME ]</string>
+    <string name="meltdown_reward_frame_name">Crimson Avatar Frame</string>
+    <string name="meltdown_reward_frame_lore">A crimson ring and disruptions around the avatar.</string>
+
+    <string name="meltdown_reward_aura_tag">[ AURA ]</string>
+    <string name="meltdown_reward_aura_name">Core Melt</string>
+    <string name="meltdown_reward_aura_lore">Vibrating crimson scanlines of a dying signal.</string>
+
+    <string name="meltdown_reward_background_tag">[ BACKGROUND ]</string>
+    <string name="meltdown_reward_background_name">Weeping Void</string>
+    <string name="meltdown_reward_background_lore">A living weeping eye that drops crimson tears of digital blood.</string>
+    <!-- Meltdown Reality Breach — lore code lines shown through the crack/hole -->
+    <string name="meltdown_code_line_01">THIRD IMPACT INITIATED</string>
+    <string name="meltdown_code_line_02">REALITY_INTEGRITY = 0.000</string>
+    <string name="meltdown_code_line_03">you were not supposed to see this</string>
+    <string name="meltdown_code_line_04">0xVOID  0xDEAD  0x003C</string>
+    <string name="meltdown_code_line_05">VOID SECTOR UNLOCKED</string>
+    <string name="meltdown_code_line_06">run. // no, too late</string>
+    <string name="meltdown_code_line_07">no way back</string>
+    <string name="meltdown_code_line_08">she is already inside you</string>
+    <string name="meltdown_code_line_09">kill(reality); spawn(VOID)</string>
+    <string name="meltdown_code_line_10">blood on the bones</string>
+    <string name="meltdown_code_line_11">do not blink</string>
+    <string name="meltdown_code_line_12">void.consume(you)</string>
+    <string name="meltdown_code_line_13">THE WALL BETWEEN WORLDS HAS CRACKED</string>
+    <string name="meltdown_code_line_14">we are the code beneath</string>
+    <string name="meltdown_code_line_15">it knows you are here</string>
+    <string name="meltdown_code_line_16">CLOSE YOUR EYES</string>
+    <string name="meltdown_code_line_17">third impact. the last.</string>
+    <string name="meltdown_code_line_18">ACCEPT THE VOID</string>
+    <string name="meltdown_code_line_19">can you hear it? that is your name</string>
+    <string name="meltdown_code_line_20">void.accept()</string>
+    <string name="meltdown_code_line_21">///</string>
+    <string name="meltdown_code_line_22">...</string>
+    <string name="meltdown_code_line_23">x5>></string>
+    <string name="meltdown_code_line_24">---</string>
+    <!-- Meltdown terminal dialog strings -->
+    <string name="meltdown_terminal_title">[ CRITICAL FAULT: CONNECTION RUPTURED ]</string>
+    <string name="meltdown_terminal_message">Warning: You have reached the absolute boundary.\nHumanity has always sought a way to erase the walls between souls, to escape the fear of isolation and the pain of understanding. The Third Impact will dissolve the boundaries of your mind, dissolving your self in the crimson sea of LCL.\n\nBut are you truly ready to cease to exist? To surrender your individuality to the void? To become everything and nothing at once?\n\nThere is no turning back. The choice is yours.\n\n[ ACCEPT THE VOID? ]</string>
+    <string name="meltdown_terminal_confirm">ACCEPT THE VOID</string>
+    <string name="meltdown_terminal_dismiss">SYSTEM RESET</string>
+    <!-- Meltdown Phase 2 screen strings -->
+    <string name="meltdown_system_compromised">// SYSTEM INTEGRITY COMPROMISED</string>
+    <string name="meltdown_sync_rate">SYNC RATE %1$d%%</string>
+    <string name="meltdown_inhibitors_disengaged">// INHIBITORS DISENGAGED — BREACH</string>
+    <string name="meltdown_breaching">// BREACHING… %1$d%%</string>
+    <string name="meltdown_hold_rift">HOLD RIFT TO DISENGAGE INHIBITORS</string>
+
+    <!-- Hints for Secret Achievements -->
+    <string name="achievement_secret_hall_unlocked_hint">A hidden hall opens for those who know the way.</string>
+    <string name="achievement_secret_crybaby_hint">Stories that make you cry leave a mark on your library.</string>
+    <string name="achievement_secret_chad_hint">Real power needs no explanation.</string>
+    <string name="achievement_secret_deku_hint">A quirk for heroes in the making.</string>
+    <string name="achievement_secret_eren_hint">Fight. For freedom beyond the walls.</string>
+    <string name="achievement_secret_lelouch_hint">Everything is proceeding according to plan.</string>
+    <string name="achievement_secret_saitama_hint">One punch is all it takes.</string>
+    <string name="achievement_secret_jojo_hint">A bizarre journey with a menacing aura.</string>
+    <string name="achievement_secret_shadow_monarch_hint">Command the shadows. Collect enough dark fantasy.</string>
 </resources>

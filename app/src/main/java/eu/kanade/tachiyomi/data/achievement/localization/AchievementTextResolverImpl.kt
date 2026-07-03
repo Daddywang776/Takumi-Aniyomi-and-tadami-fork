@@ -175,10 +175,12 @@ internal fun achievementTextResourceRefs(achievementId: String): AchievementText
         "theme_changer" -> featureResources("theme_changer")
         "persistent_clicker" -> featureResources("persistent_clicker")
         "secret_hall_unlocked" -> featureResources("secret_hall_unlocked")
+        "void_broadcast_unlocked" -> featureResources("void_broadcast_unlocked")
 
         "secret_crybaby" -> text(
             AYMR.strings.achievement_secret_crybaby_title,
             AYMR.strings.achievement_secret_crybaby_desc,
+            hintVague = AYMR.strings.achievement_secret_crybaby_hint,
         )
         "secret_harem_king" -> text(
             AYMR.strings.achievement_secret_harem_king_title,
@@ -197,6 +199,7 @@ internal fun achievementTextResourceRefs(achievementId: String): AchievementText
         "secret_chad" -> text(
             AYMR.strings.achievement_secret_chad_reader_title,
             AYMR.strings.achievement_secret_chad_reader_desc,
+            hintVague = AYMR.strings.achievement_secret_chad_hint,
         )
         "secret_shonen" -> text(
             AYMR.strings.achievement_secret_power_of_friendship_title,
@@ -208,22 +211,27 @@ internal fun achievementTextResourceRefs(achievementId: String): AchievementText
         "secret_deku" -> text(
             AYMR.strings.achievement_secret_plus_ultra_title,
             AYMR.strings.achievement_secret_plus_ultra_desc,
+            hintVague = AYMR.strings.achievement_secret_deku_hint,
         )
         "secret_eren" -> text(
             AYMR.strings.achievement_secret_tatakae_title,
             AYMR.strings.achievement_secret_tatakae_desc,
+            hintVague = AYMR.strings.achievement_secret_eren_hint,
         )
         "secret_lelouch" -> text(
             AYMR.strings.achievement_secret_all_according_to_plan_title,
             AYMR.strings.achievement_secret_all_according_to_plan_desc,
+            hintVague = AYMR.strings.achievement_secret_lelouch_hint,
         )
         "secret_saitama" -> text(
             AYMR.strings.achievement_secret_average_enjoyer_title,
             AYMR.strings.achievement_secret_average_enjoyer_desc,
+            hintVague = AYMR.strings.achievement_secret_saitama_hint,
         )
         "secret_jojo" -> text(
             AYMR.strings.achievement_secret_it_was_me_dio_title,
             AYMR.strings.achievement_secret_it_was_me_dio_desc,
+            hintVague = AYMR.strings.achievement_secret_jojo_hint,
         )
         "secret_onepiece" -> text(
             AYMR.strings.achievement_secret_king_of_pirates_title,
@@ -368,6 +376,7 @@ internal fun achievementTextResourceRefs(achievementId: String): AchievementText
         "secret_shadow_monarch" -> text(
             AYMR.strings.achievement_secret_shadow_monarch_title,
             AYMR.strings.achievement_secret_shadow_monarch_desc,
+            hintVague = AYMR.strings.achievement_secret_shadow_monarch_hint,
         )
         "secret_weeb_awakening" -> text(
             AYMR.strings.achievement_secret_weeb_awakening_title,
@@ -644,6 +653,14 @@ private fun featureResources(achievementId: String): AchievementTextResourceRefs
         "secret_hall_unlocked" -> text(
             AYMR.strings.achievement_secret_hall_unlocked_title,
             AYMR.strings.achievement_secret_hall_unlocked_desc,
+            hintVague = AYMR.strings.achievement_secret_hall_unlocked_hint,
+        )
+        "void_broadcast_unlocked" -> text(
+            AYMR.strings.achievement_void_broadcast_unlocked_title,
+            AYMR.strings.achievement_void_broadcast_unlocked_desc,
+            AYMR.strings.achievement_void_broadcast_unlocked_hint_vague,
+            AYMR.strings.achievement_void_broadcast_unlocked_hint_direct,
+            AYMR.strings.achievement_void_broadcast_unlocked_hint_obvious,
         )
         else -> AchievementTextResourceRefs(null, null)
     }
