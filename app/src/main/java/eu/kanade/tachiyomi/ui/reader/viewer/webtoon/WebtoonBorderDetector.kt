@@ -19,26 +19,38 @@ object WebtoonBorderDetector {
         var leftLimit = width
         var rightLimit = 0
 
-        for (y in sampleY) {
-            if (y >= height) continue
-            // Skip first/last 5 pixels to avoid 1-pixel borders or edge noise
-            val leftColor = bitmap.getPixel(5, y)
-            val rightColor = bitmap.getPixel(width - 6, y)
+        val cleanBitmap = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && bitmap.config == Bitmap.Config.HARDWARE) {
+            bitmap.copy(Bitmap.Config.ARGB_8888, false) ?: return Rect(0, 0, width, height)
+        } else {
+            bitmap
+        }
 
-            // Scan from left
-            for (x in 5 until width - 5) {
-                if (isSignificantDifference(bitmap.getPixel(x, y), leftColor)) {
-                    leftLimit = minOf(leftLimit, x)
-                    break
+        try {
+            for (y in sampleY) {
+                if (y >= height) continue
+                // Skip first/last 5 pixels to avoid 1-pixel borders or edge noise
+                val leftColor = cleanBitmap.getPixel(5, y)
+                val rightColor = cleanBitmap.getPixel(width - 6, y)
+
+                // Scan from left
+                for (x in 5 until width - 5) {
+                    if (isSignificantDifference(cleanBitmap.getPixel(x, y), leftColor)) {
+                        leftLimit = minOf(leftLimit, x)
+                        break
+                    }
+                }
+
+                // Scan from right
+                for (x in width - 6 downTo 5) {
+                    if (isSignificantDifference(cleanBitmap.getPixel(x, y), rightColor)) {
+                        rightLimit = maxOf(rightLimit, x)
+                        break
+                    }
                 }
             }
-
-            // Scan from right
-            for (x in width - 6 downTo 5) {
-                if (isSignificantDifference(bitmap.getPixel(x, y), rightColor)) {
-                    rightLimit = maxOf(rightLimit, x)
-                    break
-                }
+        } finally {
+            if (cleanBitmap != bitmap) {
+                cleanBitmap.recycle()
             }
         }
 
