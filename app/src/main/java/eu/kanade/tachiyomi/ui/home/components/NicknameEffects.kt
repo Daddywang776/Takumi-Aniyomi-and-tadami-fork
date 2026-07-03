@@ -1795,7 +1795,7 @@ internal fun AvatarFrameDecorations(
                             drawContent()
 
                             val center = Offset(size.width / 2f, size.height / 2f)
-                            val radius = size.minDimension / 2f - 6.dp.toPx()
+                            val radius = size.minDimension / 2f - 4.dp.toPx()
                             val pulse = pulseState.value
                             val t = glitchTime.value
 
@@ -1851,34 +1851,21 @@ internal fun AvatarFrameDecorations(
                                     center = center,
                                 )
 
-                                val path = Path().apply {
-                                    addOval(
-                                        androidx.compose.ui.geometry.Rect(
-                                            center.x - radius,
-                                            center.y - radius,
-                                            center.x + radius,
-                                            center.y + radius,
-                                        ),
-                                    )
-                                }
-                                clipPath(path) {
-                                    val numSlices = rng.nextInt(2) + 1
-                                    repeat(numSlices) { j ->
-                                        val sliceHeight = (rng.nextFloat() * 4f + 2f).dp.toPx()
-                                        val sliceY = center.y - radius + rng.nextFloat() * (radius * 2f)
-                                        val sliceColor = if (rng.nextBoolean()) {
-                                            Color(
-                                                0xFFFF003C,
-                                            ).copy(alpha = 0.45f)
-                                        } else {
-                                            Color.White.copy(alpha = 0.45f)
-                                        }
-                                        drawRect(
-                                            color = sliceColor,
-                                            topLeft = Offset(center.x - radius, sliceY),
-                                            size = androidx.compose.ui.geometry.Size(radius * 2f, sliceHeight),
-                                        )
+                                val numSlices = rng.nextInt(2) + 1
+                                repeat(numSlices) { j ->
+                                    val sliceHeight = (rng.nextFloat() * 4f + 2f).dp.toPx()
+                                    val sliceY = center.y - radius + rng.nextFloat() * (radius * 2f)
+                                    val sliceColor = if (rng.nextBoolean()) {
+                                        Color(0xFFFF003C).copy(alpha = 0.45f)
+                                    } else {
+                                        Color.White.copy(alpha = 0.45f)
                                     }
+                                    val sliceWidth = radius * 2f + 12.dp.toPx()
+                                    drawRect(
+                                        color = sliceColor,
+                                        topLeft = Offset(center.x - sliceWidth / 2f, sliceY),
+                                        size = androidx.compose.ui.geometry.Size(sliceWidth, sliceHeight),
+                                    )
                                 }
 
                                 repeat(3) { i ->

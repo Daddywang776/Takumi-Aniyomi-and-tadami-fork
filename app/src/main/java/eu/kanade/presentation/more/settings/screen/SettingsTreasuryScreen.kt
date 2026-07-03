@@ -1722,6 +1722,7 @@ private data class TreasuryExclusiveThemeSpec(
     val rarity: StringResource,
     val tagline: StringResource,
     val accentColor: Color,
+    val lockedRiddle: StringResource? = null,
 )
 
 @Composable
@@ -1764,6 +1765,7 @@ private fun TreasuryThemeSelector(
             rarity = AYMR.strings.treasury_exclusive_rarity_mythic,
             tagline = AYMR.strings.treasury_tagline_void_red,
             accentColor = Color(0xFF9E0B14),
+            lockedRiddle = AYMR.strings.achievement_void_broadcast_unlocked_hint_vague,
         ),
     )
 
@@ -1789,7 +1791,9 @@ private fun TreasuryThemeSelector(
                 val theme = spec.theme
                 val rewardId = "theme_${theme.name}"
                 val isUnlocked = isThemePreviewUnlocked(theme, unlockedUnlockables)
-                val achievementTitle = rewardToAchievementMap[rewardId]?.title
+                val achievement = rewardToAchievementMap[rewardId]
+                    ?: rewardToAchievementMap["theme_${theme.name.lowercase()}"]
+                val achievementTitle = achievement?.title
                     ?: stringResource(AYMR.strings.treasury_fallback_achievement)
                 val isSelected = appTheme == theme
 
@@ -1947,7 +1951,8 @@ private fun TreasuryThemePoster(
                         ),
                 )
                 if (!isUnlocked) {
-                    TreasuryLockVeil(achievementTitle = achievementTitle)
+                    val veilText = spec.lockedRiddle?.let { stringResource(it) } ?: achievementTitle
+                    TreasuryLockVeil(achievementTitle = veilText)
                 }
             }
 
@@ -1977,7 +1982,8 @@ private fun TreasuryThemePoster(
                             stringResource(AYMR.strings.treasury_exclusive_unlocked)
                         }
                     } else {
-                        stringResource(AYMR.strings.treasury_requires_achievement, achievementTitle)
+                        spec.lockedRiddle?.let { stringResource(it) }
+                            ?: stringResource(AYMR.strings.treasury_requires_achievement, achievementTitle)
                     },
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,

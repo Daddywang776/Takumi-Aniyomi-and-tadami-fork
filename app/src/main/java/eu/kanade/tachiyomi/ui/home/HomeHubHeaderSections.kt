@@ -670,7 +670,6 @@ private fun HomeHubProfileHeaderCanvas(
                         Box(
                             modifier = Modifier
                                 .size(48.dp)
-                                .clipToBounds()
                                 .clickable(onClick = onAvatarClick),
                             contentAlignment = Alignment.Center,
                         ) {
