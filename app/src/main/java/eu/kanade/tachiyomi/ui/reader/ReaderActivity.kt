@@ -1522,7 +1522,7 @@ class ReaderActivity : BaseActivity() {
                                             }
                                             if (achievement != null) {
                                                 val progressFlow = achievementRepository
-                                                     .getProgress("void_broadcast_unlocked").first()
+                                                    .getProgress("void_broadcast_unlocked").first()
                                                 if (progressFlow == null || !progressFlow.isUnlocked) {
                                                     justUnlocked = true
                                                     val newProgress = AchievementProgress.createStandard(
@@ -1534,12 +1534,12 @@ class ReaderActivity : BaseActivity() {
                                                     )
                                                     achievementRepository.insertOrUpdateProgress(newProgress)
 
-                                                     val pointsManager =
-                                                         Injekt.get<tachiyomi.data.achievement.handler.PointsManager>()
-                                                     pointsManager.incrementUnlocked()
+                                                    val pointsManager =
+                                                        Injekt.get<tachiyomi.data.achievement.handler.PointsManager>()
+                                                    pointsManager.incrementUnlocked()
 
-                                                     val unlockableManager = Injekt.get<UnlockableManager>()
-                                                     unlockableManager.unlockAchievementRewards(achievement)
+                                                    val unlockableManager = Injekt.get<UnlockableManager>()
+                                                    unlockableManager.unlockAchievementRewards(achievement)
                                                 }
                                             }
                                         }

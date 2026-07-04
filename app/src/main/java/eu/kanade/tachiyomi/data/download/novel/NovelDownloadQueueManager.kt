@@ -18,6 +18,8 @@ import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withTimeout
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.data.achievement.handler.AchievementHandler
+import tachiyomi.domain.achievement.model.AchievementEvent
 import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.entries.novel.model.Novel
 import tachiyomi.domain.items.novelchapter.model.NovelChapter
@@ -223,6 +225,7 @@ object NovelDownloadQueueManager {
     private val downloadManager = NovelDownloadManager()
     private val translatedDownloadManager = NovelTranslatedDownloadManager()
     private val downloadPreferences: DownloadPreferences by lazy { Injekt.get() }
+    private val achievementHandler: AchievementHandler by lazy { Injekt.get() }
     private val _state = MutableStateFlow(NovelDownloadQueueState())
     val state = _state.asStateFlow()
     private val notifier = runCatching {
@@ -452,6 +455,7 @@ object NovelDownloadQueueManager {
                 if (success) {
                     removeTask(nextTask.taskId)
                     completionTracker.recordCompletion(DownloadSection.NOVEL)
+                    achievementHandler.trackFeatureUsed(AchievementEvent.Feature.DOWNLOAD)
                     logcat(LogPriority.DEBUG) {
                         "Novel queue task completed: taskId=${nextTask.taskId}, novel=${nextTask.novel.id}, chapter=${nextTask.chapter.id}"
                     }

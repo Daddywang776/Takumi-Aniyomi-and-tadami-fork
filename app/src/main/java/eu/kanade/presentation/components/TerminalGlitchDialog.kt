@@ -1,8 +1,6 @@
 package eu.kanade.presentation.components
 
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
-import eu.kanade.domain.ui.UserProfilePreferences
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -47,15 +45,16 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.activity.compose.BackHandler
+import eu.kanade.domain.ui.UserProfilePreferences
 import kotlinx.coroutines.launch
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 
 /* =============================================================================
  *  TERMINAL GLITCH DIALOG (v2) — на базе GlitchStack.
@@ -414,7 +413,7 @@ private fun BrinkTerminalDialogContent(
                 "> обнаружен наблюдатель: $observerName",
                 "> резервный выход... не найден",
                 "> протокол КРАСНЫЙ СЕКТОР готов",
-                "> ожидаю подтверждения оператора_"
+                "> ожидаю подтверждения оператора_",
             )
         } else {
             listOf(
@@ -423,7 +422,7 @@ private fun BrinkTerminalDialogContent(
                 "> observer detected: $observerName",
                 "> backup gate... not found",
                 "> protocol RED SECTOR ready",
-                "> awaiting operator authorization_"
+                "> awaiting operator authorization_",
             )
         }
     }
@@ -449,9 +448,14 @@ private fun BrinkTerminalDialogContent(
     LaunchedEffect(Unit) {
         val scrambleGlyphs = listOf(
             '░', '▒', '▓', '█', '▄', '▀', '■', '▲', '▼', '◀', '▶', '♦', '◊', '○', '●', '◙', '◘',
-            '0', '1', 'X', 'Y', 'Z', 'F', 'E', 'A', 'D', 'C', 'O', 'N', 'N', 'E', 'C', 'T'
+            '0', '1', 'X', 'Y', 'Z', 'F', 'E', 'A', 'D', 'C', 'O', 'N', 'N', 'E', 'C', 'T',
         )
-        suspend fun typeText(target: String, delayMs: Long = 45L, scramblePerChar: Int = 2, onUpdate: (String) -> Unit) {
+        suspend fun typeText(
+            target: String,
+            delayMs: Long = 45L,
+            scramblePerChar: Int = 2,
+            onUpdate: (String) -> Unit,
+        ) {
             val sb = StringBuilder()
             for (i in target.indices) {
                 val targetChar = target[i]
@@ -528,9 +532,9 @@ private fun BrinkTerminalDialogContent(
         targetValue = 0.42f,
         animationSpec = infiniteRepeatable(
             animation = tween(1150, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse
+            repeatMode = RepeatMode.Reverse,
         ),
-        label = "pulse_anim"
+        label = "pulse_anim",
     )
 
     Column(
@@ -546,9 +550,9 @@ private fun BrinkTerminalDialogContent(
                             0.0f to Color(0xFF060009).copy(alpha = 0.30f),
                             0.42f to Color(0xFF060009).copy(alpha = 0.55f),
                             1.0f to Color(0xFF060009).copy(alpha = 0.86f),
-                        )
+                        ),
                     ),
-                    size = size
+                    size = size,
                 )
 
                 // 2. Pulse red heartbeat vignette (сверху мерцает красная зона, как подсветка)
@@ -556,12 +560,12 @@ private fun BrinkTerminalDialogContent(
                     brush = Brush.radialGradient(
                         colors = listOf(
                             Color.Transparent,
-                            Color(0xFFFF0038).copy(alpha = pulseAlpha * 0.42f)
+                            Color(0xFFFF0038).copy(alpha = pulseAlpha * 0.42f),
                         ),
                         center = center,
-                        radius = size.maxDimension * 0.7f
+                        radius = size.maxDimension * 0.7f,
                     ),
-                    size = size
+                    size = size,
                 )
             }
             .padding(horizontal = 26.dp, vertical = 40.dp),
@@ -651,7 +655,11 @@ private fun BrinkTerminalDialogContent(
                         Text(
                             text = logLine,
                             color = when {
-                                logLine.contains("00%") || logLine.contains("не найден") || logLine.contains("not found") || logLine.contains("наблюдатель") || logLine.contains("observer") -> GlitchPalette.HazardRed
+                                logLine.contains("00%") ||
+                                    logLine.contains("не найден") ||
+                                    logLine.contains("not found") ||
+                                    logLine.contains("наблюдатель") ||
+                                    logLine.contains("observer") -> GlitchPalette.HazardRed
                                 logLine.contains("готов") || logLine.contains("ready") -> GlitchPalette.Phosphor
                                 else -> Color(0xFFCDBDBE)
                             },
@@ -801,7 +809,7 @@ private fun ShatterButton(
                         vy = vy,
                         size = (2f + Math.random() * 4f).toFloat(),
                         alpha = 1f,
-                    )
+                    ),
                 )
             }
 

@@ -155,7 +155,14 @@ half4 main(float2 fragCoord){
 """
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-private fun Modifier.riftShader(time: Float, charge: Float, breach: Float, shader: RuntimeShader, brush: ShaderBrush, density: Float): Modifier =
+private fun Modifier.riftShader(
+    time: Float,
+    charge: Float,
+    breach: Float,
+    shader: RuntimeShader,
+    brush: ShaderBrush,
+    density: Float,
+): Modifier =
     this.drawBehind {
         shader.setFloatUniform("uRes", size.width, size.height)
         shader.setFloatUniform("uTime", time)

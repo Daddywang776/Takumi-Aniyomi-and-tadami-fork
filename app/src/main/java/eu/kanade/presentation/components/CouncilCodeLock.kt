@@ -26,26 +26,23 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -55,6 +52,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -97,7 +95,7 @@ fun GlitchyText(
     softWrap: Boolean = true,
 ) {
     val time by rememberGlitchTime()
-    
+
     // Хаотичные смещения в dp на основе времени
     val dx = if (glitchActive) kotlin.math.sin(time * 200f) * 3f else 0f
     val dy = if (glitchActive) kotlin.math.cos(time * 200f) * 1.5f else 0f
@@ -148,7 +146,6 @@ fun GlitchyText(
     }
 }
 
-
 /**
  * @param words Список слов подсказки В ПРАВИЛЬНОМ ПОРЯДКЕ (обычно 12).
  *              Внутри они перемешиваются по карточкам.
@@ -191,7 +188,7 @@ fun CouncilCodeLockDialog(
         }
         crtWidth.animateTo(1.05f, tween(350, easing = FastOutSlowInEasing))
         crtWidth.animateTo(1f, tween(100, easing = LinearEasing)) // легкий пружинящий отскок
-        
+
         crtHeight.animateTo(1.03f, tween(400, easing = FastOutSlowInEasing))
         crtHeight.animateTo(1f, tween(100, easing = LinearEasing)) // легкий пружинящий отскок
     }
@@ -199,7 +196,8 @@ fun CouncilCodeLockDialog(
     // мигание рамки
     val infinite = rememberInfiniteTransition(label = "pulse")
     val pulse by infinite.animateFloat(
-        initialValue = 0f, targetValue = 1f,
+        initialValue = 0f,
+        targetValue = 1f,
         animationSpec = infiniteRepeatable(tween(1050, easing = LinearEasing), RepeatMode.Reverse),
         label = "pulse",
     )
@@ -290,12 +288,12 @@ fun CouncilCodeLockDialog(
     val fullBriefingText = remember(isRussian) {
         if (isRussian) {
             "СИСТЕМНОЕ УПРАВЛЕНИЕ ЗАБЛОКИРОВАНО СОВЕТОМ.\n" +
-            "нажмите монолит, чтобы открыть слово · нажмите ещё раз, чтобы добавить его в код.\n" +
-            "соберите подсказку из 12 слов в правильном порядке, чтобы снять блокировку."
+                "нажмите монолит, чтобы открыть слово · нажмите ещё раз, чтобы добавить его в код.\n" +
+                "соберите подсказку из 12 слов в правильном порядке, чтобы снять блокировку."
         } else {
             "SYSTEM CONTROL LOCKED BY THE COUNCIL.\n" +
-            "tap a monolith to reveal a word · tap again to add it to the code.\n" +
-            "assemble the 12-word hint in the correct order to bypass the lock."
+                "tap a monolith to reveal a word · tap again to add it to the code.\n" +
+                "assemble the 12-word hint in the correct order to bypass the lock."
         }
     }
 
@@ -310,19 +308,27 @@ fun CouncilCodeLockDialog(
                 val l2 = "нажмите монолит, чтобы открыть слово · нажмите ещё раз, чтобы добавить его в код.\n"
                 val l3Start = "соберите "
                 val l3Highlight = "подсказку из 12 слов"
-                
+
                 val range1 = 0 until l1.length
                 val range2 = l1.length until (l1.length + l2.length)
                 val range3Start = (l1.length + l2.length) until (l1.length + l2.length + l3Start.length)
-                val range3Highlight = (l1.length + l2.length + l3Start.length) until (l1.length + l2.length + l3Start.length + l3Highlight.length)
+                val range3Highlight =
+                    (l1.length + l2.length + l3Start.length) until
+                        (l1.length + l2.length + l3Start.length + l3Highlight.length)
 
                 for (i in 0 until len) {
                     val char = displayedBriefing[i]
                     val style = when (i) {
-                        in range1 -> androidx.compose.ui.text.SpanStyle(color = CouncilAmberHi, fontWeight = FontWeight.Bold)
+                        in range1 -> androidx.compose.ui.text.SpanStyle(
+                            color = CouncilAmberHi,
+                            fontWeight = FontWeight.Bold,
+                        )
                         in range2 -> androidx.compose.ui.text.SpanStyle(color = CouncilAmberHi.copy(alpha = 0.85f))
                         in range3Start -> androidx.compose.ui.text.SpanStyle(color = CouncilAmberHi.copy(alpha = 0.85f))
-                        in range3Highlight -> androidx.compose.ui.text.SpanStyle(color = accent, fontWeight = FontWeight.Bold)
+                        in range3Highlight -> androidx.compose.ui.text.SpanStyle(
+                            color = accent,
+                            fontWeight = FontWeight.Bold,
+                        )
                         else -> androidx.compose.ui.text.SpanStyle(color = CouncilAmberHi.copy(alpha = 0.85f))
                     }
                     withStyle(style) {
@@ -338,15 +344,23 @@ fun CouncilCodeLockDialog(
                 val range1 = 0 until l1.length
                 val range2 = l1.length until (l1.length + l2.length)
                 val range3Start = (l1.length + l2.length) until (l1.length + l2.length + l3Start.length)
-                val range3Highlight = (l1.length + l2.length + l3Start.length) until (l1.length + l2.length + l3Start.length + l3Highlight.length)
+                val range3Highlight =
+                    (l1.length + l2.length + l3Start.length) until
+                        (l1.length + l2.length + l3Start.length + l3Highlight.length)
 
                 for (i in 0 until len) {
                     val char = displayedBriefing[i]
                     val style = when (i) {
-                        in range1 -> androidx.compose.ui.text.SpanStyle(color = CouncilAmberHi, fontWeight = FontWeight.Bold)
+                        in range1 -> androidx.compose.ui.text.SpanStyle(
+                            color = CouncilAmberHi,
+                            fontWeight = FontWeight.Bold,
+                        )
                         in range2 -> androidx.compose.ui.text.SpanStyle(color = CouncilAmberHi.copy(alpha = 0.85f))
                         in range3Start -> androidx.compose.ui.text.SpanStyle(color = CouncilAmberHi.copy(alpha = 0.85f))
-                        in range3Highlight -> androidx.compose.ui.text.SpanStyle(color = accent, fontWeight = FontWeight.Bold)
+                        in range3Highlight -> androidx.compose.ui.text.SpanStyle(
+                            color = accent,
+                            fontWeight = FontWeight.Bold,
+                        )
                         else -> androidx.compose.ui.text.SpanStyle(color = CouncilAmberHi.copy(alpha = 0.85f))
                     }
                     withStyle(style) {
@@ -606,11 +620,31 @@ fun CouncilCodeLockDialog(
 
                 Spacer(Modifier.height(8.dp))
 
-                // статус
                 val (statusText, statusColor) = when {
-                    locked -> (if (isRussian) "▶ КОД ПРИНЯТ · БЛОКИРОВКА СНЯТА" else "▶ CODE ACCEPTED · LOCK BYPASSED") to green
-                    errorFlash -> (if (isRussian) "▲ НЕВЕРНЫЙ ПОРЯДОК · СВЕРЬТЕ СМЫСЛ" else "▲ INVALID ORDER · CHECK MEANING") to GlitchPalette.HazardRed
-                    else -> (if (isRussian) "ОЖИДАНИЕ ВВОДА… (${seq.size}/$n)" else "AWAITING INPUT… (${seq.size}/$n)") to Color(0xFF6A6A6A)
+                    locked -> {
+                        val text = if (isRussian) {
+                            "▶ КОД ПРИНЯТ · БЛОКИРОВКА СНЯТА"
+                        } else {
+                            "▶ CODE ACCEPTED · LOCK BYPASSED"
+                        }
+                        text to green
+                    }
+                    errorFlash -> {
+                        val text = if (isRussian) {
+                            "▲ НЕВЕРНЫЙ ПОРЯДОК · СВЕРЬТЕ СМЫСЛ"
+                        } else {
+                            "▲ INVALID ORDER · CHECK MEANING"
+                        }
+                        text to GlitchPalette.HazardRed
+                    }
+                    else -> {
+                        val text = if (isRussian) {
+                            "ОЖИДАНИЕ ВВОДА… (${seq.size}/$n)"
+                        } else {
+                            "AWAITING INPUT… (${seq.size}/$n)"
+                        }
+                        text to Color(0xFF6A6A6A)
+                    }
                 }
                 Box(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
@@ -670,14 +704,14 @@ private fun FlipCard(
         label = "flip",
     )
     val faceColor = if (highlight) green else accent
-    
+
     val time by rememberGlitchTime()
     val cardOffset = if (glitchActive && !used) {
         val rndCard = java.util.Random((time * 10f + number).toLong())
         if (rndCard.nextFloat() < 0.45f) {
             IntOffset(
                 (kotlin.math.sin(time * 160f + number) * 3f).roundToInt(),
-                (kotlin.math.cos(time * 160f + number) * 2f).roundToInt()
+                (kotlin.math.cos(time * 160f + number) * 2f).roundToInt(),
             )
         } else {
             IntOffset.Zero
@@ -820,7 +854,8 @@ private fun HoldToDisableButton(
             .border(2.dp, accent, RectangleShape)
             .drawBehind {
                 // диагональные hazard-полосы
-                val stripeW = 12f; val gap = 12f
+                val stripeW = 12f
+                val gap = 12f
                 var x = -size.height
                 while (x < size.width + size.height) {
                     val p = Path().apply {

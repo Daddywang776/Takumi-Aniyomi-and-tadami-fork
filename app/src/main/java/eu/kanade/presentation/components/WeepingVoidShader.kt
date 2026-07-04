@@ -234,39 +234,39 @@ half4 main(float2 fragCoord){
     // ==== 3D Falling Tears Simulation ====
     float tearField = 0.0;
     float tearSpecular = 0.0;
-    
+
     // Only compute tears if we are in the active area below the eye
     if (uv.y < 0.02 && abs(uv.x) < w * 1.4) {
         // Reduced to 3 columns/tracks for less clutter
         for (int i = 0; i < 3; i++) {
             float fi = float(i);
-            
+
             // X coordinate of the track (evenly spaced horizontally)
             float trackX = mix(-w * 0.7, w * 0.7, (fi + 0.5) / 3.0);
             trackX += sin(uv.y * 12.0 + T * 1.2 + fi * 9.1) * 0.003;
-            
+
             float seed = fi * 53.29;
             // Extremely slow drifting speed (weightlessness)
             float speed = 0.025 + hash(float2(seed, 2.3)) * 0.012;
             // Long delay between drifting drops
             float delay = hash(float2(seed, 6.7)) * 25.0;
-            
+
             float t = T * speed + delay;
             float fractPart = fract(t);
-            
+
             // Active for 35% of the cycle, inactive for 65% (gentle intervals)
             float activeDuty = 0.35;
             float dropActive = step(fractPart, activeDuty);
             float progress = fractPart / activeDuty;
-            
+
             float xn = clamp(trackX / w, -1.0, 1.0);
             float baseH = 0.23 * EYE_SIZE;
             float startY = -baseH * (1.0 - xn * xn);
-            
+
             float dropY = startY;
             float trailTop = startY;
             float trailFade = 1.0;
-            
+
             if (progress < 0.20) {
                 // Phase 1: Growing/stretching drop (attached to eyelid)
                 float pStretch = progress / 0.20;
@@ -280,19 +280,19 @@ half4 main(float2 fragCoord){
                 trailTop = startY - pFall * 0.65;       // trail top recedes to detach
                 trailFade = max(0.0, 1.0 - pFall * 2.0); // trail fades out
             }
-            
+
             float2 dropPos = float2(trackX, dropY);
             float2 diff = uv - dropPos;
-            
+
             // Perturb the distance with a combination of angular waves and noise for organic wobble
             float angle = atan(diff.y, diff.x);
             float distortion = sin(angle * 4.0 + T * 2.5 + seed) * 0.0008;
             distortion += vnoise(uv * 50.0 + T * 1.5 + seed) * 0.0015;
             float dDrop = length(diff) + distortion;
-            
+
             // 1. Bulb shape
             float bulb = 1.0 - smoothstep(0.006, 0.012, dDrop);
-            
+
             // 2. Beaded trail
             float inTrail = step(dropY, uv.y) * step(uv.y, trailTop);
             float distToCenterLine = abs(uv.x - trackX);
@@ -300,13 +300,13 @@ half4 main(float2 fragCoord){
             float trailWidth = mix(0.0035, 0.0012, (startY - uv.y) / (startY - dropY + 0.001));
             trailWidth *= 0.65 + 0.35 * bead;
             float trail = (1.0 - smoothstep(trailWidth - 0.001, trailWidth + 0.001, distToCenterLine)) * inTrail;
-            
+
             // Combine, fade out inside the eye with verticalMask and only render during active phase
             float verticalMask = smoothstep(startY, startY - 0.012, uv.y);
             float dropIntensity = max(bulb, trail * trailFade) * verticalMask * dropActive;
-            
+
             tearField = max(tearField, dropIntensity);
-            
+
             // 3. Highlight calculations (clean 3D specular)
             float3 lightDir = normalize(float3(-1.0, 1.2, 1.8));
             if (dDrop < 0.015 && dropActive > 0.5) {
@@ -315,7 +315,7 @@ half4 main(float2 fragCoord){
                 float spec = pow(max(0.0, dot(reflect(vec3(0.0, 0.0, -1.0), normal), lightDir)), 14.0);
                 tearSpecular = max(tearSpecular, spec * bulb * verticalMask);
             }
-            
+
             if (trail > 0.01 && dropActive > 0.5) {
                 float trailNormalX = (uv.x - trackX) / (trailWidth + 0.0001);
                 float trailSpec = pow(max(0.0, -trailNormalX), 5.0) * trail * 0.45;

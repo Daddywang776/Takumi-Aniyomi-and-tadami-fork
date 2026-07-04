@@ -132,13 +132,13 @@ fun MeltdownInitiationHost(
                     listOf(
                         "ДЛЯ", "СБРОСА", "ОХЛАЖДЕНИЯ", "СПУСТИСЬ", "В",
                         "ДОПОЛНИТЕЛЬНЫЙ", "ИНЖЕНЕРНЫЙ", "ОТСЕК", "СИСТЕМНОГО",
-                        "УПРАВЛЕНИЯ", "И", "НАСТРОЙКИ"
+                        "УПРАВЛЕНИЯ", "И", "НАСТРОЙКИ",
                     )
                 } else {
                     listOf(
                         "TO", "RESET", "COOLING", "DESCEND", "INTO",
                         "THE", "ADVANCED", "ENGINEERING", "SECTION",
-                        "OF", "SYSTEM", "SETTINGS"
+                        "OF", "SYSTEM", "SETTINGS",
                     )
                 }
             }

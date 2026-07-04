@@ -265,7 +265,7 @@ fun VoidRevealScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = 1f - backgroundReveal.value))
+                .background(Color.Black.copy(alpha = 1f - backgroundReveal.value)),
         )
 
         GlitchStack(
@@ -366,7 +366,9 @@ fun VoidRevealScreen(
                     val achievementText = if (justUnlocked) {
                         stringResource(AYMR.strings.meltdown_ritual_achievement_unlocked)
                     } else {
-                        val isRussian = stringResource(AYMR.strings.meltdown_ritual_reveal_title).contains(Regex("[а-яА-Я]"))
+                        val isRussian = stringResource(
+                            AYMR.strings.meltdown_ritual_reveal_title,
+                        ).contains(Regex("[а-яА-Я]"))
                         if (isRussian) "ДОСТИЖЕНИЕ УЖЕ ПОЛУЧЕНО" else "ACHIEVEMENT ALREADY UNLOCKED"
                     }
                     GlitchTypewriterText(

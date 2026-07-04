@@ -2,9 +2,6 @@ package eu.kanade.presentation.components
 
 import android.graphics.Bitmap
 import android.graphics.BitmapShader
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
-import eu.kanade.domain.ui.UserProfilePreferences
 import android.graphics.BlurMaskFilter
 import android.graphics.Matrix
 import android.graphics.Paint
@@ -32,21 +29,23 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import eu.kanade.domain.ui.UserProfilePreferences
 import kotlinx.coroutines.delay
 import tachiyomi.i18n.aniyomi.AYMR
-import tachiyomi.presentation.core.i18n.stringResource
+import uy.kohesive.injekt.Injekt
+import uy.kohesive.injekt.api.get
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.floor
@@ -229,7 +228,7 @@ internal fun rememberCodeShader(): BitmapShader {
                 "val exitCode = 0xDEAD",
                 "// ошибка: наблюдатель.активен = true",
                 "val soul = soulInstance",
-                "// реальность — это иллюзия"
+                "// реальность — это иллюзия",
             )
         } else {
             listOf(
@@ -307,7 +306,7 @@ internal fun rememberCodeShader(): BitmapShader {
                 "val exitCode = 0xDEAD",
                 "// error: observer.active = true",
                 "val soul = soulInstance",
-                "// reality is an illusion"
+                "// reality is an illusion",
             )
         }
     }
@@ -670,13 +669,13 @@ fun VoidRealityBreachFinale(
         delay(breachDur(BREACH_ACT_GAP_MS).toLong()) // пауза ПОСЛЕ акта COLLAPSE
         phase = MeltdownPhase.FlashBlack
         fb.animateTo(1f, tween(breachDur(BREACH_FLASH_BLACK_MS), easing = LinearEasing))
-        
+
         // 1. Удар тишины: 1.5с чёрного — послесвечение дыры на сетчатке + звон-кольцо (реж. правка)
         blackBeat.animateTo(1f, tween(breachDur(1500), easing = LinearEasing))
-        
+
         // 2. Постепенно глитчи появляются сильнее и сильнее (1.5 секунды)
         buildUpGlitch.animateTo(1f, tween(breachDur(1500), easing = LinearEasing))
-        
+
         // 3. Открывается финальный экран наград
         phase = MeltdownPhase.Reveal
     }
@@ -881,7 +880,9 @@ private fun DrawScope.drawSilenceAfterimage(blackBeat: Float) {
     val gh = (1f - blackBeat) * 0.5f
     if (gh > 0.01f) {
         val gg = RadialGradient(
-            cx, cy, 120f,
+            cx,
+            cy,
+            120f,
             intArrayOf(
                 android.graphics.Color.argb((gh * 255f).toInt().coerceIn(0, 255), 120, 0, 30),
                 android.graphics.Color.argb(0, 0, 0, 0),
@@ -911,7 +912,9 @@ private fun DrawScope.drawSilenceAfterimage(blackBeat: Float) {
         val s = hash01(i * 11) * 1.4f
         dust.color = android.graphics.Color.argb(
             ((1f - blackBeat) * 0.5f * hash01(i * 2) * 255f).toInt().coerceIn(0, 255),
-            255, 80, 90,
+            255,
+            80,
+            90,
         )
         nc.drawRect(px, py, px + s, py + s, dust)
     }
