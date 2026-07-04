@@ -656,11 +656,9 @@ private fun featureResources(achievementId: String): AchievementTextResourceRefs
             hintVague = AYMR.strings.achievement_secret_hall_unlocked_hint,
         )
         "void_broadcast_unlocked" -> text(
-            AYMR.strings.achievement_void_broadcast_unlocked_title,
-            AYMR.strings.achievement_void_broadcast_unlocked_desc,
-            AYMR.strings.achievement_void_broadcast_unlocked_hint_vague,
-            AYMR.strings.achievement_void_broadcast_unlocked_hint_direct,
-            AYMR.strings.achievement_void_broadcast_unlocked_hint_obvious,
+            title = AYMR.strings.achievement_void_broadcast_unlocked_title,
+            description = AYMR.strings.achievement_void_broadcast_unlocked_desc,
+            hintVague = AYMR.strings.achievement_void_broadcast_unlocked_hint_vague,
         )
         else -> AchievementTextResourceRefs(null, null)
     }
