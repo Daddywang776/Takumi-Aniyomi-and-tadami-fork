@@ -23,6 +23,8 @@ abstract class ViewerConfig(
 
     var navigationModeChangedListener: (() -> Unit)? = null
 
+    var transitionPropertyChangedListener: (() -> Unit)? = null
+
     var tappingInverted = ReaderPreferences.TappingInvertMode.NONE
     var longTapEnabled = true
     var usePageTransitions = false
@@ -83,7 +85,7 @@ abstract class ViewerConfig(
             .register({ volumeKeysInverted = it })
 
         readerPreferences.alwaysShowChapterTransition()
-            .register({ alwaysShowChapterTransition = it })
+            .register({ alwaysShowChapterTransition = it }, { transitionPropertyChangedListener?.invoke() })
 
         readerPreferences.preloadNextChapter()
             .register({ preloadNextChapter = it })

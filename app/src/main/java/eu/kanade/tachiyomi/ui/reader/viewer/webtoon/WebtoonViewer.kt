@@ -190,6 +190,10 @@ class WebtoonViewer(val activity: ReaderActivity, val isContinuous: Boolean = tr
             refreshAdapter()
         }
 
+        config.transitionPropertyChangedListener = {
+            activity.viewModel.state.value.viewerChapters?.let(::setChapters)
+        }
+
         config.themeChangedListener = {
             ActivityCompat.recreate(activity)
         }
