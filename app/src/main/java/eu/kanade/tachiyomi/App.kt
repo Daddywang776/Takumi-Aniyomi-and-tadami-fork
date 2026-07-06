@@ -59,6 +59,7 @@ import eu.kanade.tachiyomi.data.coil.NovelReaderRefererImageFetcher
 import eu.kanade.tachiyomi.data.coil.NovelReaderRefererImageKeyer
 import eu.kanade.tachiyomi.data.coil.StringCoverUriMapper
 import eu.kanade.tachiyomi.data.coil.TachiyomiImageDecoder
+import eu.kanade.tachiyomi.data.backup.create.BackupCreateJob
 import eu.kanade.tachiyomi.data.library.anime.AnimeLibraryUpdateJob
 import eu.kanade.tachiyomi.data.library.manga.MangaLibraryUpdateJob
 import eu.kanade.tachiyomi.data.library.novel.NovelLibraryUpdateJob
@@ -323,6 +324,8 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         if (!LogcatLogger.isInstalled && networkPreferences.verboseLogging().get()) {
             LogcatLogger.install(AndroidLogcatLogger(LogPriority.VERBOSE))
         }
+
+        BackupCreateJob.clearStaleProgressNotification(this)
 
         initializeMigrator()
     }

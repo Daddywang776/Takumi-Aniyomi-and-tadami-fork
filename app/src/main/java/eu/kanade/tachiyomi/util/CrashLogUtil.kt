@@ -3,8 +3,10 @@ package eu.kanade.tachiyomi.util
 import android.content.Context
 import android.os.Build
 import com.tadami.aurora.BuildConfig
+import eu.kanade.tachiyomi.data.backup.BackupDiagnosticLog
 import eu.kanade.tachiyomi.extension.anime.AnimeExtensionManager
 import eu.kanade.tachiyomi.extension.manga.MangaExtensionManager
+import eu.kanade.tachiyomi.network.NetworkPreferences
 import eu.kanade.tachiyomi.util.storage.getUriCompat
 import eu.kanade.tachiyomi.util.system.WebViewUtil
 import eu.kanade.tachiyomi.util.system.createFileInCacheDir
@@ -21,24 +23,58 @@ class CrashLogUtil(
     private val context: Context,
     private val mangaExtensionManager: MangaExtensionManager = Injekt.get(),
     private val animeExtensionManager: AnimeExtensionManager = Injekt.get(),
+    private val networkPreferences: NetworkPreferences = Injekt.get(),
 ) {
 
     suspend fun dumpLogs(exception: Throwable? = null) = withNonCancellableContext {
         try {
             val file = context.createFileInCacheDir("tadami_crash_logs.txt")
 
-            file.appendText(getDebugInfo() + "\n\n")
+            file.writeText(getDebugInfo() + "\n\n")
+
+            BackupDiagnosticLog.readLog(context)?.let { backupLog ->
+                file.appendText("=== Backup diagnostics (last sessions) ===\n\n")
+                file.appendText(backupLog)
+                file.appendText("\n\n")
+            }
+
             getMangaExtensionsInfo()?.let { file.appendText("$it\n\n") }
             getAnimeExtensionsInfo()?.let { file.appendText("$it\n\n") }
             exception?.let { file.appendText("$it\n\n") }
 
-            Runtime.getRuntime().exec("logcat *:E -d -v year -v zone -f ${file.absolutePath}").waitFor()
+            val logcatFile = context.createFileInCacheDir("tadami_logcat_dump.tmp")
+            dumpLogcat(logcatFile)
+
+            if (logcatFile.exists() && logcatFile.length() > 0) {
+                file.appendText("=== System logcat ===\n\n")
+                file.appendText(logcatFile.readText())
+            }
+            logcatFile.delete()
 
             val uri = file.getUriCompat(context)
             context.startActivity(uri.toShareIntent(context, "text/plain"))
         } catch (e: Throwable) {
             withUIContext { context.toast("Failed to get logs") }
         }
+    }
+
+    private fun dumpLogcat(outputFile: java.io.File) {
+        val verbose = networkPreferences.verboseLogging().get()
+        val backupFilter = if (verbose) {
+            BackupDiagnosticLog.TAG + ":V"
+        } else {
+            BackupDiagnosticLog.TAG + ":E"
+        }
+        val filterSpec = arrayOf(
+            "logcat",
+            "-d",
+            "-v", "year",
+            "-v", "zone",
+            "-f", outputFile.absolutePath,
+            backupFilter,
+            "*:E",
+        )
+        Runtime.getRuntime().exec(filterSpec).waitFor()
     }
 
     fun getDebugInfo(): String {
@@ -52,6 +88,7 @@ class CrashLogUtil(
             Device name: ${Build.DEVICE} (${Build.PRODUCT})
             Device model: ${Build.MODEL}
             WebView: ${WebViewUtil.getVersion(context)}
+            Verbose logging: ${networkPreferences.verboseLogging().get()}
             Current time: ${OffsetDateTime.now(ZoneId.systemDefault())}
             MPV version: 6764488
             Libplacebo version: v7.349.0

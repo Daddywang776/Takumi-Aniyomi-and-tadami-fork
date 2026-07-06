@@ -3,6 +3,7 @@ package eu.kanade.tachiyomi.data.backup
 import android.content.Context
 import android.graphics.BitmapFactory
 import androidx.core.app.NotificationCompat
+import androidx.core.net.toUri
 import com.hippo.unifile.UniFile
 import com.tadami.aurora.R
 import eu.kanade.tachiyomi.core.security.SecurityPreferences
@@ -69,19 +70,26 @@ class BackupNotifier(private val context: Context) {
         }
     }
 
-    fun showBackupComplete(file: UniFile) {
+    fun showBackupComplete(location: String) {
+        val file = UniFile.fromUri(context, location.toUri())
+        showBackupComplete(file, location)
+    }
+
+    fun showBackupComplete(file: UniFile?, fallbackLocation: String? = null) {
         context.cancelNotification(Notifications.ID_BACKUP_PROGRESS)
 
         with(completeNotificationBuilder) {
             setContentTitle(context.stringResource(MR.strings.backup_created))
-            setContentText(file.displayablePath)
+            setContentText(file?.displayablePath ?: fallbackLocation.orEmpty())
 
             clearActions()
-            addAction(
-                R.drawable.ic_share_24dp,
-                context.stringResource(MR.strings.action_share),
-                NotificationReceiver.shareBackupPendingBroadcast(context, file.uri),
-            )
+            file?.uri?.let { uri ->
+                addAction(
+                    R.drawable.ic_share_24dp,
+                    context.stringResource(MR.strings.action_share),
+                    NotificationReceiver.shareBackupPendingBroadcast(context, uri),
+                )
+            }
 
             show(Notifications.ID_BACKUP_COMPLETE)
         }
