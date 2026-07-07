@@ -155,22 +155,25 @@ half4 main(float2 fragCoord){
 """
 
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-private fun Modifier.riftShader(
-    time: Float,
-    charge: Float,
-    breach: Float,
-    shader: RuntimeShader,
-    brush: ShaderBrush,
-    density: Float,
-): Modifier =
-    this.drawBehind {
-        shader.setFloatUniform("uRes", size.width, size.height)
-        shader.setFloatUniform("uTime", time)
-        shader.setFloatUniform("uCharge", charge)
-        shader.setFloatUniform("uBreach", breach)
-        shader.setFloatUniform("uPx", density)
-        drawRect(brush = brush)
-    }
+private class RiftCorruptTerminalShader {
+    private val shader = RuntimeShader(RIFT_CORRUPT_AGSL)
+    private val brush = ShaderBrush(shader)
+
+    fun Modifier.draw(
+        time: Float,
+        charge: Float,
+        breach: Float,
+        density: Float,
+    ): Modifier =
+        this.drawBehind {
+            shader.setFloatUniform("uRes", size.width, size.height)
+            shader.setFloatUniform("uTime", time)
+            shader.setFloatUniform("uCharge", charge)
+            shader.setFloatUniform("uBreach", breach)
+            shader.setFloatUniform("uPx", density)
+            drawRect(brush = brush)
+        }
+}
 
 /**
  * Фон-терминал для GlitchRiftWidget. На API 33+ — AGSL-шейдер,
@@ -184,11 +187,20 @@ fun RiftCorruptTerminal(
     open: Float,
     modifier: Modifier = Modifier,
 ) {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        val shader = remember { RuntimeShader(RIFT_CORRUPT_AGSL) }
-        val brush = remember(shader) { ShaderBrush(shader) }
+    val terminalShader = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            RiftCorruptTerminalShader()
+        } else {
+            null
+        }
+    }
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && terminalShader != null) {
         val density = LocalDensity.current.density
-        Box(modifier.riftShader(time, charge, breach, shader, brush, density))
+        Box(
+            modifier = with(terminalShader) {
+                modifier.draw(time, charge, breach, density)
+            },
+        )
     } else {
         RiftDatamoshBackground(time = time, open = open, modifier = modifier)
     }

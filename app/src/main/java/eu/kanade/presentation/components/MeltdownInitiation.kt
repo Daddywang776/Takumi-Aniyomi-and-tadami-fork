@@ -16,6 +16,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.IntOffset
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import tachiyomi.i18n.aniyomi.AYMR
@@ -46,9 +47,7 @@ fun MeltdownInitiationHost(
     content: @Composable () -> Unit,
 ) {
     var phase by remember { mutableStateOf(InitiationPhase.Idle) }
-    val time by rememberGlitchTime()
     val intensity = remember { Animatable(0f) }
-
     val scope = rememberCoroutineScope()
     var isShuttingDown by remember { mutableStateOf(false) }
     val shutdownAnim = remember { Animatable(0f) }
@@ -66,14 +65,56 @@ fun MeltdownInitiationHost(
         }
     }
 
-    // Интенсивность глитча: во время выключения резко нарастает до максимума
+    val isRitualActive = triggered || phase != InitiationPhase.Idle || isShuttingDown
+
+    if (!isRitualActive) {
+        Box(modifier = modifier.fillMaxSize()) {
+            content()
+        }
+        return
+    }
+
+    MeltdownInitiationRitual(
+        modifier = modifier,
+        phase = phase,
+        intensity = intensity,
+        isShuttingDown = isShuttingDown,
+        shutdownAnim = shutdownAnim,
+        onPhaseIdle = { phase = InitiationPhase.Idle },
+        onShuttingDownChanged = { isShuttingDown = it },
+        onAcknowledged = onAcknowledged,
+        onDismiss = onDismiss,
+        scope = scope,
+        content = content,
+    )
+}
+
+/**
+ * Активная фаза инициации: [GlitchStack], таймер кадров и оверлеи.
+ * Отдельный composable, чтобы на обычном поиске не монтировать глитч-движок.
+ */
+@Composable
+private fun MeltdownInitiationRitual(
+    phase: InitiationPhase,
+    intensity: Animatable<Float, *>,
+    isShuttingDown: Boolean,
+    shutdownAnim: Animatable<Float, *>,
+    onPhaseIdle: () -> Unit,
+    onShuttingDownChanged: (Boolean) -> Unit,
+    onAcknowledged: () -> Unit,
+    onDismiss: () -> Unit,
+    scope: CoroutineScope,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    val time by rememberGlitchTime()
+
     val currentIntensity = if (isShuttingDown) {
         intensity.value + shutdownAnim.value * (1f - intensity.value)
     } else {
-        if (phase == InitiationPhase.Idle) 0f else intensity.value
+        intensity.value
     }
 
-    // Амплитуда тряски зависит от фазы (во время выключения тряска усиливается)
     val quakeAmp = when {
         isShuttingDown -> (intensity.value + shutdownAnim.value * (1.5f - intensity.value)) * 1.8f
         phase == InitiationPhase.Corrupting -> intensity.value * 1.4f
@@ -149,21 +190,21 @@ fun MeltdownInitiationHost(
                 words = phraseWords,
                 buttonText = stringResource(AYMR.strings.meltdown_initiation_button),
                 onConfirm = {
-                    isShuttingDown = true
+                    onShuttingDownChanged(true)
                     scope.launch {
                         shutdownAnim.animateTo(1f, tween(5000, easing = LinearEasing))
-                        phase = InitiationPhase.Idle
-                        isShuttingDown = false
+                        onPhaseIdle()
+                        onShuttingDownChanged(false)
                         shutdownAnim.snapTo(0f)
                         onAcknowledged()
                     }
                 },
                 onDismiss = {
-                    isShuttingDown = true
+                    onShuttingDownChanged(true)
                     scope.launch {
                         shutdownAnim.animateTo(1f, tween(1000, easing = LinearEasing))
-                        phase = InitiationPhase.Idle
-                        isShuttingDown = false
+                        onPhaseIdle()
+                        onShuttingDownChanged(false)
                         shutdownAnim.snapTo(0f)
                         onDismiss()
                     }
