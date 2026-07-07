@@ -57,7 +57,7 @@ object AnixartMatchingCoordinator {
             if (result.confidence == AnixartMatcher.Confidence.AUTO) break
         }
 
-        val final = bestResult ?: AnixartMatcher.match(candidateTitles, emptyList())
+        val final = finalizeMatch(bestResult ?: AnixartMatcher.match(candidateTitles, emptyList()))
         return RowMatch(result = final, matchedQuery = bestQuery)
     }
 
@@ -92,11 +92,26 @@ object AnixartMatchingCoordinator {
         new: AnixartMatcher.MatchResult,
         old: AnixartMatcher.MatchResult?,
     ): Boolean {
-        if (old == null) return new.best != null
-        val newScore = new.best?.score ?: 0
-        val oldScore = old.best?.score ?: 0
+        if (old == null) return (new.ranked.firstOrNull()?.score ?: 0) > 0
+        val newScore = new.best?.score ?: new.ranked.firstOrNull()?.score ?: 0
+        val oldScore = old.best?.score ?: old.ranked.firstOrNull()?.score ?: 0
         if (newScore != oldScore) return newScore > oldScore
         return confidenceRank(new.confidence) < confidenceRank(old.confidence)
+    }
+
+    /**
+     * Source search can return plausible catalogue hits whose titles score below the
+     * matcher floor. Keep them for manual review instead of discarding the row.
+     */
+    private fun finalizeMatch(result: AnixartMatcher.MatchResult): AnixartMatcher.MatchResult {
+        val top = result.ranked.firstOrNull() ?: return result
+        if (result.confidence == AnixartMatcher.Confidence.NO_MATCH && top.score > 0) {
+            return result.copy(
+                confidence = AnixartMatcher.Confidence.NEEDS_REVIEW,
+                best = top,
+            )
+        }
+        return result
     }
 
     private fun confidenceRank(confidence: AnixartMatcher.Confidence): Int = when (confidence) {

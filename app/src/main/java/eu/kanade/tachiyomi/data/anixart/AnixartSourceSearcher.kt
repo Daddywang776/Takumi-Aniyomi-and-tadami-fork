@@ -1,7 +1,7 @@
 package eu.kanade.tachiyomi.data.anixart
 
 import eu.kanade.tachiyomi.animesource.AnimeCatalogueSource
-import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
+import eu.kanade.tachiyomi.data.shikimori.CatalogueExtensionSearch
 import kotlinx.coroutines.withTimeout
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
@@ -25,7 +25,7 @@ class AnixartSourceSearcher(
     private val sourceIds: List<Long>,
     private val rateLimiter: AnixartSourceRateLimiter = AnixartSourceRateLimiter(),
     private val maxResultsPerSource: Int = MAX_RESULTS_PER_SOURCE,
-    private val sourceTimeoutMs: Long = SOURCE_TIMEOUT_MS,
+    private val sourceTimeoutMs: Long = CatalogueExtensionSearch.SOURCE_TIMEOUT_MS,
 ) : AnixartTitleSearcher {
 
     override suspend fun search(query: String): List<AnixartMatcher.SearchCandidate> {
@@ -35,8 +35,11 @@ class AnixartSourceSearcher(
             val source = sourceManager.get(sourceId) as? AnimeCatalogueSource ?: continue
             val page = try {
                 rateLimiter.withRateLimit(sourceId) {
-                    withTimeout(sourceTimeoutMs) {
-                        source.getSearchAnime(1, query, AnimeFilterList())
+                    CatalogueExtensionSearch.onExtensionThread {
+                        withTimeout(sourceTimeoutMs) {
+                            val filters = CatalogueExtensionSearch.safeAnimeFilterList { source.getFilterList() }
+                            source.getSearchAnime(1, query, filters)
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -62,6 +65,5 @@ class AnixartSourceSearcher(
 
     companion object {
         const val MAX_RESULTS_PER_SOURCE = 10
-        const val SOURCE_TIMEOUT_MS = 8_000L
     }
 }

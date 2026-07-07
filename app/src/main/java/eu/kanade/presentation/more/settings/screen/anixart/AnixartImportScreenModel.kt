@@ -7,12 +7,8 @@ import eu.kanade.tachiyomi.data.anixart.AnixartImportJob
 import eu.kanade.tachiyomi.data.anixart.AnixartSourceSearcher
 import eu.kanade.tachiyomi.data.anixart.AnixartTrackerSync
 import eu.kanade.tachiyomi.data.anixart.ImportAnixartEntries
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import tachiyomi.data.anixart.AnixartCsvParser
 import tachiyomi.data.anixart.AnixartImportPlanner
 import tachiyomi.data.anixart.AnixartMatcher
@@ -20,6 +16,7 @@ import tachiyomi.data.anixart.AnixartMatchingCoordinator
 import tachiyomi.data.anixart.AnixartRow
 import tachiyomi.data.anixart.AnixartSourceHints
 import tachiyomi.data.anixart.AnixartStatus
+import tachiyomi.data.anixart.MediaImportMatchingEngine
 import tachiyomi.domain.category.anime.interactor.GetAnimeCategories
 import tachiyomi.domain.category.model.Category
 import tachiyomi.domain.entries.anime.interactor.GetAnimeByUrlAndSourceId
@@ -27,8 +24,6 @@ import tachiyomi.domain.source.anime.service.AnimeSourceManager
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.io.InputStream
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Drives the Anixart import wizard as a small state machine:
@@ -129,7 +124,7 @@ class AnixartImportScreenModel(
                         preflight = PreflightInfo(
                             totalRows = rows.size,
                             missingOriginalCount = missingOriginal,
-                            largeImport = rows.size > LARGE_IMPORT_THRESHOLD,
+                            largeImport = rows.size > MediaImportMatchingEngine.LARGE_IMPORT_THRESHOLD,
                         ),
                         sources = sources,
                         categories = categories,
@@ -212,41 +207,31 @@ class AnixartImportScreenModel(
         mutableState.update { State.Matching(0, totalRows) }
         screenModelScope.launch {
             val searcher = AnixartSourceSearcher(sourceManager, sourceIds)
-            val searchCache = ConcurrentHashMap<String, List<AnixartMatcher.SearchCandidate>>()
-            val semaphore = Semaphore(MATCHING_CONCURRENCY)
-            val matchedCount = AtomicInteger(0)
-
-            suspend fun cachedSearch(query: String): List<AnixartMatcher.SearchCandidate> {
-                return searchCache.getOrPut(query) {
-                    searcher.search(query)
-                }
-            }
-
-            val items = rows.map { row ->
-                async {
-                    semaphore.withPermit {
-                        val rowMatch = AnixartMatchingCoordinator.matchRow(row) { query ->
-                            cachedSearch(query)
-                        }
-                        val currentMatched = matchedCount.incrementAndGet()
-                        mutableState.update { State.Matching(currentMatched, totalRows) }
-
-                        val sourceName = rowMatch.result.best?.candidate?.sourceId?.let { sourceNames[it] }
-                        ReviewItem(
-                            row = row,
-                            result = rowMatch.result,
-                            selectedId = rowMatch.result.best?.candidate?.id,
-                            enabled = rowMatch.result.confidence != AnixartMatcher.Confidence.NO_MATCH,
-                            matchedQuery = rowMatch.matchedQuery,
-                            matchedSourceName = sourceName,
-                        )
-                    }
-                }
-            }.awaitAll()
-
-            val matchingReport = AnixartMatchingCoordinator.summarize(
-                items.map { AnixartMatchingCoordinator.RowMatch(it.result, it.matchedQuery) },
+            val (results, matchingReport) = MediaImportMatchingEngine.matchRows(
+                rows = rows,
+                toInput = { row ->
+                    MediaImportMatchingEngine.RowInput(
+                        candidateTitles = row.candidateTitles(),
+                        searchQueries = row.searchQueries(),
+                    )
+                },
+                search = { query -> searcher.search(query) },
+                sourceNames = sourceNames,
+                onProgress = { currentMatched, total ->
+                    mutableState.update { State.Matching(currentMatched, total) }
+                },
             )
+
+            val items = results.map { row ->
+                ReviewItem(
+                    row = row.row,
+                    result = row.result,
+                    selectedId = row.result.best?.candidate?.id,
+                    enabled = row.result.confidence != AnixartMatcher.Confidence.NO_MATCH,
+                    matchedQuery = row.matchedQuery,
+                    matchedSourceName = row.matchedSourceName,
+                )
+            }
             mutableState.update {
                 State.Review(items, matchingReport, statusCategoryIds, favoriteCategoryId, syncToShikimori)
             }
@@ -283,7 +268,7 @@ class AnixartImportScreenModel(
         )
         val plan = AnixartImportPlanner.plan(selections, config)
 
-        if (plan.actions.size > LARGE_IMPORT_THRESHOLD) {
+        if (plan.actions.size > MediaImportMatchingEngine.LARGE_IMPORT_THRESHOLD) {
             AnixartImportJob.start(plan, review.syncToShikimori, review.items)
             mutableState.update {
                 State.Done(
@@ -329,10 +314,5 @@ class AnixartImportScreenModel(
         } catch (_: Exception) {
             null
         }
-    }
-
-    companion object {
-        const val LARGE_IMPORT_THRESHOLD = 100
-        private const val MATCHING_CONCURRENCY = 2
     }
 }

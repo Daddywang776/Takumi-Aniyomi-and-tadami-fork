@@ -52,6 +52,24 @@ class AnixartMatchingCoordinatorTest {
     }
 
     @Test
+    fun `search hits below score floor still surface for review`() = runBlocking {
+        val search: suspend (String) -> List<AnixartMatcher.SearchCandidate> = {
+            listOf(candidate(1L, "Frieren: Beyond Journey's End"))
+        }
+
+        val match = AnixartMatchingCoordinator.matchTitles(
+            candidateTitles = listOf("Sousou no Frieren"),
+            searchQueries = listOf("Sousou no Frieren"),
+            search = search,
+        )
+
+        match.matchedQuery shouldBe "Sousou no Frieren"
+        match.result.confidence shouldBe AnixartMatcher.Confidence.NEEDS_REVIEW
+        match.result.ranked.size shouldBe 1
+        match.result.best shouldBe match.result.ranked.first()
+    }
+
+    @Test
     fun `summarize counts confidence buckets`() {
         val report = AnixartMatchingCoordinator.summarize(
             listOf(

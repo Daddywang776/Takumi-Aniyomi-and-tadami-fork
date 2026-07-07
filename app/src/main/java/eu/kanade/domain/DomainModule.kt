@@ -436,6 +436,9 @@ class DomainModule : InjektModule {
                 get(),
             )
         }
+        addFactory {
+            eu.kanade.tachiyomi.data.shikimori.ImportShikimoriExecutor(get(), get(), get())
+        }
         addFactory { UpdateAnime(get(), get()) }
         addFactory { SetAnimeCategories(get()) }
         addFactory { ShouldUpdateDbSeason() }

@@ -36,6 +36,8 @@ data class ShikimoriImportEntry(
 
     fun searchQueries(): List<String> {
         val raw = buildList {
+            add(name)
+            russian?.let { add(it) }
             add(cleanTitle(name))
             russian?.let { add(cleanTitle(it)) }
         }

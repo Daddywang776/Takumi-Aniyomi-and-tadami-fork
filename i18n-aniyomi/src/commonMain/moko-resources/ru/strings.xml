@@ -2542,6 +2542,14 @@
     <string name="shikimori_import_status_rewatching">Пересматриваю</string>
     <string name="shikimori_import_status_rereading">Перечитываю</string>
     <string name="shikimori_import_report">Добавлено %1$d, уже в библиотеке %2$d, ошибок %3$d, привязано к Shikimori %4$d</string>
+    <string name="shikimori_import_error_network">Не удалось загрузить список Shikimori. Проверьте подключение и попробуйте снова.</string>
+    <string name="shikimori_import_error_rate_limited">Превышен лимит запросов Shikimori. Подождите минуту и попробуйте снова.</string>
+    <string name="shikimori_import_error_canceled">Импорт отменён</string>
+    <string name="shikimori_import_error_failed">Импорт не удался</string>
+    <string name="shikimori_import_background_started">Импорт продолжается в фоне. По завершении придёт уведомление.</string>
+    <string name="shikimori_import_manual_search">Искать вручную</string>
+    <string name="shikimori_import_manual_search_title">Поиск в источниках</string>
+    <string name="shikimori_import_manual_search_hint">Введите название так же, как в каталоге источника</string>
     <!-- Time Paradox Achievement -->
     <string name="achievement_time_paradox_title">Временной парадокс</string>
     <string name="achievement_time_paradox_desc">Почитайте или посмотрите что-то ровно в 11:11</string>

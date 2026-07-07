@@ -6,23 +6,20 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.presentation.more.settings.screen.anixart.AnixartImportScreenModel.SourceChoice
 import eu.kanade.tachiyomi.data.anixart.AnixartSourceSearcher
 import eu.kanade.tachiyomi.data.shikimori.FetchShikimoriImportEntries
-import eu.kanade.tachiyomi.data.shikimori.ImportShikimoriEntries
-import eu.kanade.tachiyomi.data.shikimori.ImportShikimoriMangaEntries
-import eu.kanade.tachiyomi.data.shikimori.ImportShikimoriNovelEntries
+import eu.kanade.tachiyomi.data.shikimori.ImportShikimoriExecutor
+import eu.kanade.tachiyomi.data.shikimori.ShikimoriImportJob
 import eu.kanade.tachiyomi.data.shikimori.ShikimoriMangaSourceSearcher
 import eu.kanade.tachiyomi.data.shikimori.ShikimoriNovelSourceSearcher
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Semaphore
-import kotlinx.coroutines.sync.withPermit
 import tachiyomi.data.anixart.AnixartMatcher
 import tachiyomi.data.anixart.AnixartMatchingCoordinator
 import tachiyomi.data.anixart.AnixartSourceHints
 import tachiyomi.data.anixart.AnixartTitleSearcher
+import tachiyomi.data.anixart.MediaImportMatchingEngine
 import tachiyomi.data.shikimori.ShikimoriImportEntry
 import tachiyomi.data.shikimori.ShikimoriImportMediaType
+import tachiyomi.data.shikimori.ShikimoriImportPlanner
 import tachiyomi.data.shikimori.ShikimoriImportStatus
 import tachiyomi.domain.category.anime.interactor.GetAnimeCategories
 import tachiyomi.domain.category.manga.interactor.GetMangaCategories
@@ -32,8 +29,6 @@ import tachiyomi.domain.source.manga.service.MangaSourceManager
 import tachiyomi.domain.source.novel.service.NovelSourceManager
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicInteger
 
 class ShikimoriImportScreenModel(
     private val animeSourceManager: AnimeSourceManager = Injekt.get(),
@@ -43,9 +38,7 @@ class ShikimoriImportScreenModel(
     private val getMangaCategories: GetMangaCategories = Injekt.get(),
     private val getNovelCategories: GetNovelCategories = Injekt.get(),
     private val fetchEntries: FetchShikimoriImportEntries = Injekt.get(),
-    private val importAnimeEntries: ImportShikimoriEntries = Injekt.get(),
-    private val importMangaEntries: ImportShikimoriMangaEntries = Injekt.get(),
-    private val importNovelEntries: ImportShikimoriNovelEntries = Injekt.get(),
+    private val importExecutor: ImportShikimoriExecutor = Injekt.get(),
 ) : StateScreenModel<ShikimoriImportScreenModel.State>(State.Loading(ShikimoriImportMediaType.ANIME)) {
 
     @Immutable
@@ -56,14 +49,6 @@ class ShikimoriImportScreenModel(
         val enabled: Boolean,
         val matchedQuery: String?,
         val matchedSourceName: String?,
-    )
-
-    @Immutable
-    data class ImportReport(
-        val added: Int,
-        val alreadyInLibrary: Int,
-        val failed: Int,
-        val trackerBound: Int,
     )
 
     sealed interface State {
@@ -80,7 +65,6 @@ class ShikimoriImportScreenModel(
             val sources: List<SourceChoice>,
             val categories: List<CategoryUi>,
             val statusCategoryIds: Map<ShikimoriImportStatus, Long?>,
-            val favoriteCategoryId: Long?,
             val statusFilter: Set<ShikimoriImportStatus>,
             val largeImport: Boolean,
         ) : State
@@ -89,12 +73,20 @@ class ShikimoriImportScreenModel(
             val current: Int,
             val total: Int,
         ) : State
+        data class ManualSearchState(
+            val rowIndex: Int,
+            val query: String,
+            val loading: Boolean = false,
+        )
+
         data class Review(
             override val mediaType: ShikimoriImportMediaType,
             val items: List<ReviewItem>,
             val matchingReport: AnixartMatchingCoordinator.MatchingReport,
             val statusCategoryIds: Map<ShikimoriImportStatus, Long?>,
-            val favoriteCategoryId: Long?,
+            val sourceIds: List<Long>,
+            val sourceNames: Map<Long, String>,
+            val manualSearch: ManualSearchState? = null,
         ) : State
         data class Importing(
             override val mediaType: ShikimoriImportMediaType,
@@ -103,8 +95,9 @@ class ShikimoriImportScreenModel(
         ) : State
         data class Done(
             override val mediaType: ShikimoriImportMediaType,
-            val report: ImportReport,
+            val report: ImportShikimoriExecutor.Report,
             val matchingReport: AnixartMatchingCoordinator.MatchingReport,
+            val backgroundJob: Boolean,
         ) : State
     }
 
@@ -114,7 +107,7 @@ class ShikimoriImportScreenModel(
         val name: String,
     )
 
-    enum class ErrorKind { NOT_LOGGED_IN, EMPTY }
+    enum class ErrorKind { NOT_LOGGED_IN, EMPTY, NETWORK, RATE_LIMITED }
 
     init {
         load(ShikimoriImportMediaType.ANIME)
@@ -145,15 +138,16 @@ class ShikimoriImportScreenModel(
                         sources = sources,
                         categories = categories,
                         statusCategoryIds = emptyMap(),
-                        favoriteCategoryId = null,
                         statusFilter = ShikimoriImportStatus.forMediaType(mediaType).toSet(),
-                        largeImport = entries.size > 100,
+                        largeImport = entries.size > MediaImportMatchingEngine.LARGE_IMPORT_THRESHOLD,
                     )
                 }
             } catch (_: FetchShikimoriImportEntries.NotLoggedInException) {
                 mutableState.update { State.Error(mediaType, ErrorKind.NOT_LOGGED_IN) }
-            } catch (_: Exception) {
-                mutableState.update { State.Error(mediaType, ErrorKind.EMPTY) }
+            } catch (_: FetchShikimoriImportEntries.RateLimitedException) {
+                mutableState.update { State.Error(mediaType, ErrorKind.RATE_LIMITED) }
+            } catch (_: FetchShikimoriImportEntries.NetworkException) {
+                mutableState.update { State.Error(mediaType, ErrorKind.NETWORK) }
             }
         }
     }
@@ -219,13 +213,6 @@ class ShikimoriImportScreenModel(
         }
     }
 
-    fun setFavoriteCategoryMapping(categoryId: Long?) {
-        mutableState.update { s ->
-            if (s !is State.PickSources) return@update s
-            s.copy(favoriteCategoryId = categoryId)
-        }
-    }
-
     private fun filteredEntries(pick: State.PickSources): List<ShikimoriImportEntry> {
         return pick.entries.filter { entry ->
             val status = ShikimoriImportStatus.fromApi(entry.status)
@@ -241,7 +228,6 @@ class ShikimoriImportScreenModel(
         if (entries.isEmpty()) return
 
         val statusCategoryIds = current.statusCategoryIds
-        val favoriteCategoryId = current.favoriteCategoryId
         val total = entries.size
         val sourceNames = current.sources.associate { it.id to it.name }
         val mediaType = current.mediaType
@@ -249,40 +235,40 @@ class ShikimoriImportScreenModel(
         mutableState.update { State.Matching(mediaType, 0, total) }
         screenModelScope.launch {
             val searcher = createSearcher(mediaType, sourceIds)
-            val searchCache = ConcurrentHashMap<String, List<AnixartMatcher.SearchCandidate>>()
-            val semaphore = Semaphore(2)
-            val matchedCount = AtomicInteger(0)
-
-            suspend fun cachedSearch(query: String) = searchCache.getOrPut(query) { searcher.search(query) }
-
-            val items = entries.map { entry ->
-                async {
-                    semaphore.withPermit {
-                        val rowMatch = AnixartMatchingCoordinator.matchTitles(
-                            candidateTitles = entry.candidateTitles(),
-                            searchQueries = entry.searchQueries(),
-                            search = { cachedSearch(it) },
-                        )
-                        val currentMatched = matchedCount.incrementAndGet()
-                        mutableState.update { State.Matching(mediaType, currentMatched, total) }
-                        val sourceName = rowMatch.result.best?.candidate?.sourceId?.let { sourceNames[it] }
-                        ReviewItem(
-                            entry = entry,
-                            result = rowMatch.result,
-                            selectedId = rowMatch.result.best?.candidate?.id,
-                            enabled = rowMatch.result.confidence != AnixartMatcher.Confidence.NO_MATCH,
-                            matchedQuery = rowMatch.matchedQuery,
-                            matchedSourceName = sourceName,
-                        )
-                    }
-                }
-            }.awaitAll()
-
-            val matchingReport = AnixartMatchingCoordinator.summarize(
-                items.map { AnixartMatchingCoordinator.RowMatch(it.result, it.matchedQuery) },
+            val (results, matchingReport) = MediaImportMatchingEngine.matchRows(
+                rows = entries,
+                toInput = { entry ->
+                    MediaImportMatchingEngine.RowInput(
+                        candidateTitles = entry.candidateTitles(),
+                        searchQueries = entry.searchQueries(),
+                    )
+                },
+                search = { query -> searcher.search(query) },
+                sourceNames = sourceNames,
+                onProgress = { currentMatched, totalRows ->
+                    mutableState.update { State.Matching(mediaType, currentMatched, totalRows) }
+                },
             )
+
+            val items = results.map { row ->
+                ReviewItem(
+                    entry = row.row,
+                    result = row.result,
+                    selectedId = row.result.best?.candidate?.id,
+                    enabled = row.result.confidence != AnixartMatcher.Confidence.NO_MATCH,
+                    matchedQuery = row.matchedQuery,
+                    matchedSourceName = row.matchedSourceName,
+                )
+            }
             mutableState.update {
-                State.Review(mediaType, items, matchingReport, statusCategoryIds, favoriteCategoryId)
+                State.Review(
+                    mediaType = mediaType,
+                    items = items,
+                    matchingReport = matchingReport,
+                    statusCategoryIds = statusCategoryIds,
+                    sourceIds = sourceIds,
+                    sourceNames = sourceNames,
+                )
             }
         }
     }
@@ -299,7 +285,85 @@ class ShikimoriImportScreenModel(
     fun setSelection(rowIndex: Int, candidateId: Long?) {
         mutableState.update { s ->
             if (s !is State.Review) return@update s
-            s.copy(items = s.items.mapIndexed { i, it -> if (i == rowIndex) it.copy(selectedId = candidateId) else it })
+            s.copy(
+                items = s.items.mapIndexed { i, item ->
+                    if (i != rowIndex) return@mapIndexed item
+                    item.copy(
+                        selectedId = candidateId,
+                        enabled = candidateId != null,
+                    )
+                },
+            )
+        }
+    }
+
+    fun openManualSearch(rowIndex: Int) {
+        mutableState.update { s ->
+            if (s !is State.Review) return@update s
+            val entry = s.items.getOrNull(rowIndex)?.entry ?: return@update s
+            val defaultQuery = entry.russian?.takeIf { it.isNotBlank() } ?: entry.name
+            s.copy(manualSearch = State.ManualSearchState(rowIndex, defaultQuery))
+        }
+    }
+
+    fun dismissManualSearch() {
+        mutableState.update { s ->
+            if (s !is State.Review) return@update s
+            s.copy(manualSearch = null)
+        }
+    }
+
+    fun setManualSearchQuery(query: String) {
+        mutableState.update { s ->
+            if (s !is State.Review) return@update s
+            val manual = s.manualSearch ?: return@update s
+            s.copy(manualSearch = manual.copy(query = query))
+        }
+    }
+
+    fun runManualSearch() {
+        val review = state.value as? State.Review ?: return
+        val manual = review.manualSearch ?: return
+        val query = manual.query.trim()
+        if (query.isEmpty()) return
+        val rowIndex = manual.rowIndex
+        val item = review.items.getOrNull(rowIndex) ?: return
+
+        mutableState.update { s ->
+            if (s !is State.Review) return@update s
+            s.copy(manualSearch = manual.copy(loading = true))
+        }
+
+        screenModelScope.launch {
+            val searcher = createSearcher(review.mediaType, review.sourceIds)
+            val candidates = searcher.search(query)
+            val rawMatch = AnixartMatcher.match(item.entry.candidateTitles(), candidates)
+            val top = rawMatch.ranked.firstOrNull()
+            val result = if (top == null || top.score <= 0) {
+                rawMatch
+            } else {
+                rawMatch.copy(
+                    confidence = AnixartMatcher.Confidence.NEEDS_REVIEW,
+                    best = top,
+                )
+            }
+            val sourceName = result.best?.candidate?.sourceId?.let { review.sourceNames[it] }
+            mutableState.update { s ->
+                if (s !is State.Review) return@update s
+                s.copy(
+                    manualSearch = null,
+                    items = s.items.mapIndexed { i, row ->
+                        if (i != rowIndex) return@mapIndexed row
+                        row.copy(
+                            result = result,
+                            selectedId = result.best?.candidate?.id,
+                            enabled = result.best != null,
+                            matchedQuery = query,
+                            matchedSourceName = sourceName,
+                        )
+                    },
+                )
+            }
         }
     }
 
@@ -315,49 +379,37 @@ class ShikimoriImportScreenModel(
 
     fun startImport() {
         val review = state.value as? State.Review ?: return
-        val actions = review.items.mapNotNull { item ->
-            if (!item.enabled || item.selectedId == null) return@mapNotNull null
-            val candidate = item.result.ranked.firstOrNull { it.candidate.id == item.selectedId }?.candidate
-                ?: return@mapNotNull null
-            val status = ShikimoriImportStatus.fromApi(item.entry.status)
-            val cats = buildSet {
-                status?.let { s -> review.statusCategoryIds[s]?.let(::add) }
+        val selections = review.items.map { item ->
+            val chosen = item.result.ranked.firstOrNull { it.candidate.id == item.selectedId }?.candidate
+            ShikimoriImportPlanner.Selection(item.entry, chosen, item.enabled)
+        }
+        val statusMap = review.statusCategoryIds.filterValues { it != null }.mapValues { it.value!! }
+        val plan = ShikimoriImportPlanner.plan(
+            selections,
+            ShikimoriImportPlanner.Config(statusCategoryIds = statusMap),
+        )
+
+        if (plan.actions.size > MediaImportMatchingEngine.LARGE_IMPORT_THRESHOLD) {
+            ShikimoriImportJob.start(Injekt.get<android.app.Application>(), review.mediaType, plan)
+            mutableState.update {
+                State.Done(
+                    mediaType = review.mediaType,
+                    report = ImportShikimoriExecutor.Report(0, 0, 0, 0),
+                    matchingReport = review.matchingReport,
+                    backgroundJob = true,
+                )
             }
-            Triple(item.entry, candidate, cats)
+            return
         }
 
-        mutableState.update { State.Importing(review.mediaType, 0, actions.size) }
+        mutableState.update { State.Importing(review.mediaType, 0, plan.actions.size) }
         screenModelScope.launch {
-            val report = when (review.mediaType) {
-                ShikimoriImportMediaType.ANIME -> {
-                    val animeActions = actions.map { (entry, candidate, cats) ->
-                        ImportShikimoriEntries.Action(entry, candidate, cats)
-                    }
-                    val raw = importAnimeEntries.await(animeActions) { current, total ->
-                        mutableState.update { State.Importing(review.mediaType, current, total) }
-                    }
-                    ImportReport(raw.added, raw.alreadyInLibrary, raw.failed, raw.trackerBound)
-                }
-                ShikimoriImportMediaType.MANGA -> {
-                    val mangaActions = actions.map { (entry, candidate, cats) ->
-                        ImportShikimoriMangaEntries.Action(entry, candidate, cats)
-                    }
-                    val raw = importMangaEntries.await(mangaActions) { current, total ->
-                        mutableState.update { State.Importing(review.mediaType, current, total) }
-                    }
-                    ImportReport(raw.added, raw.alreadyInLibrary, raw.failed, raw.trackerBound)
-                }
-                ShikimoriImportMediaType.RANOBE -> {
-                    val novelActions = actions.map { (entry, candidate, cats) ->
-                        ImportShikimoriNovelEntries.Action(entry, candidate, cats)
-                    }
-                    val raw = importNovelEntries.await(novelActions) { current, total ->
-                        mutableState.update { State.Importing(review.mediaType, current, total) }
-                    }
-                    ImportReport(raw.added, raw.alreadyInLibrary, raw.failed, raw.trackerBound)
-                }
+            val report = importExecutor.await(review.mediaType, plan) { current, total ->
+                mutableState.update { State.Importing(review.mediaType, current, total) }
             }
-            mutableState.update { State.Done(review.mediaType, report, review.matchingReport) }
+            mutableState.update {
+                State.Done(review.mediaType, report, review.matchingReport, backgroundJob = false)
+            }
         }
     }
 }
