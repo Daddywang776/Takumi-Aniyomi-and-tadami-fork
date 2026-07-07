@@ -2491,6 +2491,7 @@
     <string name="anixart_import_pick_file">Выбрать CSV-файл</string>
     <string name="anixart_import_pick_file_hint">В Anixart: Управление данными → Экспорт закладок → CSV</string>
     <string name="anixart_import_select_sources">Выберите источники для поиска совпадений</string>
+    <string name="anixart_import_start_matching">Искать совпадения</string>
     <string name="anixart_import_searching">Поиск совпадений…</string>
     <string name="anixart_import_review_title">Проверка совпадений</string>
     <string name="anixart_import_group_exact">Точное совпадение</string>
@@ -2527,12 +2528,19 @@
 
     <!-- Shikimori library import -->
     <string name="shikimori_import_title">Импорт из Shikimori</string>
-    <string name="shikimori_import_summary">Импорт вашего аниме-списка Shikimori в библиотеку</string>
+    <string name="shikimori_import_summary">Импорт списков аниме, манги и ранобэ из Shikimori в библиотеку</string>
+    <string name="shikimori_import_tab_anime">Аниме</string>
+    <string name="shikimori_import_tab_manga">Манга</string>
+    <string name="shikimori_import_tab_ranobe">Ранобэ</string>
     <string name="shikimori_import_not_logged_in">Сначала войдите в Shikimori в настройках трекинга</string>
-    <string name="shikimori_import_empty">В списке Shikimori не найдено аниме</string>
+    <string name="shikimori_import_empty_anime">В списке Shikimori не найдено аниме</string>
+    <string name="shikimori_import_empty_manga">В списке Shikimori не найдена манга</string>
+    <string name="shikimori_import_empty_ranobe">В списке Shikimori не найдено ранобэ</string>
+    <string name="shikimori_import_status_reading">Читаю</string>
     <string name="shikimori_import_status_planned">В планах</string>
     <string name="shikimori_import_status_on_hold">Отложено</string>
     <string name="shikimori_import_status_rewatching">Пересматриваю</string>
+    <string name="shikimori_import_status_rereading">Перечитываю</string>
     <string name="shikimori_import_report">Добавлено %1$d, уже в библиотеке %2$d, ошибок %3$d, привязано к Shikimori %4$d</string>
     <!-- Time Paradox Achievement -->
     <string name="achievement_time_paradox_title">Временной парадокс</string>

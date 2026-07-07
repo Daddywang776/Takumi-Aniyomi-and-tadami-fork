@@ -1,28 +1,30 @@
 package eu.kanade.tachiyomi.data.shikimori
 
-import eu.kanade.domain.entries.anime.interactor.UpdateAnime
-import eu.kanade.domain.entries.anime.model.toDomainAnime
-import eu.kanade.domain.track.anime.interactor.AddAnimeTracks
-import eu.kanade.tachiyomi.animesource.model.SAnime
-import eu.kanade.tachiyomi.data.database.models.anime.AnimeTrack
+import eu.kanade.domain.entries.novel.interactor.UpdateNovel
+import eu.kanade.domain.entries.novel.model.toDomainNovel
+import eu.kanade.domain.track.novel.interactor.AddNovelTracks
+import eu.kanade.tachiyomi.data.database.models.manga.MangaTrack
 import eu.kanade.tachiyomi.data.track.TrackerManager
 import eu.kanade.tachiyomi.data.track.shikimori.toTrackStatus
+import eu.kanade.tachiyomi.novelsource.model.SNovel
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.data.anixart.AnixartMatcher
 import tachiyomi.data.shikimori.ShikimoriImportEntry
-import tachiyomi.domain.category.anime.interactor.GetAnimeCategories
-import tachiyomi.domain.category.anime.interactor.SetAnimeCategories
-import tachiyomi.domain.entries.anime.interactor.GetAnimeByUrlAndSourceId
-import tachiyomi.domain.entries.anime.interactor.NetworkToLocalAnime
+import tachiyomi.domain.category.novel.interactor.GetNovelCategories
+import tachiyomi.domain.category.novel.interactor.SetNovelCategories
+import tachiyomi.domain.entries.novel.interactor.GetNovelByUrlAndSourceId
+import tachiyomi.domain.entries.novel.interactor.NetworkToLocalNovel
+import tachiyomi.domain.entries.novel.model.NovelUpdate
+import java.time.Instant
 
-class ImportShikimoriEntries(
-    private val networkToLocalAnime: NetworkToLocalAnime,
-    private val getAnimeByUrlAndSourceId: GetAnimeByUrlAndSourceId,
-    private val updateAnime: UpdateAnime,
-    private val getAnimeCategories: GetAnimeCategories,
-    private val setAnimeCategories: SetAnimeCategories,
-    private val addAnimeTracks: AddAnimeTracks,
+class ImportShikimoriNovelEntries(
+    private val networkToLocalNovel: NetworkToLocalNovel,
+    private val getNovelByUrlAndSourceId: GetNovelByUrlAndSourceId,
+    private val updateNovel: UpdateNovel,
+    private val getNovelCategories: GetNovelCategories,
+    private val setNovelCategories: SetNovelCategories,
+    private val addNovelTracks: AddNovelTracks,
     private val trackerManager: TrackerManager,
 ) {
 
@@ -53,41 +55,47 @@ class ImportShikimoriEntries(
             onProgress(index + 1, actions.size)
             try {
                 val candidate = action.candidate
-                val existing = getAnimeByUrlAndSourceId.await(candidate.url, candidate.sourceId)
+                val existing = getNovelByUrlAndSourceId.await(candidate.url, candidate.sourceId)
                 val wasInLibrary = existing?.favorite == true
 
-                val sAnime = SAnime.create().apply {
+                val sNovel = SNovel.create().apply {
                     url = candidate.url
                     title = candidate.displayTitle
                     thumbnail_url = candidate.thumbnailUrl
                 }
-                val localAnime = networkToLocalAnime.await(
-                    sAnime.toDomainAnime(candidate.sourceId),
+                val localNovel = networkToLocalNovel.await(
+                    sNovel.toDomainNovel(candidate.sourceId),
                 )
 
-                if (!localAnime.favorite) {
-                    updateAnime.awaitUpdateFavorite(localAnime.id, favorite = true)
+                if (!localNovel.favorite) {
+                    updateNovel.await(
+                        NovelUpdate(
+                            id = localNovel.id,
+                            favorite = true,
+                            dateAdded = Instant.now().toEpochMilli(),
+                        ),
+                    )
                 }
 
                 if (action.categoryIds.isNotEmpty()) {
-                    val current = getAnimeCategories.await(localAnime.id).map { it.id }.toSet()
+                    val current = getNovelCategories.await(localNovel.id).map { it.id }.toSet()
                     val merged = current + action.categoryIds
                     if (merged != current) {
-                        setAnimeCategories.await(localAnime.id, merged.toList())
+                        setNovelCategories.await(localNovel.id, merged.toList())
                     }
                 }
 
                 if (shikimori.isLoggedIn) {
-                    val track = AnimeTrack.create(shikimori.id).apply {
-                        anime_id = localAnime.id
+                    val track = MangaTrack.create(shikimori.id).apply {
+                        manga_id = localNovel.id
                         remote_id = action.entry.remoteId
                         title = action.entry.name
-                        total_episodes = action.entry.totalCount ?: 0L
+                        total_chapters = action.entry.totalCount ?: 0L
                         score = action.entry.score.toDouble()
                         status = toTrackStatus(action.entry.status)
-                        last_episode_seen = action.entry.progress.toDouble()
+                        last_chapter_read = action.entry.progress.toDouble()
                     }
-                    addAnimeTracks.bind(shikimori, track, localAnime.id)
+                    addNovelTracks.bind(shikimori, track, localNovel.id)
                     trackerBound++
                 }
 
@@ -95,7 +103,7 @@ class ImportShikimoriEntries(
             } catch (e: Exception) {
                 failed++
                 logcat(LogPriority.ERROR, e) {
-                    "Shikimori import failed for '${action.entry.name}'"
+                    "Shikimori ranobe import failed for '${action.entry.name}'"
                 }
             }
         }

@@ -60,7 +60,8 @@ actual class LocalAnimeSource(
     @Suppress("PrivatePropertyName")
     private val LatestFilters = AnimeFilterList(AnimeOrderBy.Latest(context))
 
-    override val name = context.stringResource(AYMR.strings.local_anime_source)
+    override val name: String
+        get() = context.stringResource(AYMR.strings.local_anime_source)
 
     override val id: Long = ID
 

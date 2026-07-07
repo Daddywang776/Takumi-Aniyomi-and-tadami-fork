@@ -2,7 +2,6 @@ package eu.kanade.presentation.more.settings.screen.shikimori
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -16,7 +15,9 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -33,6 +34,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.presentation.components.AppBar
 import tachiyomi.data.anixart.AnixartSourceHints
+import tachiyomi.data.shikimori.ShikimoriImportMediaType
 import tachiyomi.data.shikimori.ShikimoriImportStatus
 import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.i18n.stringResource
@@ -54,50 +56,59 @@ class ShikimoriImportScreen : ParentScreen() {
                 )
             },
         ) { padding ->
-            when (val s = state) {
-                is ShikimoriImportScreenModel.State.Loading -> Centered(padding) { CircularProgressIndicator() }
-                is ShikimoriImportScreenModel.State.Matching -> Centered(padding) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator()
-                        Text(
-                            stringResource(AYMR.strings.anixart_import_searching) + " ${s.current}/${s.total}",
-                            modifier = Modifier.padding(top = 16.dp),
-                        )
+            Column(Modifier.padding(padding).fillMaxSize()) {
+                MediaTypeTabs(
+                    selected = state.mediaType,
+                    enabled = state is ShikimoriImportScreenModel.State.PickSources ||
+                        state is ShikimoriImportScreenModel.State.Loading ||
+                        state is ShikimoriImportScreenModel.State.Error,
+                    onSelect = model::switchMediaType,
+                )
+                when (val s = state) {
+                    is ShikimoriImportScreenModel.State.Loading -> Centered { CircularProgressIndicator() }
+                    is ShikimoriImportScreenModel.State.Matching -> Centered {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator()
+                            Text(
+                                stringResource(AYMR.strings.anixart_import_searching) + " ${s.current}/${s.total}",
+                                modifier = Modifier.padding(top = 16.dp),
+                            )
+                        }
                     }
-                }
-                is ShikimoriImportScreenModel.State.Error -> Centered(padding) {
-                    Text(
-                        stringResource(
-                            when (s.messageKey) {
-                                ShikimoriImportScreenModel.ErrorKind.NOT_LOGGED_IN ->
-                                    AYMR.strings.shikimori_import_not_logged_in
-                                ShikimoriImportScreenModel.ErrorKind.EMPTY ->
-                                    AYMR.strings.shikimori_import_empty
-                            },
-                        ),
-                    )
-                }
-                is ShikimoriImportScreenModel.State.PickSources -> PickSources(padding, s, model)
-                is ShikimoriImportScreenModel.State.Review -> Review(padding, s, model)
-                is ShikimoriImportScreenModel.State.Importing -> Centered(padding) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator()
-                        Text(stringResource(AYMR.strings.anixart_import_importing) + " ${s.current}/${s.total}")
-                    }
-                }
-                is ShikimoriImportScreenModel.State.Done -> Centered(padding) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(stringResource(AYMR.strings.anixart_import_done))
+                    is ShikimoriImportScreenModel.State.Error -> Centered {
                         Text(
                             stringResource(
-                                AYMR.strings.shikimori_import_report,
-                                s.report.added,
-                                s.report.alreadyInLibrary,
-                                s.report.failed,
-                                s.report.trackerBound,
+                                when (s.messageKey) {
+                                    ShikimoriImportScreenModel.ErrorKind.NOT_LOGGED_IN ->
+                                        AYMR.strings.shikimori_import_not_logged_in
+                                    ShikimoriImportScreenModel.ErrorKind.EMPTY ->
+                                        emptyMessageFor(s.mediaType)
+                                },
                             ),
                         )
-                        Button(onClick = navigator::pop) { Text("OK") }
+                    }
+                    is ShikimoriImportScreenModel.State.PickSources -> PickSources(s, model)
+                    is ShikimoriImportScreenModel.State.Review -> Review(s, model)
+                    is ShikimoriImportScreenModel.State.Importing -> Centered {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator()
+                            Text(stringResource(AYMR.strings.anixart_import_importing) + " ${s.current}/${s.total}")
+                        }
+                    }
+                    is ShikimoriImportScreenModel.State.Done -> Centered {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(stringResource(AYMR.strings.anixart_import_done))
+                            Text(
+                                stringResource(
+                                    AYMR.strings.shikimori_import_report,
+                                    s.report.added,
+                                    s.report.alreadyInLibrary,
+                                    s.report.failed,
+                                    s.report.trackerBound,
+                                ),
+                            )
+                            Button(onClick = navigator::pop) { Text("OK") }
+                        }
                     }
                 }
             }
@@ -105,12 +116,35 @@ class ShikimoriImportScreen : ParentScreen() {
     }
 
     @Composable
+    private fun MediaTypeTabs(
+        selected: ShikimoriImportMediaType,
+        enabled: Boolean,
+        onSelect: (ShikimoriImportMediaType) -> Unit,
+    ) {
+        val tabs = listOf(
+            ShikimoriImportMediaType.ANIME to AYMR.strings.shikimori_import_tab_anime,
+            ShikimoriImportMediaType.MANGA to AYMR.strings.shikimori_import_tab_manga,
+            ShikimoriImportMediaType.RANOBE to AYMR.strings.shikimori_import_tab_ranobe,
+        )
+        val selectedIndex = tabs.indexOfFirst { it.first == selected }.coerceAtLeast(0)
+        PrimaryTabRow(selectedTabIndex = selectedIndex) {
+            tabs.forEachIndexed { index, (type, labelRes) ->
+                Tab(
+                    selected = selectedIndex == index,
+                    onClick = { if (enabled) onSelect(type) },
+                    enabled = enabled,
+                    text = { Text(stringResource(labelRes)) },
+                )
+            }
+        }
+    }
+
+    @Composable
     private fun PickSources(
-        padding: PaddingValues,
         s: ShikimoriImportScreenModel.State.PickSources,
         model: ShikimoriImportScreenModel,
     ) {
-        Column(Modifier.padding(padding).fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
             LazyColumn(Modifier.weight(1f)) {
                 if (s.largeImport) {
                     item {
@@ -128,7 +162,7 @@ class ShikimoriImportScreen : ParentScreen() {
                         style = MaterialTheme.typography.titleMedium,
                     )
                 }
-                items(ShikimoriImportStatus.entries.toList()) { status ->
+                items(ShikimoriImportStatus.forMediaType(s.mediaType)) { status ->
                     ListItem(
                         headlineContent = { Text(statusLabel(status)) },
                         leadingContent = {
@@ -172,18 +206,17 @@ class ShikimoriImportScreen : ParentScreen() {
                 modifier = Modifier.padding(16.dp).fillMaxWidth(),
                 enabled = s.sources.any { it.selected },
             ) {
-                Text(stringResource(AYMR.strings.anixart_import_searching))
+                Text(stringResource(AYMR.strings.anixart_import_start_matching))
             }
         }
     }
 
     @Composable
     private fun Review(
-        padding: PaddingValues,
         s: ShikimoriImportScreenModel.State.Review,
         model: ShikimoriImportScreenModel,
     ) {
-        Column(Modifier.padding(padding).fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
             LazyColumn(Modifier.weight(1f)) {
                 itemsIndexed(s.items) { index, item ->
                     ReviewItemRow(index, item, model)
@@ -250,17 +283,26 @@ class ShikimoriImportScreen : ParentScreen() {
     @Composable
     private fun statusLabel(status: ShikimoriImportStatus): String = when (status) {
         ShikimoriImportStatus.WATCHING -> stringResource(AYMR.strings.anixart_import_status_watching)
+        ShikimoriImportStatus.READING -> stringResource(AYMR.strings.shikimori_import_status_reading)
         ShikimoriImportStatus.COMPLETED -> stringResource(AYMR.strings.anixart_import_status_completed)
         ShikimoriImportStatus.PLANNED -> stringResource(AYMR.strings.shikimori_import_status_planned)
         ShikimoriImportStatus.ON_HOLD -> stringResource(AYMR.strings.shikimori_import_status_on_hold)
         ShikimoriImportStatus.DROPPED -> stringResource(AYMR.strings.anixart_import_status_dropped)
         ShikimoriImportStatus.REWATCHING -> stringResource(AYMR.strings.shikimori_import_status_rewatching)
+        ShikimoriImportStatus.REREADING -> stringResource(AYMR.strings.shikimori_import_status_rereading)
     }
 
     @Composable
-    private fun Centered(padding: PaddingValues, content: @Composable () -> Unit) {
+    private fun emptyMessageFor(mediaType: ShikimoriImportMediaType) = when (mediaType) {
+        ShikimoriImportMediaType.ANIME -> AYMR.strings.shikimori_import_empty_anime
+        ShikimoriImportMediaType.MANGA -> AYMR.strings.shikimori_import_empty_manga
+        ShikimoriImportMediaType.RANOBE -> AYMR.strings.shikimori_import_empty_ranobe
+    }
+
+    @Composable
+    private fun Centered(content: @Composable () -> Unit) {
         Column(
-            modifier = Modifier.padding(padding).fillMaxSize(),
+            modifier = Modifier.fillMaxSize(),
             verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) { content() }

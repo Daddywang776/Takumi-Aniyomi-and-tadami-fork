@@ -357,7 +357,7 @@ class AnixartImportScreen(
                 modifier = Modifier.padding(16.dp).fillMaxWidth(),
                 enabled = s.sources.any { it.selected },
             ) {
-                Text(stringResource(AYMR.strings.anixart_import_searching))
+                Text(stringResource(AYMR.strings.anixart_import_start_matching))
             }
         }
     }

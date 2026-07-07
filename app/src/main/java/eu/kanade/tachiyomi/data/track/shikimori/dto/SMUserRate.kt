@@ -9,6 +9,7 @@ data class SMUserRate(
     val score: Int,
     val status: String,
     val episodes: Int = 0,
+    val chapters: Int = 0,
     @SerialName("target_id")
     val targetId: Long,
     @SerialName("target_type")
