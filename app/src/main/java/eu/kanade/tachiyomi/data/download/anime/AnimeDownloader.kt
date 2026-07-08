@@ -197,6 +197,20 @@ class AnimeDownloader(
     }
 
     /**
+     * Pauses active downloads while the worker waits for network recovery.
+     */
+    fun pauseForNetwork(reason: String) {
+        cancelDownloaderJob()
+        queueState.value
+            .filter { it.status == AnimeDownload.State.DOWNLOADING }
+            .forEach {
+                it.status = AnimeDownload.State.QUEUE
+                it.currentSpeedBytesPerSecond = 0L
+            }
+        notifier.onWarning(reason)
+    }
+
+    /**
      * Removes everything from the queue.
      */
     fun clearQueue() {

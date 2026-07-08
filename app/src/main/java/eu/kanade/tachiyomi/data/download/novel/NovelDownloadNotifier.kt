@@ -142,4 +142,18 @@ internal class NovelDownloadNotifier(private val context: Context) {
     fun dismissProgress() {
         context.cancelNotification(Notifications.ID_DOWNLOAD_NOVEL_PROGRESS)
     }
+
+    fun onWarning(reason: String) {
+        with(errorNotificationBuilder) {
+            setSmallIcon(R.drawable.ic_warning_white_24dp)
+            setOngoing(false)
+            setProgress(0, 0, false)
+            clearActions()
+            setContentIntent(NotificationHandler.openDownloadManagerPendingActivity(context))
+            setContentTitle(reason)
+            setContentText(null)
+            setTimeoutAfter(30_000L)
+            show(Notifications.ID_DOWNLOAD_NOVEL_ERROR)
+        }
+    }
 }

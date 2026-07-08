@@ -205,6 +205,17 @@ class MangaDownloader(
     }
 
     /**
+     * Pauses active downloads while the worker waits for network recovery.
+     */
+    fun pauseForNetwork(reason: String) {
+        cancelDownloaderJob()
+        queueState.value
+            .filter { it.status == MangaDownload.State.DOWNLOADING }
+            .forEach { it.status = MangaDownload.State.QUEUE }
+        notifier.onWarning(reason)
+    }
+
+    /**
      * Removes everything from the queue.
      */
     fun clearQueue() {
