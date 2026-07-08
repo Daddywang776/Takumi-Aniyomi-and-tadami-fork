@@ -166,7 +166,11 @@ class BackupCreator(
             }
             val backupNovel = BackupDiagnosticLog.measure(context, "collect_novel") {
                 backupNovels(
-                    novels = if (shouldBackupNovel) novelRepository.getNovelFavorites() + nonFavoriteNovel else emptyList(),
+                    novels = if (shouldBackupNovel) {
+                        novelRepository.getNovelFavorites() + nonFavoriteNovel
+                    } else {
+                        emptyList()
+                    },
                     options = options,
                 )
             }
