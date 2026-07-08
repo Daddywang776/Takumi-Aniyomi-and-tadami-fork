@@ -10,7 +10,7 @@ import android.os.Build
 import android.os.Bundle
 import androidx.core.content.FileProvider
 import androidx.core.net.toUri
-import eu.kanade.domain.base.BasePreferences
+import eu.kanade.domain.source.anime.interactor.GetAnimeIncognitoState
 import eu.kanade.domain.track.anime.model.toDbTrack
 import eu.kanade.domain.track.anime.service.DelayedAnimeTrackingUpdateJob
 import eu.kanade.domain.track.anime.store.DelayedAnimeTrackingStore
@@ -51,6 +51,7 @@ import tachiyomi.source.local.entries.anime.LocalAnimeSource
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
+
 import java.io.File
 import java.util.Date
 
@@ -416,7 +417,7 @@ class ExternalIntents {
     private val playerPreferences: PlayerPreferences = Injekt.get()
     private val downloadPreferences: DownloadPreferences = Injekt.get()
     private val trackPreferences: TrackPreferences = Injekt.get()
-    private val basePreferences: BasePreferences by injectLazy()
+    private val getIncognitoState: GetAnimeIncognitoState = Injekt.get()
 
     /**
      * Saves this episode's last seen history if incognito mode isn't on.
@@ -424,7 +425,7 @@ class ExternalIntents {
      * @param currentEpisode the episode to update.
      */
     private suspend fun saveEpisodeHistory(currentEpisode: Episode) {
-        if (basePreferences.incognitoMode().get()) return
+        if (getIncognitoState.shouldPauseHistory(anime.source, anime.favorite)) return
         upsertHistory.await(
             AnimeHistoryUpdate(currentEpisode.id, Date()),
         )
@@ -445,7 +446,7 @@ class ExternalIntents {
         lastSecondSeen: Long,
         totalSeconds: Long,
     ) {
-        if (basePreferences.incognitoMode().get()) return
+        if (getIncognitoState.shouldPauseHistory(anime.source, anime.favorite)) return
         val currEp = currentEpisode ?: return
 
         if (totalSeconds > 0L) {

@@ -54,6 +54,7 @@ import eu.kanade.domain.source.manga.interactor.ToggleMangaSource
 import eu.kanade.domain.source.manga.interactor.ToggleMangaSourcePin
 import eu.kanade.domain.source.novel.interactor.GetEnabledNovelSources
 import eu.kanade.domain.source.novel.interactor.GetLanguagesWithNovelSources
+import eu.kanade.domain.source.novel.interactor.GetNovelIncognitoState
 import eu.kanade.domain.source.novel.interactor.GetNovelSourcesWithFavoriteCount
 import eu.kanade.domain.source.novel.interactor.ToggleNovelIncognito
 import eu.kanade.domain.source.novel.interactor.ToggleNovelSource
@@ -676,6 +677,7 @@ class DomainModule : InjektModule {
         addFactory { ReplaceNovelExtensionRepo(get()) }
         addFactory { UpdateNovelExtensionRepo(get(), get()) }
         addFactory { ToggleNovelIncognito(get()) }
+        addFactory { GetNovelIncognitoState(get(), get(), get()) }
 
         addSingletonFactory<CustomButtonRepository> { CustomButtonRepositoryImpl(get()) }
         addFactory { CreateCustomButton(get()) }

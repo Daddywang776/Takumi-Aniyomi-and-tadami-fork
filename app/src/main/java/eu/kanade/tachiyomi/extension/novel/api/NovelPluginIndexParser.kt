@@ -6,6 +6,7 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.booleanOrNull
+import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -41,6 +42,7 @@ private fun JsonElement.toPlugin(repoUrl: String): NovelPlugin.Available? {
     val versionCode = parseVersion(obj["version"])
     val rawVersion = obj["version"]?.stringValue()
     val versionName = rawVersion?.takeIf { it.isNotBlank() } ?: versionCode.toString()
+    val isNsfw = obj["nsfw"].parseNsfwFlag()
 
     return NovelPlugin.Available(
         id = id,
@@ -56,6 +58,7 @@ private fun JsonElement.toPlugin(repoUrl: String): NovelPlugin.Available? {
         hasSettings = hasSettings,
         sha256 = sha256,
         repoUrl = repoUrl,
+        isNsfw = isNsfw,
     )
 }
 
@@ -78,6 +81,7 @@ private fun JsonObject.toKotlinExtensionPlugin(repoUrl: String): NovelPlugin.Ava
         ?.get("baseUrl")
         ?.stringValue()
         .orEmpty()
+    val isNsfw = this["nsfw"].parseNsfwFlag()
 
     return NovelPlugin.Available(
         id = pkgName,
@@ -96,7 +100,19 @@ private fun JsonObject.toKotlinExtensionPlugin(repoUrl: String): NovelPlugin.Ava
         pkgName = pkgName,
         apkUrl = apkUrl,
         isKotlinExtension = true,
+        isNsfw = isNsfw,
     )
+}
+
+private fun JsonElement?.parseNsfwFlag(): Boolean {
+    val primitive = this?.jsonPrimitive ?: return false
+    return when {
+        primitive.isString -> {
+            val content = primitive.content
+            content == "1" || content.equals("true", ignoreCase = true)
+        }
+        else -> primitive.intOrNull == 1 || primitive.booleanOrNull == true
+    }
 }
 
 private fun String.resolveApkAgainstRepo(repoUrl: String): String? {

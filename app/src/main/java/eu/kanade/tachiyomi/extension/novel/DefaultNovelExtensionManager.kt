@@ -13,6 +13,7 @@ import eu.kanade.tachiyomi.extension.novel.kotlin.KotlinNovelExtensionLoadResult
 import eu.kanade.tachiyomi.extension.novel.kotlin.KotlinNovelExtensionLoader
 import eu.kanade.tachiyomi.extension.novel.runtime.NovelPluginCapabilities
 import eu.kanade.tachiyomi.extension.novel.runtime.NovelPluginCapabilitySource
+import eu.kanade.tachiyomi.extension.novel.runtime.NovelPluginIdentitySource
 import eu.kanade.tachiyomi.novelsource.NovelSource
 import eu.kanade.tachiyomi.util.system.isPackageInstalled
 import kotlinx.coroutines.CoroutineScope
@@ -22,6 +23,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+
 import kotlinx.coroutines.launch
 import tachiyomi.core.common.preference.getAndSet
 import tachiyomi.data.extension.novel.NovelPluginInstallerFacade
@@ -234,6 +238,51 @@ class DefaultNovelExtensionManager(
         return (source as? NovelPluginCapabilitySource)?.pluginCapabilities
     }
 
+    override fun getPluginId(sourceId: Long): String? {
+        installedSources.value
+            .firstOrNull { it.id == sourceId }
+            ?.let { source -> (source as? NovelPluginIdentitySource)?.pluginId }
+            ?.let { return it }
+
+        return installedPlugins.value
+            .firstOrNull { NovelPluginId.toSourceId(it.id) == sourceId }
+            ?.id
+    }
+
+    override fun getPluginIdAsFlow(sourceId: Long): Flow<String?> {
+        return combine(installedSourcesFlow, installedPluginsFlow) { sources, plugins ->
+            sources.firstOrNull { it.id == sourceId }
+                ?.let { source -> (source as? NovelPluginIdentitySource)?.pluginId }
+                ?: plugins.firstOrNull { NovelPluginId.toSourceId(it.id) == sourceId }?.id
+        }
+            .distinctUntilChanged()
+    }
+
+    override fun isNsfwForSource(sourceId: Long): Boolean {
+        val pluginId = getPluginId(sourceId) ?: return false
+        return resolvePluginNsfw(pluginId)
+    }
+
+    override fun isNsfwForSourceAsFlow(sourceId: Long): Flow<Boolean> {
+        return combine(
+            getPluginIdAsFlow(sourceId),
+            installedPluginsFlow,
+            availablePluginsFlow,
+        ) { pluginId, installed, available ->
+            if (pluginId == null) return@combine false
+            installed.firstOrNull { it.id == pluginId }?.isNsfw
+                ?: available.firstOrNull { it.id == pluginId }?.isNsfw
+                ?: false
+        }
+            .distinctUntilChanged()
+    }
+
+    private fun resolvePluginNsfw(pluginId: String): Boolean {
+        return installedPlugins.value.firstOrNull { it.id == pluginId }?.isNsfw
+            ?: availablePlugins.value.firstOrNull { it.id == pluginId }?.isNsfw
+            ?: false
+    }
+
     private fun reloadInstalledKotlinExtensions() {
         val appContext = context ?: return
         installedKotlinExtensionsSnapshot = KotlinNovelExtensionLoader.loadExtensions(appContext)
@@ -243,7 +292,11 @@ class DefaultNovelExtensionManager(
     private fun applyInstalledSnapshots() {
         val availableById = availablePlugins.value.groupBy { it.id }
         val normalizedJs = installedJsPluginsSnapshot
-            .map { it.withNormalizedLang().withPendingSavedOrInferredRepo(availableById[it.id].orEmpty()) }
+            .map {
+                it.withNormalizedLang()
+                    .withPendingSavedOrInferredRepo(availableById[it.id].orEmpty())
+                    .withNsfwFromAvailable(availableById[it.id].orEmpty())
+            }
         val normalizedKotlin = installedKotlinExtensionsSnapshot
             .mapNotNull { result ->
                 (result.plugin as? NovelPlugin.Installed)
@@ -297,6 +350,16 @@ class DefaultNovelExtensionManager(
     private fun NovelPlugin.Installed.withSavedRepo(key: String): NovelPlugin.Installed? {
         val savedRepo = getSavedInstalledRepo(key) ?: getSavedInstalledRepo(id) ?: return null
         return copy(repoUrl = savedRepo.url, repoName = savedRepo.name.takeIf { it.isNotBlank() })
+    }
+
+    private fun NovelPlugin.Installed.withNsfwFromAvailable(
+        variants: List<NovelPlugin.Available>,
+    ): NovelPlugin.Installed {
+        if (isKotlinExtension) return this
+        val nsfw = variants.firstOrNull { it.versionCode == versionCode }?.isNsfw
+            ?: variants.firstOrNull()?.isNsfw
+            ?: isNsfw
+        return if (nsfw == isNsfw) this else copy(isNsfw = nsfw)
     }
 
     private fun NovelPlugin.Installed.withInferredRepo(

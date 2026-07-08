@@ -1,27 +1,27 @@
-package eu.kanade.domain.source.manga.interactor
+package eu.kanade.domain.source.novel.interactor
 
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.source.interactor.IncognitoStateLogic
 import eu.kanade.domain.source.service.SourcePreferences
-import eu.kanade.tachiyomi.extension.manga.MangaExtensionManager
+import eu.kanade.tachiyomi.extension.novel.NovelExtensionManager
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 
-class GetMangaIncognitoState(
+class GetNovelIncognitoState(
     private val basePreferences: BasePreferences,
     private val sourcePreferences: SourcePreferences,
-    private val extensionManager: MangaExtensionManager,
+    private val extensionManager: NovelExtensionManager,
 ) {
     fun await(sourceId: Long?): Boolean {
         if (basePreferences.incognitoMode().get()) return true
         if (sourceId == null) return false
-        val extensionPackage = extensionManager.getExtensionPackage(sourceId) ?: return false
+        val pluginId = extensionManager.getPluginId(sourceId) ?: return false
         return IncognitoStateLogic.resolve(
             globalIncognito = false,
             policy = sourcePreferences.incognitoPolicy().get(),
             isNsfw = extensionManager.isNsfwForSource(sourceId),
-            inExtensionSet = extensionPackage in sourcePreferences.incognitoMangaExtensions().get(),
+            inExtensionSet = pluginId in sourcePreferences.incognitoNovelExtensions().get(),
         )
     }
 
@@ -30,15 +30,15 @@ class GetMangaIncognitoState(
         return combine(
             basePreferences.incognitoMode().changes(),
             sourcePreferences.incognitoPolicy().changes(),
-            sourcePreferences.incognitoMangaExtensions().changes(),
-            extensionManager.getExtensionPackageAsFlow(sourceId),
+            sourcePreferences.incognitoNovelExtensions().changes(),
+            extensionManager.getPluginIdAsFlow(sourceId),
             extensionManager.isNsfwForSourceAsFlow(sourceId),
-        ) { globalIncognito, policy, incognitoExtensions, extensionPackage, isNsfw ->
+        ) { globalIncognito, policy, incognitoExtensions, pluginId, isNsfw ->
             IncognitoStateLogic.resolve(
                 globalIncognito = globalIncognito,
                 policy = policy,
                 isNsfw = isNsfw,
-                inExtensionSet = extensionPackage != null && extensionPackage in incognitoExtensions,
+                inExtensionSet = pluginId != null && pluginId in incognitoExtensions,
             )
         }
             .distinctUntilChanged()

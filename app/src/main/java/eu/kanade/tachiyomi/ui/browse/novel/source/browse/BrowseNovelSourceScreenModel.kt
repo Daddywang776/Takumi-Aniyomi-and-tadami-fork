@@ -13,6 +13,7 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.core.preference.asState
 import eu.kanade.domain.entries.novel.interactor.UpdateNovel
 import eu.kanade.domain.entries.novel.model.toDomainNovel
+import eu.kanade.domain.source.novel.interactor.GetNovelIncognitoState
 import eu.kanade.presentation.util.ioCoroutineScope
 import eu.kanade.tachiyomi.extension.novel.runtime.hasVisiblePluginSettings
 import eu.kanade.tachiyomi.novelsource.ConfigurableNovelSource
@@ -131,6 +132,7 @@ class BrowseNovelSourceScreenModel(
     sourceManager: NovelSourceManager = Injekt.get(),
     getRemoteNovel: GetRemoteNovel = Injekt.get(),
     sourcePreferences: eu.kanade.domain.source.service.SourcePreferences = Injekt.get(),
+    private val getIncognitoState: GetNovelIncognitoState = Injekt.get(),
     private val getNovelByUrlAndSourceId: GetNovelByUrlAndSourceId = Injekt.get(),
     private val getNovelInteractor: GetNovel? = null,
     private val networkToLocalNovel: NetworkToLocalNovel = Injekt.get(),
@@ -163,7 +165,9 @@ class BrowseNovelSourceScreenModel(
             }
         }
 
-        sourcePreferences.lastUsedNovelSource().set(source.id)
+        if (!getIncognitoState.await(source.id)) {
+            sourcePreferences.lastUsedNovelSource().set(source.id)
+        }
 
         loadSavedSearches()
 

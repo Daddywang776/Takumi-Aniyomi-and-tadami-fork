@@ -12,6 +12,7 @@ import eu.kanade.domain.entries.manga.interactor.SetMangaViewerFlags
 import eu.kanade.domain.entries.manga.model.readerOrientation
 import eu.kanade.domain.entries.manga.model.readingMode
 import eu.kanade.domain.items.chapter.model.toDbChapter
+import eu.kanade.domain.source.interactor.ForegroundIncognitoState
 import eu.kanade.domain.source.manga.interactor.GetMangaIncognitoState
 import eu.kanade.domain.track.manga.interactor.TrackChapter
 import eu.kanade.domain.track.service.TrackPreferences
@@ -60,11 +61,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import logcat.LogPriority
 import tachiyomi.core.common.preference.toggle
@@ -136,6 +139,7 @@ class ReaderViewModel @JvmOverloads constructor(
     private val autoWebtoonPageIndexes = mutableSetOf<Int>()
     private val autoWebtoonPageDimensions = mutableListOf<MangaReaderPageDimensions>()
     private var autoWebtoonPromptedMangaId: Long? = null
+    private var foregroundIncognitoJob: Job? = null
 
     /**
      * The manga loaded in the reader. It can be null when instantiated for a short time.
@@ -268,6 +272,10 @@ class ReaderViewModel @JvmOverloads constructor(
     }
 
     private val incognitoMode: Boolean by lazy { getIncognitoState.await(manga?.source) }
+
+    private fun shouldPauseHistory(): Boolean {
+        return getIncognitoState.shouldPauseHistory(manga?.source, manga?.favorite == true)
+    }
     private val downloadAheadAmount = downloadPreferences.autoDownloadWhileReading().get()
     private var pendingWebtoonProgress: PendingWebtoonProgress? = null
     private var webtoonProgressSaveJob: Job? = null
@@ -297,6 +305,8 @@ class ReaderViewModel @JvmOverloads constructor(
     }
 
     override fun onCleared() {
+        foregroundIncognitoJob?.cancel()
+        ForegroundIncognitoState.set(false)
         webtoonProgressSaveJob?.cancel()
         flushPendingWebtoonScrollProgress()
 
@@ -409,6 +419,15 @@ class ReaderViewModel @JvmOverloads constructor(
         }
     }
 
+    private fun observeForegroundIncognito(sourceId: Long?) {
+        foregroundIncognitoJob?.cancel()
+        foregroundIncognitoJob = viewModelScope.launch {
+            getIncognitoState.subscribe(sourceId).collect { active ->
+                ForegroundIncognitoState.set(active)
+            }
+        }
+    }
+
     /**
      * Whether this presenter is initialized yet.
      */
@@ -433,6 +452,7 @@ class ReaderViewModel @JvmOverloads constructor(
                     this@ReaderViewModel.seriesId = seriesId
                     sourceManager.isInitialized.first { it }
                     mutableState.update { it.copy(manga = manga) }
+                    observeForegroundIncognito(manga.source)
                     if (chapterId == -1L) chapterId = initialChapterId
 
                     val context = Injekt.get<Application>()
@@ -719,7 +739,7 @@ class ReaderViewModel @JvmOverloads constructor(
         readerChapter.requestedPageOffsetRatioPpm = null
         chapterPageIndex = pageIndex
 
-        if (!incognitoMode && page.status != Page.State.ERROR) {
+        if (!shouldPauseHistory() && page.status != Page.State.ERROR) {
             readerChapter.chapter.last_page_read = if (shouldHandleLongPageProgress() || totalPages <= 0) {
                 pageIndex.toLong()
             } else {
@@ -855,7 +875,7 @@ class ReaderViewModel @JvmOverloads constructor(
      * Saves the chapter last read history if incognito mode isn't on.
      */
     private suspend fun updateHistory(readerChapter: ReaderChapter) {
-        if (incognitoMode) return
+        if (shouldPauseHistory()) return
 
         val chapterId = readerChapter.chapter.id!!
         val readAt = Date()
@@ -1243,7 +1263,7 @@ class ReaderViewModel @JvmOverloads constructor(
     }
 
     private fun shouldTrackWebtoonChapterProgress(): Boolean {
-        if (incognitoMode) return false
+        if (shouldPauseHistory()) return false
         return when (ReadingMode.fromPreference(getMangaReadingMode())) {
             ReadingMode.WEBTOON,
             ReadingMode.CONTINUOUS_VERTICAL,
@@ -1371,7 +1391,7 @@ class ReaderViewModel @JvmOverloads constructor(
      * will run in a background thread and errors are ignored.
      */
     private fun updateTrackChapterRead(readerChapter: ReaderChapter) {
-        if (incognitoMode) return
+        if (shouldPauseHistory()) return
         if (!trackPreferences.autoUpdateTrack().get()) return
 
         val manga = manga ?: return

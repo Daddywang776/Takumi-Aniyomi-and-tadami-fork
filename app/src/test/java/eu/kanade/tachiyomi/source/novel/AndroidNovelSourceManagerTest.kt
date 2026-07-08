@@ -178,6 +178,14 @@ class AndroidNovelSourceManagerTest {
         override fun getPluginIconUrlForSource(sourceId: Long): String? = null
 
         override fun getCapabilitiesForSource(sourceId: Long): NovelPluginCapabilities? = null
+
+        override fun getPluginId(sourceId: Long): String? = null
+
+        override fun getPluginIdAsFlow(sourceId: Long): Flow<String?> = MutableStateFlow(null)
+
+        override fun isNsfwForSource(sourceId: Long): Boolean = false
+
+        override fun isNsfwForSourceAsFlow(sourceId: Long): Flow<Boolean> = MutableStateFlow(false)
     }
 
     private class FakeNovelStubSourceRepository : NovelStubSourceRepository {

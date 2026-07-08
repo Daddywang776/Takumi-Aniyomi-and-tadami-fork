@@ -14,6 +14,7 @@ sealed class NovelPlugin {
     abstract val hasSettings: Boolean
     abstract val sha256: String
     abstract val repoUrl: String
+    abstract val isNsfw: Boolean
 
     data class Available(
         override val id: String,
@@ -33,6 +34,7 @@ sealed class NovelPlugin {
         val pkgName: String? = null,
         val apkUrl: String? = null,
         val isKotlinExtension: Boolean = false,
+        override val isNsfw: Boolean = false,
     ) : NovelPlugin()
 
     data class Installed(
@@ -53,6 +55,7 @@ sealed class NovelPlugin {
         val pkgName: String? = null,
         val apkUrl: String? = null,
         val isKotlinExtension: Boolean = false,
+        override val isNsfw: Boolean = false,
     ) : NovelPlugin()
 
     data class Untrusted(
@@ -72,5 +75,6 @@ sealed class NovelPlugin {
         val pkgName: String,
         val signatureHash: String,
         val isKotlinExtension: Boolean = true,
+        override val isNsfw: Boolean = false,
     ) : NovelPlugin()
 }

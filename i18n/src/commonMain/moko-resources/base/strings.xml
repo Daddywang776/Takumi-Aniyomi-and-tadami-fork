@@ -830,7 +830,14 @@
     <string name="label_downloaded_only">Downloaded only</string>
     <string name="pref_incognito_mode">Incognito mode</string>
     <string name="pref_incognito_mode_summary">Pauses reading history</string>
-    <string name="pref_incognito_mode_extension_summary">Pause reading history for extension</string>
+    <string name="pref_incognito_mode_extension_summary">Pause reading history for this extension (persists across restarts)</string>
+    <string name="pref_incognito_policy_section">Extension incognito</string>
+    <string name="pref_incognito_policy">Automatic incognito</string>
+    <string name="pref_incognito_policy_summary">Not the More screen toggle. Chooses when extensions enter incognito automatically while global incognito is off. Per-extension switches in extension settings still apply. Global incognito on More always overrides this.</string>
+    <string name="pref_incognito_policy_manual_only">Manual only</string>
+    <string name="pref_incognito_policy_manual_only_summary">Extensions use incognito only if enabled in their settings. History is paused while browsing; library titles are still tracked.</string>
+    <string name="pref_incognito_policy_nsfw_auto">NSFW sources</string>
+    <string name="pref_incognito_policy_nsfw_auto_summary">NSFW extensions use incognito automatically. History is paused while browsing; library titles are still tracked.</string>
     <string name="notification_incognito_text">Disable incognito mode</string>
     <string name="downloaded_only_summary">Filters all entries in your library</string>
 

@@ -58,6 +58,7 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.extension.anime.interactor.TrustAnimeExtension
 import eu.kanade.domain.extension.manga.interactor.TrustMangaExtension
+import eu.kanade.domain.source.model.IncognitoPolicy
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.domain.source.service.SourcePreferences.DataSaver
 import eu.kanade.domain.ui.UiPreferences
@@ -141,6 +142,7 @@ object SettingsAdvancedScreen : SearchableSettings {
         val navigator = LocalNavigator.currentOrThrow
 
         val basePreferences = remember { Injekt.get<BasePreferences>() }
+        val sourcePreferences = remember { Injekt.get<SourcePreferences>() }
         val networkPreferences = remember { Injekt.get<NetworkPreferences>() }
         val uiPreferences = remember { Injekt.get<UiPreferences>() }
 
@@ -183,6 +185,33 @@ object SettingsAdvancedScreen : SearchableSettings {
                 },
             ),
             getBackgroundActivityGroup(),
+            Preference.PreferenceGroup(
+                title = stringResource(MR.strings.pref_incognito_policy_section),
+                preferenceItems = persistentListOf(
+                    Preference.PreferenceItem.TextPreference(
+                        title = "",
+                        subtitle = stringResource(MR.strings.pref_incognito_policy_summary),
+                    ),
+                    Preference.PreferenceItem.ListPreference(
+                        preference = sourcePreferences.incognitoPolicy(),
+                        entries = persistentMapOf(
+                            IncognitoPolicy.MANUAL_ONLY to stringResource(MR.strings.pref_incognito_policy_manual_only),
+                            IncognitoPolicy.NSFW_AUTO to stringResource(MR.strings.pref_incognito_policy_nsfw_auto),
+                        ),
+                        title = stringResource(MR.strings.pref_incognito_policy),
+                        subtitleProvider = { value, _ ->
+                            when (value) {
+                                IncognitoPolicy.MANUAL_ONLY -> stringResource(
+                                    MR.strings.pref_incognito_policy_manual_only_summary,
+                                )
+                                IncognitoPolicy.NSFW_AUTO -> stringResource(
+                                    MR.strings.pref_incognito_policy_nsfw_auto_summary,
+                                )
+                            }
+                        },
+                    ),
+                ),
+            ),
             Preference.PreferenceGroup(
                 title = stringResource(MR.strings.label_haptic_feedback),
                 preferenceItems = persistentListOf(

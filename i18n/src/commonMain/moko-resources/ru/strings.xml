@@ -500,6 +500,13 @@
     <string name="manga_from_library">Из библиотеки</string>
     <string name="pref_incognito_mode_summary">Приостанавливает историю чтения</string>
     <string name="pref_incognito_mode">Режим инкогнито</string>
+    <string name="pref_incognito_policy_section">Инкогнито расширений</string>
+    <string name="pref_incognito_policy">Автоинкогнито</string>
+    <string name="pref_incognito_policy_summary">Это не переключатель на экране «Ещё». Задаёт, когда расширения автоматически входят в инкогнито, пока глобальный режим выключен. Переключатели в настройках расширений тоже учитываются. Глобальный инкогнито на «Ещё» всегда важнее этой настройки.</string>
+    <string name="pref_incognito_policy_manual_only">Только вручную</string>
+    <string name="pref_incognito_policy_manual_only_summary">Инкогнито только у расширений, которые вы включили в их настройках. История не пишется при просмотре; тайтлы в библиотеке отслеживаются.</string>
+    <string name="pref_incognito_policy_nsfw_auto">NSFW-источники</string>
+    <string name="pref_incognito_policy_nsfw_auto_summary">NSFW-расширения автоматически в инкогнито. История не пишется при просмотре; тайтлы в библиотеке отслеживаются.</string>
     <string name="pref_clear_history">Очистить историю</string>
     <string name="clear_history_confirmation">Вы уверены? Вся история будет удалена.</string>
     <string name="clear_history_completed">История удалена</string>
@@ -961,7 +968,7 @@
     <string name="pref_hardware_bitmap_threshold">Пользовательская аппаратная пороговая обработка растрового изображения</string>
     <string name="pref_hardware_bitmap_threshold_default">По умолчанию (%d)</string>
     <string name="pref_always_decode_long_strip_with_ssiv_summary">Влияет на производительность. Включите этот параметр, если пороговая обработка растрового изображения не помогает с ошибками, связанными с пустыми изображениями</string>
-    <string name="pref_incognito_mode_extension_summary">Приостановить историю чтения для расширений</string>
+    <string name="pref_incognito_mode_extension_summary">Приостанавливать историю чтения для этого расширения (сохраняется после перезапуска)</string>
     <string name="label_auto">Авто</string>
     <string name="theme_monochrome">Монохром</string>
     <string name="tracked_privately">Отслеживается приватно</string>

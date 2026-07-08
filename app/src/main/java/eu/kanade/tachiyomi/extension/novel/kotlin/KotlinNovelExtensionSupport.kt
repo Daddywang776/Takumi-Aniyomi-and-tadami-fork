@@ -353,6 +353,7 @@ object KotlinNovelExtensionLoader {
                     pkgName = pkgName,
                     signatureHash = signatures.last(),
                     isKotlinExtension = true,
+                    isNsfw = isNsfw,
                 ),
                 sources = emptyList(),
             )
@@ -417,6 +418,7 @@ object KotlinNovelExtensionLoader {
             pkgName = pkgName,
             apkUrl = null,
             isKotlinExtension = true,
+            isNsfw = isNsfw,
         )
         return KotlinNovelExtensionLoadResult(plugin, sources)
     }

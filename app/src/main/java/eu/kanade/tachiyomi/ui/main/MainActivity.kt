@@ -64,7 +64,10 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import com.tadami.aurora.BuildConfig
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.source.anime.interactor.GetAnimeIncognitoState
+import eu.kanade.domain.source.interactor.ForegroundIncognitoState
+import eu.kanade.domain.source.interactor.NovelReaderIncognitoState
 import eu.kanade.domain.source.manga.interactor.GetMangaIncognitoState
+import eu.kanade.domain.source.novel.interactor.GetNovelIncognitoState
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.achievement.components.AchievementGroupNotification
 import eu.kanade.presentation.achievement.components.AchievementListDialog
@@ -101,6 +104,7 @@ import eu.kanade.tachiyomi.ui.browse.anime.source.browse.BrowseAnimeSourceScreen
 import eu.kanade.tachiyomi.ui.browse.anime.source.globalsearch.GlobalAnimeSearchScreen
 import eu.kanade.tachiyomi.ui.browse.manga.source.browse.BrowseMangaSourceScreen
 import eu.kanade.tachiyomi.ui.browse.manga.source.globalsearch.GlobalMangaSearchScreen
+import eu.kanade.tachiyomi.ui.browse.novel.source.browse.BrowseNovelSourceScreen
 import eu.kanade.tachiyomi.ui.browse.novel.source.globalsearch.GlobalNovelSearchScreen
 import eu.kanade.tachiyomi.ui.deeplink.DeepLinkScreenType
 import eu.kanade.tachiyomi.ui.deeplink.anime.DeepLinkAnimeScreen
@@ -162,6 +166,7 @@ class MainActivity : BaseActivity() {
 
     private val getAnimeIncognitoState: GetAnimeIncognitoState by injectLazy()
     private val getMangaIncognitoState: GetMangaIncognitoState by injectLazy()
+    private val getNovelIncognitoState: GetNovelIncognitoState by injectLazy()
     private val activityDataRepository: ActivityDataRepository by injectLazy()
 
     // To be checked by splash screen. If true then splash screen will be removed.
@@ -225,9 +230,13 @@ class MainActivity : BaseActivity() {
 
             var incognito by remember { mutableStateOf(false) }
             var incognitoAnime by remember { mutableStateOf(false) }
-            LaunchedEffect(Unit) {
-                incognito = withContext(Dispatchers.IO) { getMangaIncognitoState.await(null) }
-                incognitoAnime = withContext(Dispatchers.IO) { getAnimeIncognitoState.await(null) }
+            var incognitoNovel by remember { mutableStateOf(false) }
+            val globalIncognito by preferences.incognitoMode().collectAsStateWithLifecycle()
+            val novelReaderIncognito by NovelReaderIncognitoState.active.collectAsStateWithLifecycle()
+            val effectiveIncognito =
+                globalIncognito || incognito || incognitoAnime || incognitoNovel || novelReaderIncognito
+            LaunchedEffect(effectiveIncognito) {
+                ForegroundIncognitoState.set(effectiveIncognito)
             }
             val downloadOnly by preferences.downloadedOnly().collectAsStateWithLifecycle()
             val indexing by downloadCache.isInitializing.collectAsStateWithLifecycle()
@@ -237,7 +246,7 @@ class MainActivity : BaseActivity() {
             val statusBarBackgroundColor = when {
                 indexing || indexingAnime -> IndexingBannerBackgroundColor
                 downloadOnly -> DownloadedOnlyBannerBackgroundColor
-                incognito || incognitoAnime -> IncognitoModeBannerBackgroundColor
+                effectiveIncognito -> IncognitoModeBannerBackgroundColor
                 else -> MaterialTheme.colorScheme.surface
             }
 
@@ -310,6 +319,12 @@ class MainActivity : BaseActivity() {
                             .collectLatest { incognitoAnime = it }
                     }
 
+                    LaunchedEffect(navigator.lastItem) {
+                        (navigator.lastItem as? BrowseNovelSourceScreen)?.sourceId
+                            .let(getNovelIncognitoState::subscribe)
+                            .collectLatest { incognitoNovel = it }
+                    }
+
                     val readerBackdropColor = when (val currentScreen = navigator.lastItem) {
                         is NovelReaderScreen -> {
                             currentScreen.resolveInitialBackdropColor() ?: NovelReaderBackdropSession.backgroundColor
@@ -332,7 +347,7 @@ class MainActivity : BaseActivity() {
                         topBar = {
                             AppStateBanners(
                                 downloadedOnlyMode = downloadOnly,
-                                incognitoMode = incognito || incognitoAnime,
+                                incognitoMode = effectiveIncognito,
                                 indexing = indexing || indexingAnime,
                                 modifier = Modifier.windowInsetsPadding(scaffoldInsets),
                             )
