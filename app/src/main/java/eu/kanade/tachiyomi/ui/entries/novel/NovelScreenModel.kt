@@ -450,7 +450,11 @@ class NovelScreenModel(
             val translatedDownloadFormat = novelReaderPreferences.translatedDownloadFormat(novel.id)
             val isJaomixPagedSource = source.isJaomixPagedSource()
             val shouldAutoRefreshNovel = !novel.initialized || chapters.isEmpty()
-            val shouldAutoRefreshChapters = chapters.isEmpty() || isJaomixPagedSource
+            // PERF: avoid expensive source chapter list fetch + parse on most repeated opens.
+            // We still allow manual refresh (user button) and respect paged sources.
+            val shouldAutoRefreshChapters = chapters.isEmpty() ||
+                isJaomixPagedSource ||
+                isNovelChapterListStale(novel)
             val currentDownloadedIds = (state.value as? State.Success)
                 ?.downloadedChapterIds
                 ?.intersect(chapters.mapTo(mutableSetOf()) { it.id })
@@ -589,6 +593,9 @@ class NovelScreenModel(
                 chapterCount = chapters.size,
                 manualFetch = false,
             )
+
+            // PERF instrumentation (TADAMI_PERF_NOVEL_TITLE) - removable after validation
+            logcat(LogPriority.DEBUG) { "TADAMI_PERF_NOVEL_TITLE db-loaded id=$novelId chapters=${chapters.size}" }
             if (isLikelyWebViewLoginRequired(source, novel, chapters.size)) {
                 logcat(LogPriority.DEBUG) {
                     "Novel ${novel.id} (${source.name}) may need WebView login (pre-refresh): " +
@@ -614,11 +621,18 @@ class NovelScreenModel(
             syncDownloadedState(deferFilesystemFallback = true)
 
             if ((shouldAutoRefreshNovel || shouldAutoRefreshChapters) && screenModelScope.isActive) {
+                logcat(LogPriority.DEBUG) {
+                    "TADAMI_PERF_NOVEL_TITLE triggering-refresh id=$novelId staleChapters=${shouldAutoRefreshChapters && !chapters.isEmpty()}"
+                }
                 refreshChapters(
                     manualFetch = false,
                     refreshNovel = shouldAutoRefreshNovel,
                     refreshChapters = shouldAutoRefreshChapters,
                 )
+            } else {
+                logcat(LogPriority.DEBUG) {
+                    "TADAMI_PERF_NOVEL_TITLE skip-source-refresh id=$novelId (using cached chapters)"
+                }
             }
         }
     }
@@ -732,6 +746,12 @@ class NovelScreenModel(
     }
 
     private var suggestionsJob: Job? = null
+
+    // Lightweight in-memory cache for recent chapter list responses from source.
+    // Dramatically reduces re-parsing cost on repeated screen opens / process death recovery.
+    // Keyed by novelId + very short TTL. Manual refresh always bypasses.
+    private val recentChapterListCache =
+        mutableMapOf<Long, Pair<Long, List<eu.kanade.tachiyomi.novelsource.model.SNovelChapter>>>()
 
     private fun loadSuggestions(
         seed: SuggestionSeed,
@@ -1528,7 +1548,28 @@ class NovelScreenModel(
             return
         }
 
-        val sourceChapters = state.source.getChapterList(state.novel.toSNovel())
+        // PERF instrumentation
+        val fetchStart = System.currentTimeMillis()
+        logcat(LogPriority.DEBUG) { "TADAMI_PERF_NOVEL_TITLE chapter-fetch-start id=${state.novel.id}" }
+
+        // Use short-lived cache unless this is an explicit user refresh
+        val cacheKey = state.novel.id
+        val cached = if (!manualFetch) recentChapterListCache[cacheKey] else null
+        val sourceChapters = if (cached != null && (System.currentTimeMillis() - cached.first) < 90_000L) {
+            logcat(LogPriority.DEBUG) { "TADAMI_PERF_NOVEL_TITLE using-chapter-cache id=$cacheKey" }
+            cached.second
+        } else {
+            val fresh = state.source.getChapterList(state.novel.toSNovel())
+            if (!manualFetch) {
+                recentChapterListCache[cacheKey] = System.currentTimeMillis() to fresh
+            }
+            fresh
+        }
+        val fetchMs = System.currentTimeMillis() - fetchStart
+        logcat(LogPriority.DEBUG) {
+            "TADAMI_PERF_NOVEL_TITLE chapter-fetch-done id=${state.novel.id} count=${sourceChapters.size} took=${fetchMs}ms manual=$manualFetch"
+        }
+
         logcat {
             "Fetched chapters for id=${state.novel.id} source=${state.source.name}, " +
                 "count=${sourceChapters.size}, manualFetch=$manualFetch"
@@ -1539,12 +1580,17 @@ class NovelScreenModel(
                     "WebView login after fetch: chapters=0, descriptionBlank=true"
             }
         }
+        val syncStart = System.currentTimeMillis()
         val newChapters = syncNovelChaptersWithSource.await(
             rawSourceChapters = sourceChapters,
             novel = state.novel,
             source = state.source,
             manualFetch = manualFetch,
         )
+        val syncMs = System.currentTimeMillis() - syncStart
+        logcat(LogPriority.DEBUG) {
+            "TADAMI_PERF_NOVEL_TITLE sync-done id=${state.novel.id} new=${newChapters.size} took=${syncMs}ms"
+        }
         logcat(LogPriority.DEBUG) {
             "Synced chapters for id=${state.novel.id} source=${state.source.name}, " +
                 "newCount=${newChapters.size}, manualFetch=$manualFetch"
@@ -1629,6 +1675,18 @@ class NovelScreenModel(
 
     private fun NovelSource.isJaomixPagedSource(): Boolean {
         return (this as? NovelJsSource)?.isJaomixPagedPlugin() == true
+    }
+
+    /**
+     * PERF: Conservative staleness check to avoid repeated expensive getChapterList + full sync/parse.
+     * Manual refresh (button) always bypasses this via explicit call.
+     */
+    private fun isNovelChapterListStale(novel: Novel): Boolean {
+        val last = novel.lastUpdate
+        if (last <= 0L) return false
+        val ageMs = System.currentTimeMillis() - last
+        // 20 minutes grace period is a good balance for novels (many sources are slow to parse 100s-1000s chapters).
+        return ageMs > 20 * 60 * 1000L
     }
 
     fun toggleChapterRead(chapterId: Long) {

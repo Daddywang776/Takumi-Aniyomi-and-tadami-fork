@@ -323,9 +323,10 @@ internal object MangaExtensionLoader {
         }
 
         // Validate lib version
-        val libVersion = appInfo.metaData?.getDouble(METADATA_EXTENSION_LIB)?.takeUnless { it == 0.0 }
+        val rawLibVersion = appInfo.metaData?.getDouble(METADATA_EXTENSION_LIB)?.takeUnless { it == 0.0 }
             ?: appInfo.metaData?.getFloat(METADATA_EXTENSION_LIB)?.toDouble()?.takeUnless { it == 0.0 }
             ?: versionName.substringBeforeLast('.').toDoubleOrNull()
+        val libVersion = if (rawLibVersion != null) kotlin.math.round(rawLibVersion * 100.0) / 100.0 else null
         if (libVersion == null || libVersion !in SUPPORTED_LIB_VERSIONS) {
             logcat(LogPriority.WARN) {
                 "Lib version is $libVersion, while only versions " +

@@ -83,23 +83,28 @@ fun FullscreenPosterBackground(
     val colors = AuroraTheme.colors
     val hasScrolledAway = firstVisibleItemIndex > 0 || scrollOffset > 100
 
+    // PERF: on initial load (no scroll) we can use direct values to avoid animation cost
+    // until user actually interacts. Springs are nice but add work on every open.
+    val rawDim = if (hasScrolledAway) 0.7f else (scrollOffset / 100f).coerceIn(0f, 0.7f)
+    val rawBlur = if (hasScrolledAway) {
+        1f
+    } else {
+        (scrollOffset / 100f).coerceIn(minimumBlurOverlayAlpha, 1f)
+    }
+
     val dimAlpha by animateFloatAsState(
-        targetValue = if (hasScrolledAway) 0.7f else (scrollOffset / 100f).coerceIn(0f, 0.7f),
+        targetValue = rawDim,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioNoBouncy,
-            stiffness = Spring.StiffnessLow,
+            stiffness = if (hasScrolledAway) Spring.StiffnessLow else Spring.StiffnessMedium,
         ),
         label = "dimAlpha",
     )
     val blurOverlayAlpha by animateFloatAsState(
-        targetValue = if (hasScrolledAway) {
-            1f
-        } else {
-            (scrollOffset / 100f).coerceIn(minimumBlurOverlayAlpha, 1f)
-        },
+        targetValue = rawBlur,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioNoBouncy,
-            stiffness = Spring.StiffnessLow,
+            stiffness = if (hasScrolledAway) Spring.StiffnessLow else Spring.StiffnessMedium,
         ),
         label = "blurOverlayAlpha",
     )
@@ -216,7 +221,11 @@ fun FullscreenPosterBackground(
                 modifier = Modifier.fillMaxSize(),
             )
 
-            if (shouldDrawAuroraPosterBlurOverlay(blurOverlayAlpha)) {
+            // PERF: only pay the expensive blur layer cost when user has scrolled or blur is significant.
+            // Avoids double full-res decode + heavy blur modifier on initial screen launch.
+            val shouldApplyBlurLayer = blurOverlayAlpha > 0.08f &&
+                shouldDrawAuroraPosterBlurOverlay(blurOverlayAlpha)
+            if (shouldApplyBlurLayer) {
                 Image(
                     painter = backgroundPainter,
                     contentDescription = null,

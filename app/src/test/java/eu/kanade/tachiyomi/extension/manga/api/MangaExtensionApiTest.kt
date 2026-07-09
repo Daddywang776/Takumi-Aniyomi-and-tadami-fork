@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.extension.manga.api
 
 import android.content.Context
 import eu.kanade.tachiyomi.extension.manga.MangaExtensionManager
+import eu.kanade.tachiyomi.extension.manga.util.MangaExtensionLoader
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
 import io.mockk.coJustRun
@@ -121,6 +122,14 @@ class MangaExtensionApiTest {
                 "Beta Store",
             )
         }
+    }
+
+    @Test
+    fun `precision issues with float values are correctly rounded and matched`() {
+        val rawLibVersion = 1.4000000357627869
+        val roundedLibVersion = kotlin.math.round(rawLibVersion * 100.0) / 100.0
+        roundedLibVersion shouldBe 1.4
+        (roundedLibVersion in MangaExtensionLoader.SUPPORTED_LIB_VERSIONS) shouldBe true
     }
 
     @Test

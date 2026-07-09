@@ -209,8 +209,10 @@ fun NovelScreenAuroraImpl(
     val chapters = state.processedChapters
     val readChapterCount = remember(state.chapters) { state.chapters.count { it.read } }
     val groupedByChapter = false
-    val groupedByVolume = remember(chapters) { shouldGroupNovelChaptersByVolume(chapters) }
-    val chapterGroups = remember(chapters, groupedByChapter) {
+    // PERF: use cheaper keys for remember. Full list reference changes often; size + scanlator is usually sufficient
+    // for grouping decision until actual chapter content (names/numbers) changes.
+    val groupedByVolume = remember(chapters.size, selectedScanlator) { shouldGroupNovelChaptersByVolume(chapters) }
+    val chapterGroups = remember(chapters.size, groupedByChapter, selectedScanlator) {
         if (groupedByChapter) {
             resolveNovelChapterDisplayData(
                 chapters = chapters,
@@ -221,7 +223,7 @@ fun NovelScreenAuroraImpl(
             emptyList()
         }
     }
-    val volumeGroups = remember(chapters, groupedByVolume) {
+    val volumeGroups = remember(chapters.size, groupedByVolume, selectedScanlator) {
         if (groupedByVolume) {
             resolveNovelVolumeChapterDisplayData(
                 chapters = chapters,
@@ -239,7 +241,7 @@ fun NovelScreenAuroraImpl(
         }
     }
     val initialExpandedGroupKeys =
-        remember(chapters, selectedScanlator, state.targetChapterIndex, volumeGroups, groupedByVolume) {
+        remember(chapters.size, selectedScanlator, state.targetChapterIndex, groupedByVolume) {
             when {
                 groupedByVolume -> {
                     val targetChapterId = chapters.getOrNull(state.targetChapterIndex)?.id
@@ -351,17 +353,18 @@ fun NovelScreenAuroraImpl(
             .distinctUntilChanged()
             .collect { isReverseScrollingOverlay = it }
     }
-    val visibleRows = remember(displayRows, chaptersExpanded, listChapterCount, groupedByChapter, groupedByVolume) {
-        if (chaptersExpanded) {
-            displayRows
-        } else {
-            resolveNovelVisibleChapterRows(
-                rows = displayRows,
-                visibleTopLevelCount = minOf(NOVEL_AURORA_COLLAPSED_PREVIEW_COUNT, listChapterCount),
-                groupedByChapter = groupedByChapter || groupedByVolume,
-            )
+    val visibleRows =
+        remember(displayRows.size, chaptersExpanded, listChapterCount, groupedByChapter, groupedByVolume) {
+            if (chaptersExpanded) {
+                displayRows
+            } else {
+                resolveNovelVisibleChapterRows(
+                    rows = displayRows,
+                    visibleTopLevelCount = minOf(NOVEL_AURORA_COLLAPSED_PREVIEW_COUNT, listChapterCount),
+                    groupedByChapter = groupedByChapter || groupedByVolume,
+                )
+            }
         }
-    }
 
     LaunchedEffect(state.targetChapterIndex, isAutoJumpToNextEnabled) {
         val targetIndex = resolveNovelAuroraTargetScrollIndex(
