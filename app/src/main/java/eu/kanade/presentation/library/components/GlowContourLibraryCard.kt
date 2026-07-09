@@ -72,10 +72,8 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.PathParser
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import dev.icerock.moko.resources.StringResource
-import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.components.buildAuroraCoverImageRequest
 import eu.kanade.presentation.components.rememberAuroraCoverPlaceholderPainter
 import eu.kanade.presentation.components.resolveActiveAuraPalette
@@ -88,9 +86,6 @@ import tachiyomi.i18n.MR
 import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.LocalAppHaptics
-import tachiyomi.presentation.core.util.collectAsStateWithLifecycle
-import uy.kohesive.injekt.Injekt
-import uy.kohesive.injekt.api.get
 import android.graphics.Matrix as AndroidMatrix
 
 private const val GLOW_CONTOUR_SVG_WIDTH = 256f
@@ -523,6 +518,7 @@ internal fun GlowContourLibraryGridItem(
     gridColumns: Int? = null,
     customCover: @Composable (() -> Unit)? = null,
     genres: List<String> = emptyList(),
+    enabledAuras: Set<String> = emptySet(),
     performanceMode: Boolean = false,
 ) {
     val colors = AuroraTheme.colors
@@ -555,6 +551,7 @@ internal fun GlowContourLibraryGridItem(
             gridColumns = gridColumns,
             customCover = customCover,
             genres = genres,
+            enabledAuras = enabledAuras,
             performanceMode = performanceMode,
         )
 
@@ -690,6 +687,7 @@ private fun GlowContourLibraryCard(
     modifier: Modifier = Modifier,
     customCover: @Composable (() -> Unit)? = null,
     genres: List<String> = emptyList(),
+    enabledAuras: Set<String> = emptySet(),
     performanceMode: Boolean = false,
 ) {
     val colors = AuroraTheme.colors
@@ -705,8 +703,7 @@ private fun GlowContourLibraryCard(
     val progressState = resolveGlowContourProgressRenderState(progressPercent)
     val coverTitleFontFamily = LocalCoverTitleFontFamily.current
 
-    val uiPreferences = remember { Injekt.get<UiPreferences>() }
-    val enabledAuras by uiPreferences.enabledAuras().collectAsStateWithLifecycle()
+    // enabledAuras is hoisted to the Aurora content level (one collection per screen instead of per card)
     val auraColors = remember(enabledAuras) {
         resolveActiveAuraPalette(enabledAuras)?.gradientColors
     }

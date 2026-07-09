@@ -56,6 +56,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.components.AuroraCard
 import eu.kanade.presentation.components.AuroraTabRow
 import eu.kanade.presentation.components.LocalTabState
@@ -102,6 +103,7 @@ import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.util.LocalAppHaptics
 import tachiyomi.presentation.core.util.collectAsStateWithLifecycle
 import tachiyomi.presentation.core.util.plus
+import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.items as listItems
@@ -153,6 +155,8 @@ fun NovelLibraryAuroraContent(
     }
     val columns by columnPreference.collectAsStateWithLifecycle()
     val auroraCardStyle by libraryPreferences.auroraLibraryCardStyle().collectAsStateWithLifecycle()
+    val uiPreferences = remember { Injekt.get<UiPreferences>() }
+    val enabledAuras by uiPreferences.enabledAuras().collectAsStateWithLifecycle()
     val useGlowContourCards = auroraCardStyle == AuroraLibraryCardStyle.GlowContour
     val auroraAdaptiveSpec = rememberAuroraAdaptiveSpec()
     val displaySpec = remember(displayMode, columns, auroraAdaptiveSpec) {
@@ -318,6 +322,7 @@ fun NovelLibraryAuroraContent(
                         glowDisplayMode = LibraryDisplayMode.List,
                         gridColumns = null,
                         onTogglePinned = onTogglePinned,
+                        enabledAuras = enabledAuras,
                         performanceMode = useLargeGridPerformanceMode,
                     )
                 }
@@ -426,6 +431,8 @@ fun NovelLibraryAuroraContent(
                             glowDisplayMode = displayMode,
                             gridColumns = columns.coerceAtLeast(0),
                             onTogglePinned = onTogglePinned,
+                            enabledAuras = enabledAuras,
+                            performanceMode = useLargeGridPerformanceMode,
                         )
                     }
                 }
@@ -518,6 +525,7 @@ private fun NovelLibraryAuroraCard(
     glowDisplayMode: LibraryDisplayMode,
     gridColumns: Int?,
     onTogglePinned: ((NovelLibraryItem) -> Unit)? = null,
+    enabledAuras: Set<String> = emptySet(),
     performanceMode: Boolean = false,
 ) {
     val useGlowContourCards = cardStyle == AuroraLibraryCardStyle.GlowContour
@@ -567,6 +575,7 @@ private fun NovelLibraryAuroraCard(
             cornerIndicatorState = cornerIndicatorState,
             textSpec = textSpec,
             genres = item.coverNovel?.genre ?: emptyList(),
+            enabledAuras = enabledAuras,
             performanceMode = performanceMode,
             badge = if (badgeState.hasBadge()) {
                 {

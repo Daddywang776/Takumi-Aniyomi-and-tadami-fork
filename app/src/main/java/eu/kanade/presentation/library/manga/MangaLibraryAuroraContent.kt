@@ -15,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.components.AuroraCard
 import eu.kanade.presentation.library.AURORA_LARGE_GRID_PERFORMANCE_THRESHOLD
 import eu.kanade.presentation.library.components.GlobalSearchItem
@@ -49,6 +50,7 @@ import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.util.collectAsState
 import tachiyomi.presentation.core.util.plus
+import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.items as listItems
@@ -74,6 +76,8 @@ fun MangaLibraryAuroraContent(
 ) {
     val auroraAdaptiveSpec = rememberAuroraAdaptiveSpec()
     val auroraCardStyle by libraryPreferences.auroraLibraryCardStyle().collectAsState()
+    val uiPreferences = remember { Injekt.get<UiPreferences>() }
+    val enabledAuras by uiPreferences.enabledAuras().collectAsState()
     val useGlowContourCards = auroraCardStyle == AuroraLibraryCardStyle.GlowContour
 
     if (items.isEmpty()) {
@@ -139,6 +143,7 @@ fun MangaLibraryAuroraContent(
                     adaptiveMinCellDp = auroraAdaptiveSpec.compactGridAdaptiveMinCellDp,
                     cardStyle = auroraCardStyle,
                     glowDisplayMode = LibraryDisplayMode.CompactGrid,
+                    enabledAuras = enabledAuras,
                 )
             } else {
                 MangaLibraryCompactGrid(
@@ -177,6 +182,7 @@ fun MangaLibraryAuroraContent(
                 adaptiveMinCellDp = auroraAdaptiveSpec.coverOnlyGridAdaptiveMinCellDp,
                 cardStyle = auroraCardStyle,
                 glowDisplayMode = LibraryDisplayMode.CoverOnlyGrid,
+                enabledAuras = enabledAuras,
             )
         }
 
@@ -199,6 +205,7 @@ fun MangaLibraryAuroraContent(
                 adaptiveMinCellDp = auroraAdaptiveSpec.comfortableGridAdaptiveMinCellDp,
                 cardStyle = auroraCardStyle,
                 glowDisplayMode = LibraryDisplayMode.ComfortableGrid,
+                enabledAuras = enabledAuras,
             )
         }
     }
@@ -406,6 +413,7 @@ private fun MangaLibraryAuroraCardGrid(
     adaptiveMinCellDp: Int,
     cardStyle: AuroraLibraryCardStyle,
     glowDisplayMode: LibraryDisplayMode,
+    enabledAuras: Set<String> = emptySet(),
 ) {
     val useGlowContourCards = cardStyle == AuroraLibraryCardStyle.GlowContour
     val showPinnedSection = remember(items) { items.containsAtLeastMatches(requiredCount = 2) { it.pinned } }
@@ -505,6 +513,7 @@ private fun MangaLibraryAuroraCardGrid(
                     cornerIndicatorState = cornerIndicatorState,
                     seriesHeaderText = seriesHeaderText,
                     genres = manga.genre ?: emptyList(),
+                    enabledAuras = enabledAuras,
                     performanceMode = items.size > AURORA_LARGE_GRID_PERFORMANCE_THRESHOLD,
                     customCover = if (isSeries) {
                         {

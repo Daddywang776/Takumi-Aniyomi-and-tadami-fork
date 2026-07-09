@@ -15,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.components.AuroraCard
 import eu.kanade.presentation.library.AURORA_LARGE_GRID_PERFORMANCE_THRESHOLD
 import eu.kanade.presentation.library.components.GlobalSearchItem
@@ -48,6 +49,7 @@ import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.screens.EmptyScreen
 import tachiyomi.presentation.core.util.collectAsState
 import tachiyomi.presentation.core.util.plus
+import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.items as listItems
@@ -72,7 +74,10 @@ fun AnimeLibraryAuroraContent(
 ) {
     val auroraAdaptiveSpec = rememberAuroraAdaptiveSpec()
     val auroraCardStyle by libraryPreferences.auroraLibraryCardStyle().collectAsState()
+    val uiPreferences = remember { Injekt.get<UiPreferences>() }
+    val enabledAuras by uiPreferences.enabledAuras().collectAsState()
     val useGlowContourCards = auroraCardStyle == AuroraLibraryCardStyle.GlowContour
+    val useLargeGridPerformanceMode = items.size > AURORA_LARGE_GRID_PERFORMANCE_THRESHOLD
 
     if (items.isEmpty()) {
         AnimeLibraryAuroraEmptyScreen(
@@ -132,6 +137,7 @@ fun AnimeLibraryAuroraContent(
                     adaptiveMinCellDp = auroraAdaptiveSpec.compactGridAdaptiveMinCellDp,
                     cardStyle = auroraCardStyle,
                     glowDisplayMode = LibraryDisplayMode.CompactGrid,
+                    enabledAuras = enabledAuras,
                 )
             } else {
                 AnimeLibraryCompactGrid(
@@ -168,6 +174,7 @@ fun AnimeLibraryAuroraContent(
                 adaptiveMinCellDp = auroraAdaptiveSpec.coverOnlyGridAdaptiveMinCellDp,
                 cardStyle = auroraCardStyle,
                 glowDisplayMode = LibraryDisplayMode.CoverOnlyGrid,
+                enabledAuras = enabledAuras,
             )
         }
 
@@ -189,6 +196,7 @@ fun AnimeLibraryAuroraContent(
                 adaptiveMinCellDp = auroraAdaptiveSpec.comfortableGridAdaptiveMinCellDp,
                 cardStyle = auroraCardStyle,
                 glowDisplayMode = LibraryDisplayMode.ComfortableGrid,
+                enabledAuras = enabledAuras,
             )
         }
     }
@@ -356,6 +364,7 @@ private fun AnimeLibraryAuroraCardGrid(
     adaptiveMinCellDp: Int,
     cardStyle: AuroraLibraryCardStyle,
     glowDisplayMode: LibraryDisplayMode,
+    enabledAuras: Set<String> = emptySet(),
 ) {
     val useGlowContourCards = cardStyle == AuroraLibraryCardStyle.GlowContour
     val showPinnedSection = remember(items) { items.containsAtLeastMatches(requiredCount = 2) { it.pinned } }
@@ -436,6 +445,7 @@ private fun AnimeLibraryAuroraCardGrid(
                     cornerIndicatorState = cornerIndicatorState,
                     textSpec = textSpec,
                     genres = anime.genre ?: emptyList(),
+                    enabledAuras = enabledAuras,
                     performanceMode = items.size > AURORA_LARGE_GRID_PERFORMANCE_THRESHOLD,
                     badge = if (hasBadge) {
                         {
