@@ -168,7 +168,9 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         // SY -->
         Injekt.importModule(SYDomainModule())
         // SY <--
-        Injekt.importModule(AppModule(this))
+        if (isMainProcess) {
+            Injekt.importModule(AppModule(this))
+        }
         SingletonImageLoader.setUnsafe { context -> newImageLoader(context) }
 
         Handler(Looper.getMainLooper()).post {
@@ -325,9 +327,13 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
             LogcatLogger.install(AndroidLogcatLogger(LogPriority.VERBOSE))
         }
 
-        BackupCreateJob.clearStaleProgressNotification(this)
+        if (isMainProcess) {
+            BackupCreateJob.clearStaleProgressNotification(this)
+        }
 
-        initializeMigrator()
+        if (isMainProcess) {
+            initializeMigrator()
+        }
     }
 
     private fun initializeMigrator() {
@@ -437,9 +443,16 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         val libraryPreferences = Injekt.get<tachiyomi.domain.library.service.LibraryPreferences>()
         val autoUpdateInterval = libraryPreferences.autoUpdateInterval().get()
         if (autoUpdateInterval == -1) {
-            MangaLibraryUpdateJob.startNow(this)
-            AnimeLibraryUpdateJob.startNow(this)
-            NovelLibraryUpdateJob.startNow(this)
+            val mainProcess = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                packageName == getProcessName()
+            } else {
+                true
+            }
+            if (mainProcess) {
+                MangaLibraryUpdateJob.startNow(this)
+                AnimeLibraryUpdateJob.startNow(this)
+                NovelLibraryUpdateJob.startNow(this)
+            }
         }
     }
 

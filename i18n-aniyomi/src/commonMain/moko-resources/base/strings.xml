@@ -81,7 +81,6 @@
     <string name="novel_series_cta_continue_reading">Continue reading</string>
 
     <string name="pref_behavior">Chapter behavior</string>
-    <string name="action_add_repo_message">Add additional repos to %s. This should be a URL that ends with \"index.min.json\".</string>
     <string name="download_ahead_info">Only works if the current chapter/episode + the next one are already downloaded.</string>
     <string name="non_library_settings">All read/watched entries</string>
     <string name="action_sort_last_manga_update">Last manga update</string>
@@ -1387,9 +1386,9 @@
     <string name="download_slots_info">Will only download concurrently from self-hosted or unmetered sources</string>
     <string name="parallel_page_downloads_info">Higher values can speed up page loading, but some sources work better with smaller values.</string>
     <string name="unseen">Unseen</string>
-    <string name="label_manga_extension_repos">Manga extension repos</string>
-    <string name="label_anime_extension_repos">Anime extension repos</string>
-    <string name="label_novel_extension_repos">Novel extension repos</string>
+    <string name="label_manga_extension_repos">Manga extension stores</string>
+    <string name="label_anime_extension_repos">Anime extension stores</string>
+    <string name="label_novel_extension_repos">Novel extension stores</string>
     <string name="onboarding_storage_action_create_folder">Create default Aniyomi folder</string>
     <string name="download_speed_limit">Chapter download speed limit</string>
     <string name="download_speed_limit_hint">Set to 0 to disable the speed limit.</string>

@@ -1,4 +1,4 @@
-@file:JvmName("ExtensionReposScreenKt")
+@file:JvmName("ExtensionStoreScreenKt")
 
 package eu.kanade.presentation.more.settings.screen.browse.components
 
@@ -24,7 +24,7 @@ import tachiyomi.presentation.core.i18n.stringResource
 import tachiyomi.presentation.core.util.plus
 
 @Composable
-fun ExtensionReposScreen(
+fun ExtensionStoreScreen(
     state: RepoScreenState.Success,
     onClickCreate: () -> Unit,
     onAddRepo: (String) -> Unit,
@@ -38,7 +38,7 @@ fun ExtensionReposScreen(
     val lazyListState = rememberLazyListState()
     val uiStyle = rememberResolvedSettingsUiStyle()
     SettingsScaffold(
-        title = stringResource(MR.strings.label_extension_repos),
+        title = stringResource(MR.strings.label_extension_stores),
         uiStyle = uiStyle,
         onBackPressed = navigateUp,
         topBarCanScroll = { lazyListState.canScroll() },
@@ -57,7 +57,7 @@ fun ExtensionReposScreen(
             )
         },
     ) { paddingValues ->
-        ExtensionReposContent(
+        ExtensionStoreContent(
             repos = state.repos,
             lazyListState = lazyListState,
             paddingValues = paddingValues + topSmallPaddingValues +

@@ -79,8 +79,9 @@ import eu.kanade.presentation.components.IncognitoModeBannerBackgroundColor
 import eu.kanade.presentation.components.IndexingBannerBackgroundColor
 import eu.kanade.presentation.more.UpdatedChangelogScreen
 import eu.kanade.presentation.more.settings.screen.SettingsTreasuryScreen
-import eu.kanade.presentation.more.settings.screen.browse.AnimeExtensionReposScreen
-import eu.kanade.presentation.more.settings.screen.browse.MangaExtensionReposScreen
+import eu.kanade.presentation.more.settings.screen.browse.AnimeExtensionStoreScreen
+import eu.kanade.presentation.more.settings.screen.browse.MangaExtensionStoreScreen
+import eu.kanade.presentation.more.settings.screen.browse.NovelExtensionStoreScreen
 import eu.kanade.presentation.more.settings.screen.data.RestoreBackupScreen
 import eu.kanade.presentation.reader.novel.NovelReaderBackdropSession
 import eu.kanade.presentation.util.AssistContentScreen
@@ -813,17 +814,37 @@ class MainActivity : BaseActivity() {
                     navigator.popUntilRoot()
                     navigator.push(RestoreBackupScreen(intent.data.toString()))
                 }
-                // Deep link to add anime extension repo
+                // Deep link to add anime extension repo (legacy)
                 else if (intent.scheme == "aniyomi" && intent.data?.host == "add-repo") {
                     intent.data?.getQueryParameter("url")?.let { repoUrl ->
                         navigator.popUntilRoot()
-                        navigator.push(AnimeExtensionReposScreen(repoUrl))
+                        navigator.push(AnimeExtensionStoreScreen(repoUrl))
                     }
-                } // Deep link to add extension repo
+                } // Deep link to add extension store (anime)
+                else if (intent.scheme == "aniyomi" && intent.data?.host == "extension-store") {
+                    intent.data?.getQueryParameter("url")?.let { storeUrl ->
+                        navigator.popUntilRoot()
+                        navigator.push(AnimeExtensionStoreScreen(storeUrl))
+                    }
+                } // Deep link to add extension repo (legacy)
                 else if (intent.scheme in setOf("tachiyomi", "tadami") && intent.data?.host == "add-repo") {
                     intent.data?.getQueryParameter("url")?.let { repoUrl ->
                         navigator.popUntilRoot()
-                        navigator.push(MangaExtensionReposScreen(repoUrl))
+                        navigator.push(MangaExtensionStoreScreen(repoUrl))
+                    }
+                } // Deep link to add extension store (manga)
+                else if (intent.scheme in setOf("tachiyomi", "tadami") && intent.data?.host == "extension-store") {
+                    intent.data?.getQueryParameter("url")?.let { storeUrl ->
+                        navigator.popUntilRoot()
+                        navigator.push(MangaExtensionStoreScreen(storeUrl))
+                    }
+                } // Deep link to add novel extension store
+                else if (intent.scheme in setOf("tachiyomi", "tadami") &&
+                    intent.data?.host == "novel-extension-store"
+                ) {
+                    intent.data?.getQueryParameter("url")?.let { storeUrl ->
+                        navigator.popUntilRoot()
+                        navigator.push(NovelExtensionStoreScreen(storeUrl))
                     }
                 }
                 null

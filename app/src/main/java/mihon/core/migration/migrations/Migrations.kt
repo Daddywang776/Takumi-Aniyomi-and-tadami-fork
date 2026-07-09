@@ -57,4 +57,5 @@ val migrations: List<Migration>
         EInkProfileMigration(),
         MoveLatestToFeedMigration(),
         RecomputeGenreAchievementsMigration(),
+        ExtensionRepoToStoreMigration(),
     )

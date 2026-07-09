@@ -2,55 +2,58 @@ package mihon.domain.extensionrepo.anime.interactor
 
 import eu.kanade.tachiyomi.util.lang.Hash
 import logcat.LogPriority
-import mihon.domain.extensionrepo.anime.repository.AnimeExtensionRepoRepository
-import mihon.domain.extensionrepo.exception.SaveExtensionRepoException
 import mihon.domain.extensionrepo.model.ExtensionRepo
-import mihon.domain.extensionrepo.service.ExtensionRepoService
+import mihon.domain.extensionstore.anime.repository.AnimeExtensionStoreRepository
+import mihon.domain.extensionstore.toExtensionRepo
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import tachiyomi.core.common.util.system.logcat
 
 class CreateAnimeExtensionRepo(
-    private val repository: AnimeExtensionRepoRepository,
-    private val service: ExtensionRepoService,
+    private val repository: AnimeExtensionStoreRepository,
 ) {
-    private val repoRegex = """^https://.*/index\.min\.json$""".toRegex()
-
     suspend fun await(
         indexUrl: String,
         displayName: String? = null,
         forceLocalInsert: Boolean = false,
     ): Result {
-        val formattedIndexUrl = indexUrl.toHttpUrlOrNull()
-            ?.toString()
-            ?.takeIf { it.matches(repoRegex) }
-            ?: return Result.InvalidUrl
+        val formattedIndexUrl = indexUrl.toHttpUrlOrNull()?.toString() ?: return Result.InvalidUrl
 
-        val baseUrl = formattedIndexUrl.removeSuffix("/index.min.json")
-        val repoDetails = service.fetchRepoDetails(baseUrl)
-        return if (repoDetails != null) {
-            insert(
-                repoDetails.copy(
-                    name = displayName.takeIf { !it.isNullOrBlank() } ?: repoDetails.name,
-                ),
+        val insertResult = repository.insert(formattedIndexUrl)
+        if (insertResult.isSuccess) {
+            if (!displayName.isNullOrBlank()) {
+                renameInsertedStore(formattedIndexUrl, displayName)
+            }
+            return Result.Success
+        }
+
+        if (forceLocalInsert) {
+            val localIndexUrl = normalizeForceLocalIndexUrl(formattedIndexUrl)
+            repository.insertFromPreference(
+                localIndexUrl,
+                displayName?.takeIf { it.isNotBlank() } ?: extractRepoName(localIndexUrl),
             )
-        } else if (forceLocalInsert) {
-            insert(
-                ExtensionRepo(
-                    baseUrl = baseUrl,
-                    name = displayName.takeIf { !it.isNullOrBlank() } ?: extractRepoName(baseUrl),
-                    shortName = null,
-                    website = baseUrl,
-                    signingKeyFingerprint = "NOFINGERPRINT-${Hash.sha256(baseUrl)}",
-                ),
-            )
+            return Result.Success
+        }
+
+        return handleInsertionError(formattedIndexUrl, displayName)
+    }
+
+    private fun normalizeForceLocalIndexUrl(indexUrl: String): String {
+        return if (indexUrl.endsWith("/index.min.json")) {
+            indexUrl.replace("/index.min.json", "/repo.json")
         } else {
-            Result.InvalidUrl
+            indexUrl
         }
     }
 
-    private fun extractRepoName(baseUrl: String): String {
+    private suspend fun renameInsertedStore(indexUrl: String, displayName: String) {
+        val store = repository.getAll().find { it.indexUrl == indexUrl } ?: return
+        repository.upsertStore(store.copy(name = displayName, badgeLabel = displayName))
+    }
+
+    private fun extractRepoName(url: String): String {
         return try {
-            val uri = java.net.URI(baseUrl)
+            val uri = java.net.URI(url)
             val segments = uri.path?.trim('/')?.split("/").orEmpty()
             when {
                 uri.host == "raw.githubusercontent.com" && segments.size >= 2 ->
@@ -58,49 +61,32 @@ class CreateAnimeExtensionRepo(
                 uri.host == "github.com" && segments.size >= 2 ->
                     "${segments[0]}/${segments[1]}"
                 segments.size >= 2 -> segments.take(2).joinToString("/")
-                else -> baseUrl
+                else -> url
             }
         } catch (_: Exception) {
-            baseUrl
+            url
         }
     }
 
-    private suspend fun insert(repo: ExtensionRepo): Result {
-        return try {
-            repository.insertRepo(
-                repo.baseUrl,
-                repo.name,
-                repo.shortName,
-                repo.website,
-                repo.signingKeyFingerprint,
-            )
-            Result.Success
-        } catch (e: SaveExtensionRepoException) {
-            logcat(LogPriority.WARN, e) { "SQL Conflict attempting to add new anime repository ${repo.baseUrl}" }
-            return handleInsertionError(repo)
-        }
-    }
-
-    /**
-     * Error Handler for insert when there are trying to create new repositories
-     *
-     * SaveExtensionRepoException doesn't provide constraint info in exceptions.
-     * First check if the conflict was on primary key. if so return RepoAlreadyExists
-     * Then check if the conflict was on fingerprint. if so Return DuplicateFingerprint
-     * If neither are found, there was some other Error, and return Result.Error
-     *
-     * @param repo Extension Repo holder for passing to DB/Error Dialog
-     */
-    private suspend fun handleInsertionError(repo: ExtensionRepo): Result {
-        val repoExists = repository.getRepo(repo.baseUrl)
-        if (repoExists != null) {
+    private suspend fun handleInsertionError(indexUrl: String, displayName: String?): Result {
+        val stores = repository.getAll()
+        if (stores.any { it.indexUrl == indexUrl }) {
             return Result.RepoAlreadyExists
         }
-        val matchingFingerprintRepo = repository.getRepoBySigningKeyFingerprint(repo.signingKeyFingerprint)
-        if (matchingFingerprintRepo != null) {
-            return Result.DuplicateFingerprint(matchingFingerprintRepo, repo)
+        val fingerprint = "NOFINGERPRINT-${Hash.sha256(indexUrl)}"
+        val matching = stores.find { it.signingKey == fingerprint }
+        if (matching != null) {
+            val newRepo = ExtensionRepo(
+                baseUrl = indexUrl.removeSuffix("/index.min.json").removeSuffix("/repo.json"),
+                name = displayName?.takeIf { it.isNotBlank() } ?: extractRepoName(indexUrl),
+                shortName = null,
+                website = indexUrl,
+                signingKeyFingerprint = fingerprint,
+            )
+            return Result.DuplicateFingerprint(matching.toExtensionRepo(), newRepo)
         }
-        return Result.Error
+        logcat(LogPriority.WARN) { "Failed to add anime extension store $indexUrl" }
+        return Result.InvalidUrl
     }
 
     sealed interface Result {

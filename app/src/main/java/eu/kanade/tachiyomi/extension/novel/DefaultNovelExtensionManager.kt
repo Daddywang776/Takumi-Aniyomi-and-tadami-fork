@@ -25,7 +25,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-
 import kotlinx.coroutines.launch
 import tachiyomi.core.common.preference.getAndSet
 import tachiyomi.data.extension.novel.NovelPluginInstallerFacade

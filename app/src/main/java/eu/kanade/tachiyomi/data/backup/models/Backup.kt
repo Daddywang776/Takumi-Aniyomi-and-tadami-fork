@@ -24,6 +24,10 @@ data class LegacyBackup(
     @ProtoNumber(108) var backupMangaExtensionRepo: List<BackupExtensionRepos> = emptyList(),
     @ProtoNumber(109) var backupCustomButton: List<BackupCustomButtons> = emptyList(),
     @ProtoNumber(110) var backupNovelExtensionRepo: List<BackupExtensionRepos> = emptyList(),
+    // Extension stores (primary, added for Mihon port; repo kept for legacy/sister compat)
+    @ProtoNumber(650) var backupAnimeExtensionStore: List<BackupExtensionStore> = emptyList(),
+    @ProtoNumber(651) var backupMangaExtensionStore: List<BackupExtensionStore> = emptyList(),
+    @ProtoNumber(652) var backupNovelExtensionStore: List<BackupExtensionStore> = emptyList(),
     // Achievement system
     @ProtoNumber(600) var backupAchievements: List<BackupAchievement> = emptyList(),
     @ProtoNumber(601) var backupUserProfile: BackupUserProfile? = null,
@@ -42,6 +46,7 @@ data class LegacyBackup(
             backupPreferences = backupPreferences,
             backupSourcePreferences = backupSourcePreferences,
             backupMangaExtensionRepo = backupMangaExtensionRepo,
+            backupMangaExtensionStore = backupMangaExtensionStore,
 
             isLegacy = false, // Only used for detection
             backupAnime = backupAnime,
@@ -54,6 +59,8 @@ data class LegacyBackup(
             backupAnimeExtensionRepo = backupAnimeExtensionRepo,
             backupCustomButton = backupCustomButton,
             backupNovelExtensionRepo = backupNovelExtensionRepo,
+            backupAnimeExtensionStore = backupAnimeExtensionStore,
+            backupNovelExtensionStore = backupNovelExtensionStore,
             backupAchievements = backupAchievements,
             backupUserProfile = backupUserProfile,
             backupActivityLog = backupActivityLog,
@@ -83,6 +90,9 @@ data class Backup(
     @ProtoNumber(505) var backupAnimeExtensionRepo: List<BackupExtensionRepos> = emptyList(),
     @ProtoNumber(506) var backupCustomButton: List<BackupCustomButtons> = emptyList(),
     @ProtoNumber(507) var backupNovelExtensionRepo: List<BackupExtensionRepos> = emptyList(),
+    @ProtoNumber(650) var backupAnimeExtensionStore: List<BackupExtensionStore> = emptyList(),
+    @ProtoNumber(651) var backupMangaExtensionStore: List<BackupExtensionStore> = emptyList(),
+    @ProtoNumber(652) var backupNovelExtensionStore: List<BackupExtensionStore> = emptyList(),
     @ProtoNumber(508) var backupNovel: List<BackupNovel> = emptyList(),
     @ProtoNumber(509) var backupNovelCategories: List<BackupCategory> = emptyList(),
     @ProtoNumber(510) var backupNovelSources: List<BackupSource> = emptyList(),
@@ -114,6 +124,9 @@ internal fun Backup.mergeLegacyPayloadIfPresent(legacy: LegacyBackup): Backup {
         backupAnimeExtensionRepo = backupAnimeExtensionRepo.ifEmpty { legacy.backupAnimeExtensionRepo },
         backupCustomButton = backupCustomButton.ifEmpty { legacy.backupCustomButton },
         backupNovelExtensionRepo = backupNovelExtensionRepo.ifEmpty { legacy.backupNovelExtensionRepo },
+        backupAnimeExtensionStore = backupAnimeExtensionStore.ifEmpty { legacy.backupAnimeExtensionStore },
+        backupMangaExtensionStore = backupMangaExtensionStore.ifEmpty { legacy.backupMangaExtensionStore },
+        backupNovelExtensionStore = backupNovelExtensionStore.ifEmpty { legacy.backupNovelExtensionStore },
         backupAchievements = backupAchievements.ifEmpty { legacy.backupAchievements },
         backupUserProfile = backupUserProfile ?: legacy.backupUserProfile,
         backupActivityLog = backupActivityLog.ifEmpty { legacy.backupActivityLog },

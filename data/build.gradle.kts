@@ -91,6 +91,7 @@ dependencies {
     implementation(projects.i18n)
 
     implementation(libs.bundles.sqldelight)
+    implementation(kotlinx.bundles.serialization)
 
     testImplementation(libs.bundles.test)
     testImplementation(kotlinx.coroutines.test)

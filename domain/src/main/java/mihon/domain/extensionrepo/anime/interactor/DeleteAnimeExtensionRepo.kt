@@ -1,11 +1,16 @@
 package mihon.domain.extensionrepo.anime.interactor
 
-import mihon.domain.extensionrepo.anime.repository.AnimeExtensionRepoRepository
+import mihon.domain.extensionstore.anime.repository.AnimeExtensionStoreRepository
+import mihon.domain.extensionstore.model.legacyBaseUrl
 
 class DeleteAnimeExtensionRepo(
-    private val repository: AnimeExtensionRepoRepository,
+    private val repository: AnimeExtensionStoreRepository,
 ) {
     suspend fun await(baseUrl: String) {
-        repository.deleteRepo(baseUrl)
+        val normalized = baseUrl.trimEnd('/')
+        val store = repository.getAll().find { it.legacyBaseUrl().trimEnd('/') == normalized }
+        if (store != null) {
+            repository.remove(store.indexUrl)
+        }
     }
 }

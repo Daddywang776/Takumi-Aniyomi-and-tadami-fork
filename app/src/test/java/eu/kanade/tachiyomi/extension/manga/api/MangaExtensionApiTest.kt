@@ -11,14 +11,12 @@ import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
-import mihon.domain.extensionrepo.manga.interactor.GetMangaExtensionRepo
+import mihon.data.extension.model.AvailableExtensionData
+import mihon.data.extension.repository.ExtensionStoreFetcher
 import mihon.domain.extensionrepo.manga.interactor.UpdateMangaExtensionRepo
-import mihon.domain.extensionrepo.model.ExtensionRepo
-import okhttp3.OkHttpClient
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
-import okhttp3.mockwebserver.RecordedRequest
+import mihon.domain.extensionstore.manga.repository.MangaExtensionStoreRepository
+import mihon.domain.extensionstore.model.ExtensionStore
+import mihon.domain.extensionstore.model.legacyBaseUrl
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import tachiyomi.core.common.preference.Preference
@@ -51,11 +49,10 @@ class MangaExtensionApiTest {
 
         api = MangaExtensionApi(
             preferenceStore = preferenceStore,
-            getExtensionRepo = mockk<GetMangaExtensionRepo>(relaxed = true),
+            storeRepository = mockk<MangaExtensionStoreRepository>(relaxed = true),
+            storeFetcher = mockk<ExtensionStoreFetcher>(relaxed = true),
             updateExtensionRepo = updateExtensionRepo,
             extensionManager = mangaExtensionManager,
-            networkService = mockk(relaxed = true),
-            json = Json.Default,
             timeProvider = { nowMs },
         )
     }
@@ -88,104 +85,96 @@ class MangaExtensionApiTest {
     }
 
     @Test
-    fun `find extensions keeps repo variants and repo names`() {
+    fun `find extensions keeps store variants and store names`() {
         runTest {
-            val getExtensionRepo = mockk<GetMangaExtensionRepo>()
-            val networkService = mockk<eu.kanade.tachiyomi.network.NetworkHelper>(relaxed = true)
-            val server = MockWebServer()
-            server.dispatcher = object : okhttp3.mockwebserver.Dispatcher() {
-                override fun dispatch(request: RecordedRequest): MockResponse {
-                    return when (request.path) {
-                        "/alpha/index.min.json" -> MockResponse().setResponseCode(200).setBody(
-                            extensionPayload(
-                                name = "Tachiyomi: Alpha Source",
-                                versionCode = 10,
-                                version = "1.4.0",
-                            ),
-                        )
-                        "/beta/index.min.json" -> MockResponse().setResponseCode(200).setBody(
-                            extensionPayload(
-                                name = "Tachiyomi: Beta Source",
-                                versionCode = 11,
-                                version = "1.5.0",
-                            ),
-                        )
-                        else -> MockResponse().setResponseCode(404)
-                    }
-                }
-            }
-            server.start()
+            val storeRepository = mockk<MangaExtensionStoreRepository>()
+            val storeFetcher = mockk<ExtensionStoreFetcher>()
+            val alphaStore = legacyStore(
+                baseUrl = "https://alpha.example",
+                badgeLabel = "Alpha Store",
+            )
+            val betaStore = legacyStore(
+                baseUrl = "https://beta.example",
+                badgeLabel = "Beta Store",
+            )
+            coEvery { storeRepository.getAll() } returns listOf(alphaStore, betaStore)
+            coEvery { storeFetcher.fetchExtensions(any()) } returns listOf(
+                availableExtension(alphaStore, versionCode = 10),
+                availableExtension(betaStore, versionCode = 11),
+            )
 
-            try {
-                val repoUrlAlpha = server.url("/alpha").toString()
-                val repoUrlBeta = server.url("/beta").toString()
-                coEvery { getExtensionRepo.getAll() } returns listOf(
-                    ExtensionRepo(
-                        baseUrl = repoUrlAlpha,
-                        name = "",
-                        shortName = "Alpha Repo",
-                        website = "https://alpha.example",
-                        signingKeyFingerprint = "alpha",
-                    ),
-                    ExtensionRepo(
-                        baseUrl = repoUrlBeta,
-                        name = "",
-                        shortName = null,
-                        website = "https://beta.example",
-                        signingKeyFingerprint = "beta",
-                    ),
-                )
-                every { networkService.client } returns OkHttpClient.Builder().build()
+            val api = MangaExtensionApi(
+                preferenceStore = preferenceStore,
+                storeRepository = storeRepository,
+                storeFetcher = storeFetcher,
+                updateExtensionRepo = updateExtensionRepo,
+                extensionManager = mangaExtensionManager,
+                timeProvider = { nowMs },
+            )
 
-                val api = MangaExtensionApi(
-                    preferenceStore = preferenceStore,
-                    getExtensionRepo = getExtensionRepo,
-                    updateExtensionRepo = updateExtensionRepo,
-                    extensionManager = mangaExtensionManager,
-                    networkService = networkService,
-                    json = Json.Default,
-                    timeProvider = { nowMs },
-                )
+            val extensions = api.findExtensions()
 
-                val extensions = api.findExtensions()
-
-                extensions.size shouldBe 2
-                extensions.map { it.pkgName }.distinct().size shouldBe 1
-                extensions.map { it.repoName } shouldBe listOf(
-                    "Alpha Repo",
-                    repoUrlBeta,
-                )
-            } finally {
-                server.shutdown()
-            }
+            extensions.size shouldBe 2
+            extensions.map { it.pkgName }.distinct().size shouldBe 1
+            extensions.map { it.repoName } shouldBe listOf(
+                "Alpha Store",
+                "Beta Store",
+            )
         }
     }
 
-    private fun extensionPayload(
-        name: String,
-        versionCode: Long,
-        version: String,
-    ): String {
-        return """
-            [
-              {
-                "name": "$name",
-                "pkg": "pkg.example",
-                "apk": "pkg.example.apk",
-                "lang": "en",
-                "code": $versionCode,
-                "version": "$version",
-                "nsfw": 0,
-                "sources": [
-                  {
-                    "id": 1,
-                    "lang": "en",
-                    "name": "Source",
-                    "baseUrl": "https://example.org/source"
-                  }
-                ]
-              }
-            ]
-        """.trimIndent()
+    @Test
+    fun `getApkUrl returns full http apk url unchanged`() {
+        val extension = eu.kanade.tachiyomi.extension.manga.model.MangaExtension.Available(
+            name = "Ext",
+            pkgName = "pkg.example",
+            versionName = "1.0",
+            versionCode = 1,
+            libVersion = 1.4,
+            lang = "en",
+            isNsfw = false,
+            sources = emptyList(),
+            apkName = "https://cdn.example/app.apk",
+            iconUrl = "",
+            repoUrl = "https://repo.example",
+            repoName = "Repo",
+        )
+
+        api.getApkUrl(extension) shouldBe "https://cdn.example/app.apk"
+    }
+
+    private fun legacyStore(baseUrl: String, badgeLabel: String): ExtensionStore {
+        return ExtensionStore(
+            indexUrl = "$baseUrl/repo.json",
+            name = badgeLabel,
+            badgeLabel = badgeLabel,
+            signingKey = "fp",
+            contact = ExtensionStore.Contact(website = baseUrl, discord = null),
+            isLegacy = true,
+            extensionListUrl = null,
+        )
+    }
+
+    private fun availableExtension(store: ExtensionStore, versionCode: Long): AvailableExtensionData {
+        return AvailableExtensionData(
+            name = "Source",
+            pkgName = "pkg.example",
+            apkUrl = "${store.legacyBaseUrl()}/apk/pkg.example.apk",
+            iconUrl = "${store.legacyBaseUrl()}/icon/pkg.example.png",
+            libVersion = 1.4,
+            versionCode = versionCode,
+            versionName = "1.4.0",
+            lang = "en",
+            isNsfw = false,
+            sources = listOf(
+                AvailableExtensionData.Source(
+                    id = 1,
+                    lang = "en",
+                    name = "Source",
+                    baseUrl = "https://example.org/source",
+                ),
+            ),
+            store = store,
+        )
     }
 }

@@ -48,7 +48,7 @@ import com.tadami.aurora.R
 import eu.kanade.presentation.browse.BaseBrowseItem
 import eu.kanade.presentation.browse.manga.ExtensionHeader
 import eu.kanade.presentation.browse.manga.ExtensionTrustDialog
-import eu.kanade.presentation.more.settings.screen.browse.NovelExtensionReposScreen
+import eu.kanade.presentation.more.settings.screen.browse.NovelExtensionStoreScreen
 import eu.kanade.presentation.util.animateItemFastScroll
 import eu.kanade.tachiyomi.extension.InstallStep
 import eu.kanade.tachiyomi.ui.browse.novel.extension.NovelExtensionItem
@@ -198,9 +198,9 @@ fun NovelExtensionScreen(
                     modifier = Modifier.padding(contentPadding),
                     actions = kotlinx.collections.immutable.persistentListOf(
                         EmptyScreenAction(
-                            stringRes = MR.strings.label_extension_repos,
+                            stringRes = MR.strings.label_extension_stores,
                             icon = Icons.Outlined.Public,
-                            onClick = { navigator.push(NovelExtensionReposScreen()) },
+                            onClick = { navigator.push(NovelExtensionStoreScreen()) },
                         ),
                     ),
                 )

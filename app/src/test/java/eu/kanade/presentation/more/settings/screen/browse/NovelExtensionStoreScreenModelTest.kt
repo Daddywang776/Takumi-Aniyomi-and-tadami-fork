@@ -1,6 +1,8 @@
 package eu.kanade.presentation.more.settings.screen.browse
 
-import eu.kanade.tachiyomi.extension.manga.MangaExtensionManager
+import android.app.Application
+import android.content.SharedPreferences
+import eu.kanade.tachiyomi.extension.novel.NovelExtensionManager
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.mockk.coEvery
@@ -14,34 +16,37 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
-import mihon.domain.extensionrepo.manga.interactor.CreateMangaExtensionRepo
-import mihon.domain.extensionrepo.manga.interactor.DeleteMangaExtensionRepo
-import mihon.domain.extensionrepo.manga.interactor.GetMangaExtensionRepo
-import mihon.domain.extensionrepo.manga.interactor.ReplaceMangaExtensionRepo
-import mihon.domain.extensionrepo.manga.interactor.UpdateMangaExtensionRepo
 import mihon.domain.extensionrepo.model.ExtensionRepo
+import mihon.domain.extensionrepo.novel.interactor.CreateNovelExtensionRepo
+import mihon.domain.extensionrepo.novel.interactor.DeleteNovelExtensionRepo
+import mihon.domain.extensionrepo.novel.interactor.GetNovelExtensionRepo
+import mihon.domain.extensionrepo.novel.interactor.ReplaceNovelExtensionRepo
+import mihon.domain.extensionrepo.novel.interactor.UpdateNovelExtensionRepo
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
-class MangaExtensionReposScreenModelTest {
+class NovelExtensionStoreScreenModelTest {
 
-    private val getExtensionRepo: GetMangaExtensionRepo = mockk()
-    private val createExtensionRepo: CreateMangaExtensionRepo = mockk(relaxed = true)
-    private val deleteExtensionRepo: DeleteMangaExtensionRepo = mockk(relaxed = true)
-    private val replaceExtensionRepo: ReplaceMangaExtensionRepo = mockk(relaxed = true)
-    private val updateExtensionRepo: UpdateMangaExtensionRepo = mockk(relaxed = true)
-    private val extensionManager: MangaExtensionManager = mockk(relaxed = true)
-    private val activeScreenModels = mutableListOf<MangaExtensionReposScreenModel>()
+    private val getExtensionRepo: GetNovelExtensionRepo = mockk()
+    private val createExtensionRepo: CreateNovelExtensionRepo = mockk(relaxed = true)
+    private val deleteExtensionRepo: DeleteNovelExtensionRepo = mockk(relaxed = true)
+    private val replaceExtensionRepo: ReplaceNovelExtensionRepo = mockk(relaxed = true)
+    private val updateExtensionRepo: UpdateNovelExtensionRepo = mockk(relaxed = true)
+    private val extensionManager: NovelExtensionManager = mockk(relaxed = true)
+    private val application: Application = mockk()
+    private val migrationPrefs: SharedPreferences = mockk()
+    private val activeScreenModels = mutableListOf<NovelExtensionStoreScreenModel>()
 
     @BeforeEach
     fun setup() {
         Dispatchers.setMain(Dispatchers.Unconfined)
+        every { application.getSharedPreferences("novel_extension_repo_prefs", 0) } returns migrationPrefs
+        every { migrationPrefs.getBoolean(CreateNovelExtensionRepo.MIGRATION_DONE_KEY, false) } returns true
     }
 
     @AfterEach
     fun tearDown() {
-        activeScreenModels.forEach { it.onDispose() }
         activeScreenModels.clear()
         runBlocking {
             repeat(5) { yield() }
@@ -52,16 +57,23 @@ class MangaExtensionReposScreenModelTest {
     @Test
     fun `loads repos into success state`() {
         runBlocking {
-            val repo = repo()
+            val repo = ExtensionRepo(
+                baseUrl = "https://example.org",
+                name = "Repo",
+                shortName = "repo",
+                website = "https://example.org",
+                signingKeyFingerprint = "fingerprint",
+            )
             every { getExtensionRepo.subscribeAll() } returns flowOf(listOf(repo))
 
-            val screenModel = MangaExtensionReposScreenModel(
+            val screenModel = NovelExtensionStoreScreenModel(
                 getExtensionRepo = getExtensionRepo,
                 createExtensionRepo = createExtensionRepo,
                 deleteExtensionRepo = deleteExtensionRepo,
                 replaceExtensionRepo = replaceExtensionRepo,
                 updateExtensionRepo = updateExtensionRepo,
                 extensionManager = extensionManager,
+                application = application,
             ).also(activeScreenModels::add)
 
             withTimeout(1_000) {
@@ -77,38 +89,29 @@ class MangaExtensionReposScreenModelTest {
     }
 
     @Test
-    fun `create repo forwards display name and refreshes available plugins`() {
+    fun `create repo refreshes available plugins`() {
         runBlocking {
             every { getExtensionRepo.subscribeAll() } returns flowOf(emptyList())
-            coEvery {
-                createExtensionRepo.await(
-                    "https://example.org/index.min.json",
-                    "Custom repo",
-                )
-            } returns CreateMangaExtensionRepo.Result.Success
-            coEvery { extensionManager.findAvailableExtensions() } returns Unit
+            coEvery { createExtensionRepo.await("https://example.org/plugins.min.json") } returns
+                CreateNovelExtensionRepo.Result.Success
+            coEvery { extensionManager.refreshAvailablePlugins() } returns Unit
 
-            val screenModel = MangaExtensionReposScreenModel(
+            val screenModel = NovelExtensionStoreScreenModel(
                 getExtensionRepo = getExtensionRepo,
                 createExtensionRepo = createExtensionRepo,
                 deleteExtensionRepo = deleteExtensionRepo,
                 replaceExtensionRepo = replaceExtensionRepo,
                 updateExtensionRepo = updateExtensionRepo,
                 extensionManager = extensionManager,
+                application = application,
             ).also(activeScreenModels::add)
 
-            screenModel.createRepo("https://example.org/index.min.json", "Custom repo")
+            screenModel.createRepo("https://example.org/plugins.min.json")
 
             withTimeout(1_000) {
                 while (true) {
                     runCatching {
-                        coVerify(exactly = 1) {
-                            createExtensionRepo.await(
-                                "https://example.org/index.min.json",
-                                "Custom repo",
-                            )
-                        }
-                        coVerify(exactly = 1) { extensionManager.findAvailableExtensions() }
+                        coVerify(exactly = 1) { extensionManager.refreshAvailablePlugins() }
                     }.onSuccess { return@withTimeout }
                     yield()
                 }
@@ -119,18 +122,25 @@ class MangaExtensionReposScreenModelTest {
     @Test
     fun `rename repo refreshes available plugins`() {
         runBlocking {
-            val repo = repo(name = "Old name")
+            val repo = ExtensionRepo(
+                baseUrl = "https://example.org",
+                name = "Old name",
+                shortName = "repo",
+                website = "https://example.org",
+                signingKeyFingerprint = "fingerprint",
+            )
             every { getExtensionRepo.subscribeAll() } returns flowOf(listOf(repo))
             coEvery { replaceExtensionRepo.await(repo.copy(name = "New name")) } returns Unit
-            coEvery { extensionManager.findAvailableExtensions() } returns Unit
+            coEvery { extensionManager.refreshAvailablePlugins() } returns Unit
 
-            val screenModel = MangaExtensionReposScreenModel(
+            val screenModel = NovelExtensionStoreScreenModel(
                 getExtensionRepo = getExtensionRepo,
                 createExtensionRepo = createExtensionRepo,
                 deleteExtensionRepo = deleteExtensionRepo,
                 replaceExtensionRepo = replaceExtensionRepo,
                 updateExtensionRepo = updateExtensionRepo,
                 extensionManager = extensionManager,
+                application = application,
             ).also(activeScreenModels::add)
 
             screenModel.renameRepo(repo, "New name")
@@ -139,23 +149,11 @@ class MangaExtensionReposScreenModelTest {
                 while (true) {
                     runCatching {
                         coVerify(exactly = 1) { replaceExtensionRepo.await(repo.copy(name = "New name")) }
-                        coVerify(exactly = 1) { extensionManager.findAvailableExtensions() }
+                        coVerify(exactly = 1) { extensionManager.refreshAvailablePlugins() }
                     }.onSuccess { return@withTimeout }
                     yield()
                 }
             }
         }
-    }
-
-    private fun repo(
-        name: String = "Repo",
-    ): ExtensionRepo {
-        return ExtensionRepo(
-            baseUrl = "https://example.org",
-            name = name,
-            shortName = "repo",
-            website = "https://example.org",
-            signingKeyFingerprint = "fingerprint",
-        )
     }
 }

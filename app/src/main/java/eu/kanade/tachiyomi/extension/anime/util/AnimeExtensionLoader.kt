@@ -42,11 +42,16 @@ internal object AnimeExtensionLoader {
     private const val METADATA_SOURCE_CLASS = "tachiyomi.animeextension.class"
     private const val METADATA_SOURCE_FACTORY = "tachiyomi.animeextension.factory"
     private const val METADATA_NSFW = "tachiyomi.animeextension.nsfw"
+    private const val METADATA_NAME = "tachiyomix.name"
+    private const val METADATA_CONTENT_WARNING = "tachiyomix.contentWarning"
     private const val METADATA_HAS_README = "tachiyomi.animeextension.hasReadme"
     private const val METADATA_HAS_CHANGELOG = "tachiyomi.animeextension.hasChangelog"
     private const val METADATA_TORRENT = "tachiyomi.animeextension.torrent"
-    const val LIB_VERSION_MIN = 12
-    const val LIB_VERSION_MAX = 16
+    private const val METADATA_EXTENSION_LIB = "tachiyomix.extensionLib"
+    const val LIB_VERSION_MIN = 12.0
+    const val LIB_VERSION_MAX = 16.0
+
+    val SUPPORTED_LIB_VERSIONS = (LIB_VERSION_MIN.toInt()..LIB_VERSION_MAX.toInt()).map { it.toDouble() }
 
     @Suppress("DEPRECATION")
     private val PACKAGE_FLAGS = PackageManager.GET_CONFIGURATIONS or
@@ -298,7 +303,8 @@ internal object AnimeExtensionLoader {
         val appInfo = pkgInfo.applicationInfo!!
         val pkgName = pkgInfo.packageName
 
-        val extName = pkgManager.getApplicationLabel(appInfo).toString().substringAfter("Aniyomi: ")
+        val extName = appInfo.metaData?.getString(METADATA_NAME)
+            ?: pkgManager.getApplicationLabel(appInfo).toString().substringAfter("Aniyomi: ")
         val versionName = pkgInfo.versionName
         val versionCode = PackageInfoCompat.getLongVersionCode(pkgInfo)
 
@@ -308,8 +314,10 @@ internal object AnimeExtensionLoader {
         }
 
         // Validate lib version
-        val libVersion = versionName.substringBeforeLast('.').toDoubleOrNull()
-        if (libVersion == null || libVersion < LIB_VERSION_MIN || libVersion > LIB_VERSION_MAX) {
+        val libVersion = appInfo.metaData?.getDouble(METADATA_EXTENSION_LIB)?.takeUnless { it == 0.0 }
+            ?: appInfo.metaData?.getFloat(METADATA_EXTENSION_LIB)?.toDouble()?.takeUnless { it == 0.0 }
+            ?: versionName.substringBeforeLast('.').toDoubleOrNull()
+        if (libVersion == null || libVersion !in SUPPORTED_LIB_VERSIONS) {
             logcat(LogPriority.WARN) {
                 "Lib version is $libVersion, while only versions " +
                     "$LIB_VERSION_MIN to $LIB_VERSION_MAX are allowed"
@@ -342,8 +350,9 @@ internal object AnimeExtensionLoader {
             return AnimeLoadResult.Untrusted(extension)
         }
 
-        val isNsfw = appInfo.metaData.getInt(METADATA_NSFW) == 1
-        val isTorrent = appInfo.metaData.getInt(METADATA_TORRENT) == 1
+        val isNsfw = (appInfo.metaData?.getInt(METADATA_CONTENT_WARNING) ?: 0) > 0 ||
+            appInfo.metaData?.getInt(METADATA_NSFW) == 1
+        val isTorrent = appInfo.metaData?.getInt(METADATA_TORRENT) == 1
         if (!loadNsfwSource && isNsfw) {
             logcat(LogPriority.WARN) { "NSFW extension $pkgName not allowed" }
             return AnimeLoadResult.Error
@@ -356,7 +365,12 @@ internal object AnimeExtensionLoader {
             return AnimeLoadResult.Error
         }
 
-        val sources = appInfo.metaData.getString(METADATA_SOURCE_CLASS)!!
+        val sourceMeta = appInfo.metaData?.getString(METADATA_SOURCE_CLASS)
+        if (sourceMeta.isNullOrEmpty()) {
+            logcat(LogPriority.WARN) { "Missing source class for extension $extName" }
+            return AnimeLoadResult.Error
+        }
+        val sources = sourceMeta
             .split(";")
             .map {
                 val sourceClass = it.trim()

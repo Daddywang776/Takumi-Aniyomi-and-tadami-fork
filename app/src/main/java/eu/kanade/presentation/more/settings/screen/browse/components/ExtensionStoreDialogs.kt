@@ -23,12 +23,11 @@ import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.coroutines.delay
 import mihon.domain.extensionrepo.model.ExtensionRepo
 import tachiyomi.i18n.MR
-import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.i18n.stringResource
 import kotlin.time.Duration.Companion.seconds
 
 @Composable
-fun ExtensionRepoCreateDialog(
+fun ExtensionStoreCreateDialog(
     onDismissRequest: () -> Unit,
     onCreate: (url: String, displayName: String) -> Unit,
     repoUrls: ImmutableSet<String>,
@@ -73,7 +72,7 @@ fun ExtensionRepoCreateDialog(
             }
         },
         title = {
-            Text(text = stringResource(MR.strings.action_add_repo))
+            Text(text = stringResource(MR.strings.action_add_store))
         },
         text = {
             Column {
@@ -84,8 +83,6 @@ fun ExtensionRepoCreateDialog(
                     modifier = Modifier.padding(bottom = 12.dp),
                 )
 
-                Text(text = stringResource(AYMR.strings.action_add_repo_message))
-
                 OutlinedTextField(
                     modifier = Modifier.focusRequester(focusRequester),
                     value = url,
@@ -95,10 +92,10 @@ fun ExtensionRepoCreateDialog(
                             displayName = suggestName(newUrl)
                         }
                     },
-                    label = { Text(text = stringResource(MR.strings.label_add_repo_input)) },
+                    label = { Text(text = stringResource(MR.strings.label_add_store_input)) },
                     supportingText = {
                         val msgRes = if (url.isNotEmpty() && urlAlreadyExists) {
-                            MR.strings.error_repo_exists
+                            MR.strings.error_store_exists
                         } else {
                             MR.strings.information_required_plain
                         }
@@ -132,7 +129,7 @@ fun ExtensionRepoCreateDialog(
 }
 
 @Composable
-fun ExtensionRepoDeleteDialog(
+fun ExtensionStoreDeleteDialog(
     onDismissRequest: () -> Unit,
     onDelete: () -> Unit,
     repo: String,
@@ -153,16 +150,16 @@ fun ExtensionRepoDeleteDialog(
             }
         },
         title = {
-            Text(text = stringResource(MR.strings.action_delete_repo))
+            Text(text = stringResource(MR.strings.action_delete_store))
         },
         text = {
-            Text(text = stringResource(MR.strings.delete_repo_confirmation, repo))
+            Text(text = stringResource(MR.strings.delete_store_confirmation, repo))
         },
     )
 }
 
 @Composable
-fun ExtensionRepoRenameDialog(
+fun ExtensionStoreRenameDialog(
     repo: ExtensionRepo,
     onDismissRequest: () -> Unit,
     onRename: (String) -> Unit,
@@ -180,7 +177,7 @@ fun ExtensionRepoRenameDialog(
                     onDismissRequest()
                 },
             ) {
-                Text(text = stringResource(MR.strings.action_rename_repo))
+                Text(text = stringResource(MR.strings.action_rename_store))
             }
         },
         dismissButton = {
@@ -189,7 +186,7 @@ fun ExtensionRepoRenameDialog(
             }
         },
         title = {
-            Text(text = stringResource(MR.strings.action_rename_repo))
+            Text(text = stringResource(MR.strings.action_rename_store))
         },
         text = {
             OutlinedTextField(
@@ -209,7 +206,7 @@ fun ExtensionRepoRenameDialog(
 }
 
 @Composable
-fun ExtensionRepoConflictDialog(
+fun ExtensionStoreConflictDialog(
     oldRepo: ExtensionRepo,
     newRepo: ExtensionRepo,
     onDismissRequest: () -> Unit,
@@ -224,7 +221,7 @@ fun ExtensionRepoConflictDialog(
                     onDismissRequest()
                 },
             ) {
-                Text(text = stringResource(MR.strings.action_replace_repo))
+                Text(text = stringResource(MR.strings.action_replace_store))
             }
         },
         dismissButton = {
@@ -233,16 +230,16 @@ fun ExtensionRepoConflictDialog(
             }
         },
         title = {
-            Text(text = stringResource(MR.strings.action_replace_repo_title))
+            Text(text = stringResource(MR.strings.action_replace_store_title))
         },
         text = {
-            Text(text = stringResource(MR.strings.action_replace_repo_message, newRepo.name, oldRepo.name))
+            Text(text = stringResource(MR.strings.action_replace_store_message, newRepo.name, oldRepo.name))
         },
     )
 }
 
 @Composable
-fun ExtensionRepoConfirmDialog(
+fun ExtensionStoreConfirmDialog(
     onDismissRequest: () -> Unit,
     onCreate: () -> Unit,
     repo: String,
@@ -250,10 +247,10 @@ fun ExtensionRepoConfirmDialog(
     AlertDialog(
         onDismissRequest = onDismissRequest,
         title = {
-            Text(text = stringResource(MR.strings.action_add_repo))
+            Text(text = stringResource(MR.strings.action_add_store))
         },
         text = {
-            Text(text = stringResource(MR.strings.add_repo_confirmation, repo))
+            Text(text = stringResource(MR.strings.add_store_confirmation, repo))
         },
         confirmButton = {
             TextButton(

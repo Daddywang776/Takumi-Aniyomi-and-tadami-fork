@@ -6,4 +6,5 @@ data class ExtensionRepo(
     val shortName: String?,
     val website: String,
     val signingKeyFingerprint: String,
+    val discord: String? = null,
 )

@@ -24,7 +24,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 
-class AnimeExtensionReposScreenModelTest {
+class AnimeExtensionStoreScreenModelTest {
 
     private val getExtensionRepo: GetAnimeExtensionRepo = mockk()
     private val createExtensionRepo: CreateAnimeExtensionRepo = mockk(relaxed = true)
@@ -32,7 +32,7 @@ class AnimeExtensionReposScreenModelTest {
     private val replaceExtensionRepo: ReplaceAnimeExtensionRepo = mockk(relaxed = true)
     private val updateExtensionRepo: UpdateAnimeExtensionRepo = mockk(relaxed = true)
     private val extensionManager: AnimeExtensionManager = mockk(relaxed = true)
-    private val activeScreenModels = mutableListOf<AnimeExtensionReposScreenModel>()
+    private val activeScreenModels = mutableListOf<AnimeExtensionStoreScreenModel>()
 
     @BeforeEach
     fun setup() {
@@ -41,7 +41,6 @@ class AnimeExtensionReposScreenModelTest {
 
     @AfterEach
     fun tearDown() {
-        activeScreenModels.forEach { it.onDispose() }
         activeScreenModels.clear()
         runBlocking {
             repeat(5) { yield() }
@@ -55,7 +54,7 @@ class AnimeExtensionReposScreenModelTest {
             val repo = repo()
             every { getExtensionRepo.subscribeAll() } returns flowOf(listOf(repo))
 
-            val screenModel = AnimeExtensionReposScreenModel(
+            val screenModel = AnimeExtensionStoreScreenModel(
                 getExtensionRepo = getExtensionRepo,
                 createExtensionRepo = createExtensionRepo,
                 deleteExtensionRepo = deleteExtensionRepo,
@@ -88,7 +87,7 @@ class AnimeExtensionReposScreenModelTest {
             } returns CreateAnimeExtensionRepo.Result.Success
             coEvery { extensionManager.findAvailableExtensions() } returns Unit
 
-            val screenModel = AnimeExtensionReposScreenModel(
+            val screenModel = AnimeExtensionStoreScreenModel(
                 getExtensionRepo = getExtensionRepo,
                 createExtensionRepo = createExtensionRepo,
                 deleteExtensionRepo = deleteExtensionRepo,
@@ -124,7 +123,7 @@ class AnimeExtensionReposScreenModelTest {
             coEvery { replaceExtensionRepo.await(repo.copy(name = "New name")) } returns Unit
             coEvery { extensionManager.findAvailableExtensions() } returns Unit
 
-            val screenModel = AnimeExtensionReposScreenModel(
+            val screenModel = AnimeExtensionStoreScreenModel(
                 getExtensionRepo = getExtensionRepo,
                 createExtensionRepo = createExtensionRepo,
                 deleteExtensionRepo = deleteExtensionRepo,

@@ -29,13 +29,16 @@ import androidx.compose.ui.unit.dp
 import eu.kanade.tachiyomi.util.system.copyToClipboard
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.toImmutableSet
+import eu.kanade.tachiyomi.util.system.openInBrowser
 import mihon.domain.extensionrepo.model.ExtensionRepo
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.padding
 import tachiyomi.presentation.core.i18n.stringResource
+import tachiyomi.presentation.core.icons.CustomIcons
+import tachiyomi.presentation.core.icons.Discord
 
 @Composable
-fun ExtensionReposContent(
+fun ExtensionStoreContent(
     repos: ImmutableSet<ExtensionRepo>,
     lazyListState: LazyListState,
     paddingValues: PaddingValues,
@@ -67,7 +70,7 @@ fun ExtensionReposContent(
         if (officialReposState.isNotEmpty()) {
             item {
                 Text(
-                    text = "Official Repositories",
+                    text = stringResource(MR.strings.label_official_stores),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp),
@@ -92,7 +95,7 @@ fun ExtensionReposContent(
                     Spacer(modifier = Modifier.height(8.dp))
                 }
                 Text(
-                    text = "Custom Repositories",
+                    text = stringResource(MR.strings.label_custom_stores),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp),
@@ -197,6 +200,16 @@ private fun ExtensionRepoListItem(
                 )
             }
 
+            val discordUrl = repo.discord
+            if (!discordUrl.isNullOrBlank()) {
+                IconButton(onClick = { context.openInBrowser(discordUrl) }) {
+                    Icon(
+                        imageVector = CustomIcons.Discord,
+                        contentDescription = stringResource(MR.strings.action_open_discord),
+                    )
+                }
+            }
+
             IconButton(
                 onClick = {
                     val url = "${repo.baseUrl}/index.min.json"
@@ -212,7 +225,7 @@ private fun ExtensionRepoListItem(
             IconButton(onClick = onRename) {
                 Icon(
                     imageVector = Icons.Outlined.Edit,
-                    contentDescription = stringResource(MR.strings.action_rename_repo),
+                    contentDescription = stringResource(MR.strings.action_rename_store),
                 )
             }
 

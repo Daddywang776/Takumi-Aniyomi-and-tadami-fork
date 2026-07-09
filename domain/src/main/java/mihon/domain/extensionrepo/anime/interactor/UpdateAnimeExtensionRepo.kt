@@ -1,39 +1,11 @@
 package mihon.domain.extensionrepo.anime.interactor
 
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
-import logcat.LogPriority
-import mihon.domain.extensionrepo.anime.repository.AnimeExtensionRepoRepository
-import mihon.domain.extensionrepo.model.ExtensionRepo
-import mihon.domain.extensionrepo.service.ExtensionRepoService
-import tachiyomi.core.common.util.system.logcat
+import mihon.domain.extensionstore.anime.repository.AnimeExtensionStoreRepository
 
 class UpdateAnimeExtensionRepo(
-    private val repository: AnimeExtensionRepoRepository,
-    private val service: ExtensionRepoService,
+    private val repository: AnimeExtensionStoreRepository,
 ) {
-
-    suspend fun awaitAll() = coroutineScope {
-        repository.getAll()
-            .map { async { await(it) } }
-            .awaitAll()
-    }
-
-    suspend fun await(repo: ExtensionRepo) {
-        val newRepo = runCatching { service.fetchRepoDetails(repo.baseUrl) }
-            .onFailure { error ->
-                logcat(LogPriority.WARN, error) {
-                    "Skipping anime extension repo refresh for ${repo.baseUrl}"
-                }
-            }
-            .getOrNull()
-            ?: return
-        if (
-            repo.signingKeyFingerprint.startsWith("NOFINGERPRINT") ||
-            repo.signingKeyFingerprint == newRepo.signingKeyFingerprint
-        ) {
-            repository.upsertRepo(newRepo.copy(name = repo.name))
-        }
+    suspend fun awaitAll() {
+        repository.refreshAll()
     }
 }

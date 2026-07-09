@@ -6,58 +6,54 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
-import mihon.domain.extensionrepo.model.ExtensionRepo
-import mihon.domain.extensionrepo.novel.repository.NovelExtensionRepoRepository
-import mihon.domain.extensionrepo.service.ExtensionRepoService
+import mihon.domain.extensionstore.model.ExtensionStore
+import mihon.domain.extensionstore.novel.repository.NovelExtensionStoreRepository
 import org.junit.jupiter.api.Test
 
 class CreateNovelExtensionRepoTest {
 
     @Test
     fun `invalid url returns InvalidUrl`() = runTest {
-        val repository = mockk<NovelExtensionRepoRepository>(relaxed = true)
-        val service = mockk<ExtensionRepoService>(relaxed = true)
-        val interactor = CreateNovelExtensionRepo(repository, service)
+        val repository = mockk<NovelExtensionStoreRepository>(relaxed = true)
+        val interactor = CreateNovelExtensionRepo(repository)
 
-        val result = interactor.await("https://example.org/repo.json")
+        val result = interactor.await("not-a-url")
 
         result shouldBe CreateNovelExtensionRepo.Result.InvalidUrl
-        coVerify(exactly = 0) { repository.insertRepo(any(), any(), any(), any(), any()) }
+        coVerify(exactly = 0) { repository.upsertStore(any()) }
     }
 
     @Test
-    fun `valid url inserts repo`() = runTest {
-        val repository = mockk<NovelExtensionRepoRepository>(relaxed = true)
-        val service = mockk<ExtensionRepoService>()
-        val interactor = CreateNovelExtensionRepo(repository, service)
-        val repo = ExtensionRepo(
-            baseUrl = "https://example.org",
-            name = "Repo",
-            shortName = "repo",
-            website = "https://example.org",
-            signingKeyFingerprint = "fingerprint",
+    fun `valid store url inserts via repository`() = runTest {
+        val repository = mockk<NovelExtensionStoreRepository>(relaxed = true)
+        val insertedStore = ExtensionStore(
+            indexUrl = "https://example.org/index.min.json",
+            name = "Store",
+            badgeLabel = "store",
+            signingKey = "fingerprint",
+            contact = ExtensionStore.Contact(website = "https://example.org", discord = null),
+            isLegacy = true,
+            extensionListUrl = null,
         )
-        coEvery { service.fetchRepoDetails("https://example.org") } returns repo
+        coEvery { repository.insert("https://example.org/index.min.json") } returns Result.success(Unit)
+        coEvery { repository.getAll() } returns listOf(insertedStore)
+        val interactor = CreateNovelExtensionRepo(repository)
 
-        val result = interactor.await("https://example.org/index.min.json", "Custom repo")
+        val result = interactor.await("https://example.org/index.min.json", "Custom store")
 
         result shouldBe CreateNovelExtensionRepo.Result.Success
         coVerify {
-            repository.insertRepo(
-                repo.baseUrl,
-                "Custom repo",
-                repo.shortName,
-                repo.website,
-                repo.signingKeyFingerprint,
+            repository.upsertStore(
+                insertedStore.copy(name = "Custom store", badgeLabel = "Custom store"),
             )
         }
     }
 
     @Test
-    fun `plugins min json url inserts legacy repo with NOFINGERPRINT`() = runTest {
-        val repository = mockk<NovelExtensionRepoRepository>(relaxed = true)
-        val service = mockk<ExtensionRepoService>(relaxed = true)
-        val interactor = CreateNovelExtensionRepo(repository, service)
+    fun `plugins min json url inserts legacy store with NOFINGERPRINT`() = runTest {
+        val repository = mockk<NovelExtensionStoreRepository>(relaxed = true)
+        coEvery { repository.getAll() } returns emptyList()
+        val interactor = CreateNovelExtensionRepo(repository)
 
         val indexUrl = "https://example.org/.dist/plugins.min.json"
         val baseUrl = "https://example.org/.dist"
@@ -67,14 +63,17 @@ class CreateNovelExtensionRepoTest {
 
         result shouldBe CreateNovelExtensionRepo.Result.Success
         coVerify {
-            repository.insertRepo(
-                baseUrl,
-                baseUrl,
-                null,
-                baseUrl,
-                fingerprint,
+            repository.upsertStore(
+                ExtensionStore(
+                    indexUrl = baseUrl,
+                    name = baseUrl,
+                    badgeLabel = baseUrl,
+                    signingKey = fingerprint,
+                    contact = ExtensionStore.Contact(website = baseUrl, discord = null),
+                    isLegacy = true,
+                    extensionListUrl = null,
+                ),
             )
         }
-        coVerify(exactly = 0) { service.fetchRepoDetails(any()) }
     }
 }

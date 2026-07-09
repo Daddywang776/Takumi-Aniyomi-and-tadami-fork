@@ -48,9 +48,9 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import eu.kanade.domain.ui.model.HomeHeroCtaMode
 import eu.kanade.domain.ui.model.HomeHubRecentCardMode
-import eu.kanade.presentation.more.settings.screen.browse.AnimeExtensionReposScreen
-import eu.kanade.presentation.more.settings.screen.browse.MangaExtensionReposScreen
-import eu.kanade.presentation.more.settings.screen.browse.NovelExtensionReposScreen
+import eu.kanade.presentation.more.settings.screen.browse.AnimeExtensionStoreScreen
+import eu.kanade.presentation.more.settings.screen.browse.MangaExtensionStoreScreen
+import eu.kanade.presentation.more.settings.screen.browse.NovelExtensionStoreScreen
 import eu.kanade.presentation.theme.AuroraSurfaceLevel
 import eu.kanade.presentation.theme.AuroraTheme
 import eu.kanade.presentation.theme.aurora.adaptive.auroraCenteredMaxWidth
@@ -121,7 +121,7 @@ internal fun AnimeHomeHub(
                 tabNavigator.current = BrowseTab
             }
         },
-        onBrowseClick = { navigator.push(AnimeExtensionReposScreen()) },
+        onBrowseClick = { navigator.push(AnimeExtensionStoreScreen()) },
         onExtensionClick = {
             tabNavigator.current = BrowseTab
             BrowseTab.showAnimeExtension()
@@ -181,7 +181,7 @@ internal fun MangaHomeHub(
                 tabNavigator.current = BrowseTab
             }
         },
-        onBrowseClick = { navigator.push(MangaExtensionReposScreen()) },
+        onBrowseClick = { navigator.push(MangaExtensionStoreScreen()) },
         onExtensionClick = {
             tabNavigator.current = BrowseTab
             BrowseTab.showExtension()
@@ -247,7 +247,7 @@ internal fun NovelHomeHub(
                 tabNavigator.current = BrowseTab
             }
         },
-        onBrowseClick = { navigator.push(NovelExtensionReposScreen()) },
+        onBrowseClick = { navigator.push(NovelExtensionStoreScreen()) },
         onExtensionClick = {
             tabNavigator.current = BrowseTab
             BrowseTab.showNovelExtension()

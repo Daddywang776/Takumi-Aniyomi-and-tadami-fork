@@ -1,9 +1,11 @@
 package mihon.domain.extensionrepo.novel.interactor
 
-import mihon.domain.extensionrepo.novel.repository.NovelExtensionRepoRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import mihon.domain.extensionstore.novel.repository.NovelExtensionStoreRepository
 
 class GetNovelExtensionRepoCount(
-    private val repository: NovelExtensionRepoRepository,
+    private val repository: NovelExtensionStoreRepository,
 ) {
-    fun subscribe() = repository.getCount()
+    fun subscribe(): Flow<Int> = repository.getCountAsFlow().map { it.toInt() }
 }

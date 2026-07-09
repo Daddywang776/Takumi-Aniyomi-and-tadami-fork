@@ -1,11 +1,16 @@
 package mihon.domain.extensionrepo.novel.interactor
 
-import mihon.domain.extensionrepo.novel.repository.NovelExtensionRepoRepository
+import mihon.domain.extensionstore.model.legacyBaseUrl
+import mihon.domain.extensionstore.novel.repository.NovelExtensionStoreRepository
 
 class DeleteNovelExtensionRepo(
-    private val repository: NovelExtensionRepoRepository,
+    private val repository: NovelExtensionStoreRepository,
 ) {
     suspend fun await(baseUrl: String) {
-        repository.deleteRepo(baseUrl)
+        val normalized = baseUrl.trimEnd('/')
+        val store = repository.getAll().find { it.legacyBaseUrl().trimEnd('/') == normalized }
+        if (store != null) {
+            repository.remove(store.indexUrl)
+        }
     }
 }

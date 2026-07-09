@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.util.system
 
 import android.content.Context
 import androidx.lifecycle.asFlow
+import androidx.work.Configuration
 import androidx.work.CoroutineWorker
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
@@ -13,7 +14,16 @@ import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
 
 val Context.workManager: WorkManager
-    get() = WorkManager.getInstance(this)
+    get() = try {
+        WorkManager.getInstance(this)
+    } catch (e: IllegalStateException) {
+        if (e.message?.contains("not initialized properly", ignoreCase = true) == true) {
+            WorkManager.initialize(this, Configuration.Builder().build())
+            WorkManager.getInstance(this)
+        } else {
+            throw e
+        }
+    }
 
 fun WorkManager.isRunning(tag: String): Boolean {
     val list = this.getWorkInfosByTag(tag).get()

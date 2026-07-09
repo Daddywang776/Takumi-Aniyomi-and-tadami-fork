@@ -10,6 +10,7 @@ import eu.kanade.tachiyomi.data.backup.create.creators.AchievementBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.AnimeBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.AnimeCategoriesBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.AnimeExtensionRepoBackupCreator
+import eu.kanade.tachiyomi.data.backup.create.creators.AnimeExtensionStoreBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.AnimeSourcesBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.CustomButtonBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.ExtensionsBackupCreator
@@ -17,11 +18,13 @@ import eu.kanade.tachiyomi.data.backup.create.creators.FeedBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.MangaBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.MangaCategoriesBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.MangaExtensionRepoBackupCreator
+import eu.kanade.tachiyomi.data.backup.create.creators.MangaExtensionStoreBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.MangaSeriesBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.MangaSourcesBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.NovelBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.NovelCategoriesBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.NovelExtensionRepoBackupCreator
+import eu.kanade.tachiyomi.data.backup.create.creators.NovelExtensionStoreBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.NovelSeriesBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.NovelSourcesBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.PreferenceBackupCreator
@@ -88,6 +91,9 @@ class BackupCreator(
     private val animeExtensionRepoBackupCreator: AnimeExtensionRepoBackupCreator = AnimeExtensionRepoBackupCreator(),
     private val mangaExtensionRepoBackupCreator: MangaExtensionRepoBackupCreator = MangaExtensionRepoBackupCreator(),
     private val novelExtensionRepoBackupCreator: NovelExtensionRepoBackupCreator = NovelExtensionRepoBackupCreator(),
+    private val animeExtensionStoreBackupCreator: AnimeExtensionStoreBackupCreator = AnimeExtensionStoreBackupCreator(),
+    private val mangaExtensionStoreBackupCreator: MangaExtensionStoreBackupCreator = MangaExtensionStoreBackupCreator(),
+    private val novelExtensionStoreBackupCreator: NovelExtensionStoreBackupCreator = NovelExtensionStoreBackupCreator(),
     private val customButtonBackupCreator: CustomButtonBackupCreator = CustomButtonBackupCreator(),
     private val animeSourcesBackupCreator: AnimeSourcesBackupCreator = AnimeSourcesBackupCreator(),
     private val mangaSourcesBackupCreator: MangaSourcesBackupCreator = MangaSourcesBackupCreator(),
@@ -207,14 +213,10 @@ class BackupCreator(
                 backupSources = backupMangaSources(finalBackupManga),
                 backupPreferences = backupAppPreferences(options),
                 backupSourcePreferences = backupSourcePreferences(options),
-                backupMangaExtensionRepo = if (options.sisterAppCompatible) {
-                    emptyList()
-                } else {
-                    backupMangaExtensionRepos(
-                        options,
-                        includeMangaType,
-                    )
-                },
+                backupMangaExtensionRepo = backupMangaExtensionRepos(
+                    options,
+                    includeMangaType,
+                ),
 
                 isLegacy = false,
                 backupAnime = if (options.sisterAppCompatible) emptyList() else backupAnime,
@@ -238,23 +240,18 @@ class BackupCreator(
                 },
                 backupNovelSources = if (options.sisterAppCompatible) emptyList() else backupNovelSources(backupNovel),
                 backupExtensions = if (options.sisterAppCompatible) emptyList() else backupExtensions(options),
-                backupAnimeExtensionRepo = if (options.sisterAppCompatible) {
-                    emptyList()
-                } else {
-                    backupAnimeExtensionRepos(
-                        options,
-                        includeAnimeType,
-                    )
-                },
+                backupAnimeExtensionRepo = backupAnimeExtensionRepos(
+                    options,
+                    includeAnimeType,
+                ),
                 backupCustomButton = if (options.sisterAppCompatible) emptyList() else backupCustomButtons(options),
-                backupNovelExtensionRepo = if (options.sisterAppCompatible) {
-                    emptyList()
-                } else {
-                    backupNovelExtensionRepos(
-                        options,
-                        includeNovelType,
-                    )
-                },
+                backupNovelExtensionRepo = backupNovelExtensionRepos(
+                    options,
+                    includeNovelType,
+                ),
+                backupAnimeExtensionStore = animeExtensionStoreBackupCreator(),
+                backupMangaExtensionStore = mangaExtensionStoreBackupCreator(),
+                backupNovelExtensionStore = novelExtensionStoreBackupCreator(),
                 backupAchievements = if (options.sisterAppCompatible) emptyList() else achievementData.achievements,
                 backupUserProfile = if (options.sisterAppCompatible) null else achievementData.userProfile,
                 backupActivityLog = if (options.sisterAppCompatible) emptyList() else achievementData.activityLog,

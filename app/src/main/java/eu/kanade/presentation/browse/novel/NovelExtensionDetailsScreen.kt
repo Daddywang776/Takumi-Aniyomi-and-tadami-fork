@@ -184,7 +184,7 @@ private fun DetailsHeader(
                         append("Plugin name: ${extension.name} (lang: ${extension.lang}; id: ${extension.id})\n")
                         append("Version: ${extension.versionName} (${extension.versionCode})\n")
                         append("Site: ${extension.site}\n")
-                        append("Repo: ${extension.repoUrl}\n")
+                        append("Store: ${extension.repoUrl}\n")
                         append("Has settings: ${extension.hasSettings}\n")
                     }
                     context.copyToClipboard("Novel plugin debug information", debugInfo)

@@ -417,7 +417,7 @@
     <string name="ext_update_all">Update all</string>
     <string name="ext_reinstall_required">Reinstall required</string>
     <string name="ext_reinstall_required_hint">A newer plugin was found in another repository. Reinstall is required.</string>
-    <string name="ext_obsolete">Obsolete</string>
+    <string name="ext_obsolete">Orphaned</string>
     <string name="ext_repo_update_short">Different repository</string>
     <string name="ext_repo_update_required">Reinstall required</string>
     <string name="ext_repo_update_dialog_title">Reinstall from another repository</string>
@@ -438,7 +438,7 @@
     <string name="ext_app_info">App info</string>
     <string name="untrusted_extension">Untrusted extension</string>
     <string name="untrusted_extension_message">Malicious extensions can read any stored login credentials or execute arbitrary code.\n\nBy trusting this extension, you accept these risks.</string>
-    <string name="obsolete_extension_message">This extension is no longer available. It may not function properly and can cause issues with the app. Uninstalling it is recommended.</string>
+    <string name="obsolete_extension_message">This extension is not associated with any store. It will not receive updates, may not function properly, and can cause issues with the app. Uninstalling it is recommended.</string>
     <string name="remove_private_extension_message">Do you really want to remove \"%s\" extension?</string>
     <string name="extension_api_error">Failed to fetch available extensions</string>
     <string name="ext_info_version">Version</string>
@@ -460,22 +460,37 @@
     <string name="ext_installer_dhizuku_unavailable_dialog">Install and activate Dhizuku as Device Owner to use Dhizuku as extension installer.</string>
     <string name="ext_revoke_trust">Revoke trusted unknown extensions</string>
 
-    <!-- Extension repos -->
-    <string name="label_extension_repos">Extension repos</string>
+    <!-- Extension repos (legacy keys preserved for compat/migration; primary now uses store terminology) -->
+    <string name="label_extension_repos">Extension stores</string>
+    <string name="label_extension_stores">Extension stores</string>
+    <string name="label_official_stores">Official stores</string>
+    <string name="label_custom_stores">Custom stores</string>
+    <string name="action_open_discord">Discord</string>
     <string name="information_empty_repos">You have no repos set.</string>
     <string name="action_add_repo">Add repo</string>
+    <string name="action_add_store">Add store</string>
     <string name="action_rename_repo">Rename repo</string>
+    <string name="action_rename_store">Rename store</string>
     <string name="label_add_repo_input">Repo URL</string>
-    <string name="action_add_repo_message">Add additional repos to Mihon. This should be a URL that ends with \"index.min.json\".</string>
+    <string name="label_add_store_input">Store URL</string>
     <string name="error_repo_exists">This repo already exists!</string>
+    <string name="error_store_exists">This store already exists!</string>
     <string name="action_delete_repo">Delete repo</string>
+    <string name="action_delete_store">Delete store</string>
     <string name="invalid_repo_name">Invalid repo URL</string>
+    <string name="invalid_store_name">Invalid store URL</string>
     <string name="delete_repo_confirmation">Do you wish to delete the repo \"%s\"?</string>
+    <string name="delete_store_confirmation">Do you wish to delete the store \"%s\"?</string>
     <string name="add_repo_confirmation">Do you wish to add the repo \"%s\"?</string>
+    <string name="add_store_confirmation">Do you wish to add the store \"%s\"?</string>
     <string name="action_open_repo">Open source repo</string>
+    <string name="action_open_store">Open source store</string>
     <string name="action_replace_repo">Replace</string>
+    <string name="action_replace_store">Replace</string>
     <string name="action_replace_repo_title">Signing Key Fingerprint Already Exists</string>
+    <string name="action_replace_store_title">Signing Key Fingerprint Already Exists</string>
     <string name="action_replace_repo_message">Repository %1$s has the same Signing Key Fingerprint as %2$s.\nIf this is expected, %2$s will be replaced, otherwise contact your repo maintainer.</string>
+    <string name="action_replace_store_message">Store %1$s has the same Signing Key Fingerprint as %2$s.\nIf this is expected, %2$s will be replaced, otherwise contact your store maintainer.</string>
 
       <!-- Reader section -->
     <string name="pref_fullscreen">Fullscreen</string>
@@ -738,7 +753,7 @@
     <string name="backup_choice">What do you want to backup?</string>
     <string name="app_settings">App settings</string>
     <string name="source_settings">Source settings</string>
-    <string name="extensionRepo_settings">Extension repos</string>
+    <string name="extensionRepo_settings">Extension stores</string>
     <string name="private_settings">Include sensitive settings (e.g., tracker login tokens)</string>
     <string name="non_library_settings">All read entries</string>
     <string name="creating_backup">Creating backup</string>

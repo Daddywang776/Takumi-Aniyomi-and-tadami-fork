@@ -26,7 +26,7 @@ import eu.kanade.presentation.browse.RepoPickerDialog
 import eu.kanade.presentation.browse.manga.MangaExtensionScreen
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.TabContent
-import eu.kanade.presentation.more.settings.screen.browse.MangaExtensionReposScreen
+import eu.kanade.presentation.more.settings.screen.browse.MangaExtensionStoreScreen
 import eu.kanade.tachiyomi.extension.manga.model.MangaExtension
 import eu.kanade.tachiyomi.ui.browse.manga.extension.details.MangaExtensionDetailsScreen
 import eu.kanade.tachiyomi.ui.webview.WebViewScreen
@@ -60,8 +60,8 @@ fun mangaExtensionsTab(
                 onClick = { navigator.push(MangaExtensionFilterScreen()) },
             ),
             AppBar.OverflowAction(
-                title = stringResource(MR.strings.label_extension_repos),
-                onClick = { navigator.push(MangaExtensionReposScreen()) },
+                title = stringResource(MR.strings.label_extension_stores),
+                onClick = { navigator.push(MangaExtensionStoreScreen()) },
             ),
             AppBar.OverflowAction(
                 title = "Installer diagnostics",

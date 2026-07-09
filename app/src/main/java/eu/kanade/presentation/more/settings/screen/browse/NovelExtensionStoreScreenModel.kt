@@ -1,37 +1,51 @@
 package eu.kanade.presentation.more.settings.screen.browse
 
+import android.app.Application
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
-import eu.kanade.tachiyomi.extension.anime.AnimeExtensionManager
+import eu.kanade.tachiyomi.extension.novel.NovelExtensionManager
 import kotlinx.collections.immutable.toImmutableSet
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
-import mihon.domain.extensionrepo.anime.interactor.CreateAnimeExtensionRepo
-import mihon.domain.extensionrepo.anime.interactor.DeleteAnimeExtensionRepo
-import mihon.domain.extensionrepo.anime.interactor.GetAnimeExtensionRepo
-import mihon.domain.extensionrepo.anime.interactor.ReplaceAnimeExtensionRepo
-import mihon.domain.extensionrepo.anime.interactor.UpdateAnimeExtensionRepo
+import logcat.LogPriority
 import mihon.domain.extensionrepo.model.ExtensionRepo
+import mihon.domain.extensionrepo.novel.interactor.CreateNovelExtensionRepo
+import mihon.domain.extensionrepo.novel.interactor.DeleteNovelExtensionRepo
+import mihon.domain.extensionrepo.novel.interactor.GetNovelExtensionRepo
+import mihon.domain.extensionrepo.novel.interactor.ReplaceNovelExtensionRepo
+import mihon.domain.extensionrepo.novel.interactor.UpdateNovelExtensionRepo
 import tachiyomi.core.common.util.lang.launchIO
+import tachiyomi.core.common.util.system.logcat
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
-class AnimeExtensionReposScreenModel(
-    private val getExtensionRepo: GetAnimeExtensionRepo = Injekt.get(),
-    private val createExtensionRepo: CreateAnimeExtensionRepo = Injekt.get(),
-    private val deleteExtensionRepo: DeleteAnimeExtensionRepo = Injekt.get(),
-    private val replaceExtensionRepo: ReplaceAnimeExtensionRepo = Injekt.get(),
-    private val updateExtensionRepo: UpdateAnimeExtensionRepo = Injekt.get(),
-    private val extensionManager: AnimeExtensionManager = Injekt.get(),
+class NovelExtensionStoreScreenModel(
+    private val getExtensionRepo: GetNovelExtensionRepo = Injekt.get(),
+    private val createExtensionRepo: CreateNovelExtensionRepo = Injekt.get(),
+    private val deleteExtensionRepo: DeleteNovelExtensionRepo = Injekt.get(),
+    private val replaceExtensionRepo: ReplaceNovelExtensionRepo = Injekt.get(),
+    private val updateExtensionRepo: UpdateNovelExtensionRepo = Injekt.get(),
+    private val extensionManager: NovelExtensionManager = Injekt.get(),
+    private val application: Application = Injekt.get(),
 ) : StateScreenModel<RepoScreenState>(RepoScreenState.Loading) {
 
     private val _events: Channel<RepoEvent> = Channel(Int.MAX_VALUE)
     val events = _events.receiveAsFlow()
 
+    private val migrationPrefs = application.getSharedPreferences("novel_extension_repo_prefs", 0)
+
     init {
         screenModelScope.launchIO {
+            // One-time migration: fix repo names that show raw URLs
+            if (!migrationPrefs.getBoolean(CreateNovelExtensionRepo.MIGRATION_DONE_KEY, false)) {
+                createExtensionRepo.migrateRepoNames()
+                migrationPrefs.edit()
+                    .putBoolean(CreateNovelExtensionRepo.MIGRATION_DONE_KEY, true)
+                    .apply()
+            }
+
             getExtensionRepo.subscribeAll()
                 .collectLatest { repos ->
                     mutableState.update {
@@ -51,12 +65,12 @@ class AnimeExtensionReposScreenModel(
     fun createRepo(baseUrl: String, displayName: String? = null) {
         screenModelScope.launchIO {
             when (val result = createExtensionRepo.await(baseUrl, displayName)) {
-                CreateAnimeExtensionRepo.Result.InvalidUrl -> _events.send(RepoEvent.InvalidUrl)
-                CreateAnimeExtensionRepo.Result.RepoAlreadyExists -> _events.send(RepoEvent.RepoAlreadyExists)
-                is CreateAnimeExtensionRepo.Result.DuplicateFingerprint -> {
+                CreateNovelExtensionRepo.Result.InvalidUrl -> _events.send(RepoEvent.InvalidUrl)
+                CreateNovelExtensionRepo.Result.RepoAlreadyExists -> _events.send(RepoEvent.RepoAlreadyExists)
+                is CreateNovelExtensionRepo.Result.DuplicateFingerprint -> {
                     showDialog(RepoDialog.Conflict(result.oldRepo, result.newRepo))
                 }
-                CreateAnimeExtensionRepo.Result.Success -> refreshAvailablePlugins()
+                CreateNovelExtensionRepo.Result.Success -> refreshAvailablePlugins()
                 else -> {}
             }
         }
@@ -92,8 +106,13 @@ class AnimeExtensionReposScreenModel(
 
         if (status is RepoScreenState.Success) {
             screenModelScope.launchIO {
-                updateExtensionRepo.awaitAll()
-                refreshAvailablePlugins()
+                runCatching { updateExtensionRepo.awaitAll() }
+                    .onFailure { error ->
+                        logcat(LogPriority.WARN, error) { "Failed to refresh novel extension repositories" }
+                    }
+                    .onSuccess {
+                        refreshAvailablePlugins()
+                    }
             }
         }
     }
@@ -109,7 +128,10 @@ class AnimeExtensionReposScreenModel(
     }
 
     private suspend fun refreshAvailablePlugins() {
-        extensionManager.findAvailableExtensions()
+        runCatching { extensionManager.refreshAvailablePlugins() }
+            .onFailure { error ->
+                logcat(LogPriority.WARN, error) { "Failed to refresh available novel plugins" }
+            }
     }
 
     fun showDialog(dialog: RepoDialog) {

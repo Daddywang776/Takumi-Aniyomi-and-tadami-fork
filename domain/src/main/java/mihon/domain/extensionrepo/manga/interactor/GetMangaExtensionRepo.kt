@@ -1,13 +1,19 @@
 package mihon.domain.extensionrepo.manga.interactor
 
 import kotlinx.coroutines.flow.Flow
-import mihon.domain.extensionrepo.manga.repository.MangaExtensionRepoRepository
+import kotlinx.coroutines.flow.map
 import mihon.domain.extensionrepo.model.ExtensionRepo
+import mihon.domain.extensionstore.manga.repository.MangaExtensionStoreRepository
+import mihon.domain.extensionstore.toExtensionRepo
 
 class GetMangaExtensionRepo(
-    private val repository: MangaExtensionRepoRepository,
+    private val repository: MangaExtensionStoreRepository,
 ) {
-    fun subscribeAll(): Flow<List<ExtensionRepo>> = repository.subscribeAll()
+    fun subscribeAll(): Flow<List<ExtensionRepo>> {
+        return repository.getAllAsFlow().map { stores -> stores.map { it.toExtensionRepo() } }
+    }
 
-    suspend fun getAll(): List<ExtensionRepo> = repository.getAll()
+    suspend fun getAll(): List<ExtensionRepo> {
+        return repository.getAll().map { it.toExtensionRepo() }
+    }
 }

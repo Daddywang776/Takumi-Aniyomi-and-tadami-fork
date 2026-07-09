@@ -9,6 +9,7 @@ import eu.kanade.tachiyomi.data.backup.models.BackupCategory
 import eu.kanade.tachiyomi.data.backup.models.BackupCustomButtons
 import eu.kanade.tachiyomi.data.backup.models.BackupExtension
 import eu.kanade.tachiyomi.data.backup.models.BackupExtensionRepos
+import eu.kanade.tachiyomi.data.backup.models.BackupExtensionStore
 import eu.kanade.tachiyomi.data.backup.models.BackupManga
 import eu.kanade.tachiyomi.data.backup.models.BackupNovel
 import eu.kanade.tachiyomi.data.backup.models.BackupPreference
@@ -16,16 +17,19 @@ import eu.kanade.tachiyomi.data.backup.models.BackupSourcePreferences
 import eu.kanade.tachiyomi.data.backup.restore.restorers.AchievementRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.AnimeCategoriesRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.AnimeExtensionRepoRestorer
+import eu.kanade.tachiyomi.data.backup.restore.restorers.AnimeExtensionStoreRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.AnimeRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.CustomButtonRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.ExtensionsRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.FeedRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.MangaCategoriesRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.MangaExtensionRepoRestorer
+import eu.kanade.tachiyomi.data.backup.restore.restorers.MangaExtensionStoreRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.MangaRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.MangaSeriesRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.NovelCategoriesRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.NovelExtensionRepoRestorer
+import eu.kanade.tachiyomi.data.backup.restore.restorers.NovelExtensionStoreRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.NovelRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.NovelSeriesRestorer
 import eu.kanade.tachiyomi.data.backup.restore.restorers.PreferenceRestorer
@@ -55,6 +59,9 @@ class BackupRestorer(
     private val animeExtensionRepoRestorer: AnimeExtensionRepoRestorer = AnimeExtensionRepoRestorer(),
     private val mangaExtensionRepoRestorer: MangaExtensionRepoRestorer = MangaExtensionRepoRestorer(),
     private val novelExtensionRepoRestorer: NovelExtensionRepoRestorer = NovelExtensionRepoRestorer(),
+    private val animeExtensionStoreRestorer: AnimeExtensionStoreRestorer = AnimeExtensionStoreRestorer(),
+    private val mangaExtensionStoreRestorer: MangaExtensionStoreRestorer = MangaExtensionStoreRestorer(),
+    private val novelExtensionStoreRestorer: NovelExtensionStoreRestorer = NovelExtensionStoreRestorer(),
     private val customButtonRestorer: CustomButtonRestorer = CustomButtonRestorer(),
     private val animeRestorer: AnimeRestorer = AnimeRestorer(),
     private val mangaRestorer: MangaRestorer = MangaRestorer(),
@@ -130,9 +137,18 @@ class BackupRestorer(
             restoreAmount += 1
         }
         if (options.extensionRepoSettings) {
-            if (options.restoreAnime) restoreAmount += backup.backupAnimeExtensionRepo.size
-            if (options.restoreManga) restoreAmount += backup.backupMangaExtensionRepo.size
-            if (options.restoreNovel) restoreAmount += backup.backupNovelExtensionRepo.size
+            if (options.restoreAnime) {
+                restoreAmount +=
+                    backup.backupAnimeExtensionRepo.size + backup.backupAnimeExtensionStore.size
+            }
+            if (options.restoreManga) {
+                restoreAmount +=
+                    backup.backupMangaExtensionRepo.size + backup.backupMangaExtensionStore.size
+            }
+            if (options.restoreNovel) {
+                restoreAmount +=
+                    backup.backupNovelExtensionRepo.size + backup.backupNovelExtensionStore.size
+            }
         }
         if (options.customButtons) {
             restoreAmount += 1
@@ -202,6 +218,11 @@ class BackupRestorer(
                     if (options.restoreAnime) backup.backupAnimeExtensionRepo else emptyList(),
                     if (options.restoreManga) backup.backupMangaExtensionRepo else emptyList(),
                     if (options.restoreNovel) backup.backupNovelExtensionRepo else emptyList(),
+                )
+                restoreExtensionStores(
+                    if (options.restoreAnime) backup.backupAnimeExtensionStore else emptyList(),
+                    if (options.restoreManga) backup.backupMangaExtensionStore else emptyList(),
+                    if (options.restoreNovel) backup.backupNovelExtensionStore else emptyList(),
                 )
             }
             if (options.customButtons) {
@@ -458,6 +479,75 @@ class BackupRestorer(
                 } catch (e: Exception) {
                     errors.add(
                         Date() to "Error Adding Novel Repo: ${it.name} : ${e.message}",
+                    )
+                }
+
+                restoreProgress += 1
+                notifier.showRestoreProgress(
+                    context.stringResource(MR.strings.extensionRepo_settings),
+                    restoreProgress,
+                    restoreAmount,
+                    isSync,
+                )
+            }
+    }
+
+    private fun CoroutineScope.restoreExtensionStores(
+        backupAnimeExtensionStore: List<BackupExtensionStore>,
+        backupMangaExtensionStore: List<BackupExtensionStore>,
+        backupNovelExtensionStore: List<BackupExtensionStore>,
+    ) = launch {
+        backupAnimeExtensionStore
+            .forEach {
+                ensureActive()
+
+                try {
+                    animeExtensionStoreRestorer(it)
+                } catch (e: Exception) {
+                    errors.add(
+                        Date() to "Error Adding Anime Store: ${it.name} : ${e.message}",
+                    )
+                }
+
+                restoreProgress += 1
+                notifier.showRestoreProgress(
+                    context.stringResource(MR.strings.extensionRepo_settings),
+                    restoreProgress,
+                    restoreAmount,
+                    isSync,
+                )
+            }
+
+        backupMangaExtensionStore
+            .forEach {
+                ensureActive()
+
+                try {
+                    mangaExtensionStoreRestorer(it)
+                } catch (e: Exception) {
+                    errors.add(
+                        Date() to "Error Adding Manga Store: ${it.name} : ${e.message}",
+                    )
+                }
+
+                restoreProgress += 1
+                notifier.showRestoreProgress(
+                    context.stringResource(MR.strings.extensionRepo_settings),
+                    restoreProgress,
+                    restoreAmount,
+                    isSync,
+                )
+            }
+
+        backupNovelExtensionStore
+            .forEach {
+                ensureActive()
+
+                try {
+                    novelExtensionStoreRestorer(it)
+                } catch (e: Exception) {
+                    errors.add(
+                        Date() to "Error Adding Novel Store: ${it.name} : ${e.message}",
                     )
                 }
 

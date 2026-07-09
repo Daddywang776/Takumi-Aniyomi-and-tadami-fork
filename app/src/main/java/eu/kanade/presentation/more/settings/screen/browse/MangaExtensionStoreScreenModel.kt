@@ -22,7 +22,7 @@ import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 
-class MangaExtensionReposScreenModel(
+class MangaExtensionStoreScreenModel(
     private val getExtensionRepo: GetMangaExtensionRepo = Injekt.get(),
     private val createExtensionRepo: CreateMangaExtensionRepo = Injekt.get(),
     private val deleteExtensionRepo: DeleteMangaExtensionRepo = Injekt.get(),
@@ -137,8 +137,8 @@ class MangaExtensionReposScreenModel(
 
 sealed class RepoEvent {
     sealed class LocalizedMessage(val stringRes: StringResource) : RepoEvent()
-    data object InvalidUrl : LocalizedMessage(MR.strings.invalid_repo_name)
-    data object RepoAlreadyExists : LocalizedMessage(MR.strings.error_repo_exists)
+    data object InvalidUrl : LocalizedMessage(MR.strings.invalid_store_name)
+    data object RepoAlreadyExists : LocalizedMessage(MR.strings.error_store_exists)
 }
 
 sealed class RepoDialog {

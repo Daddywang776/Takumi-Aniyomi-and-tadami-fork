@@ -1,9 +1,11 @@
 package mihon.domain.extensionrepo.manga.interactor
 
-import mihon.domain.extensionrepo.manga.repository.MangaExtensionRepoRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import mihon.domain.extensionstore.manga.repository.MangaExtensionStoreRepository
 
 class GetMangaExtensionRepoCount(
-    private val repository: MangaExtensionRepoRepository,
+    private val repository: MangaExtensionStoreRepository,
 ) {
-    fun subscribe() = repository.getCount()
+    fun subscribe(): Flow<Int> = repository.getCountAsFlow().map { it.toInt() }
 }

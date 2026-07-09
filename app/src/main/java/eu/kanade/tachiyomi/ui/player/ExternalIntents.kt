@@ -51,7 +51,6 @@ import tachiyomi.source.local.entries.anime.LocalAnimeSource
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
-
 import java.io.File
 import java.util.Date
 

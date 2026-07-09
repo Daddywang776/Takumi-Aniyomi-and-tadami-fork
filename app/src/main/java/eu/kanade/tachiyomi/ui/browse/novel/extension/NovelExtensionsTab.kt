@@ -26,7 +26,7 @@ import eu.kanade.presentation.browse.novel.NovelExtensionScreen
 import eu.kanade.presentation.browse.novel.NovelRepoPickerDialog
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.TabContent
-import eu.kanade.presentation.more.settings.screen.browse.NovelExtensionReposScreen
+import eu.kanade.presentation.more.settings.screen.browse.NovelExtensionStoreScreen
 import eu.kanade.tachiyomi.ui.browse.novel.extension.details.NovelExtensionDetailsScreen
 import eu.kanade.tachiyomi.ui.browse.novel.extension.details.NovelSourcePreferencesScreen
 import eu.kanade.tachiyomi.util.system.copyToClipboard
@@ -58,8 +58,8 @@ fun novelExtensionsTab(
                 onClick = { navigator.push(NovelExtensionFilterScreen()) },
             ),
             AppBar.OverflowAction(
-                title = stringResource(MR.strings.label_extension_repos),
-                onClick = { navigator.push(NovelExtensionReposScreen()) },
+                title = stringResource(MR.strings.label_extension_stores),
+                onClick = { navigator.push(NovelExtensionStoreScreen()) },
             ),
             AppBar.OverflowAction(
                 title = "Installer diagnostics",
