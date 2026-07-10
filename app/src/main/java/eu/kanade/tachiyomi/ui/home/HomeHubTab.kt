@@ -711,32 +711,9 @@ object HomeHubTab : Tab {
 
         var hasReportedDrawn by remember { mutableStateOf(false) }
 
-        // PERF: defer heavy customization early so we can use the flag for other light-path decisions
-        var deferHeavyCustomization by remember { mutableStateOf(false) }
-        LaunchedEffect(Unit) {
-            deferHeavyCustomization = true
-            logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH homehubtab-defer-flag-set" }
-        }
-
-        // PERF: light defaults for section visibility on first composition to avoid 3 pref collects
-        // Real values on next composition.
-        val showAnimeSection by if (deferHeavyCustomization) {
-            uiPreferences.showAnimeSection().collectAsStateWithLifecycle()
-        } else {
-            // Use real value from pref on first frame (cheap .get()), to avoid change when defer sets.
-            // This prevents sections list from changing and re-mounting the tab content (which was causing repeated content-start and skeleton flicker).
-            remember { mutableStateOf(uiPreferences.showAnimeSection().get()) }
-        }
-        val showMangaSection by if (deferHeavyCustomization) {
-            uiPreferences.showMangaSection().collectAsStateWithLifecycle()
-        } else {
-            remember { mutableStateOf(uiPreferences.showMangaSection().get()) }
-        }
-        val showNovelSection by if (deferHeavyCustomization) {
-            uiPreferences.showNovelSection().collectAsStateWithLifecycle()
-        } else {
-            remember { mutableStateOf(uiPreferences.showNovelSection().get()) }
-        }
+        val showAnimeSection by uiPreferences.showAnimeSection().collectAsStateWithLifecycle()
+        val showMangaSection by uiPreferences.showMangaSection().collectAsStateWithLifecycle()
+        val showNovelSection by uiPreferences.showNovelSection().collectAsStateWithLifecycle()
 
         val sections = remember(showAnimeSection, showMangaSection, showNovelSection) {
             buildList {
@@ -754,20 +731,17 @@ object HomeHubTab : Tab {
         }
         var selectedSection by rememberSaveable { mutableStateOf(initialSelectedSection) }
 
-        // Defer persistence effects to after first frame
-        if (deferHeavyCustomization) {
-            LaunchedEffect(sections) {
-                if (selectedSection !in sections) {
-                    selectedSection = HomeHubSection.fromKey(homeHubLastSectionPreference.get())
-                        .takeIf { it in sections }
-                        ?: sections.first()
-                }
+        LaunchedEffect(sections) {
+            if (selectedSection !in sections) {
+                selectedSection = HomeHubSection.fromKey(homeHubLastSectionPreference.get())
+                    .takeIf { it in sections }
+                    ?: sections.first()
             }
-            LaunchedEffect(selectedSection) {
-                val key = selectedSection.key
-                if (homeHubLastSectionPreference.get() != key) {
-                    homeHubLastSectionPreference.set(key)
-                }
+        }
+        LaunchedEffect(selectedSection) {
+            val key = selectedSection.key
+            if (homeHubLastSectionPreference.get() != key) {
+                homeHubLastSectionPreference.set(key)
             }
         }
 
@@ -778,13 +752,14 @@ object HomeHubTab : Tab {
         var currentStreak by remember { mutableIntStateOf(0) }
 
         val profileSection = resolveHomeHubProfileSection(sections, selectedSection)
-        // PERF: key both the model and the heavy header/content to cut recompositions after cache apply
-        val profileScreenModel: BaseHomeHubScreenModel = androidx.compose.runtime.key(profileSection) {
-            when (profileSection) {
-                HomeHubSection.Anime -> HomeHubTab.rememberScreenModel { HomeHubScreenModel() }
-                HomeHubSection.Manga -> HomeHubTab.rememberScreenModel { MangaHomeHubScreenModel() }
-                HomeHubSection.Novel -> HomeHubTab.rememberScreenModel { NovelHomeHubScreenModel() }
-            }
+        val animeScreenModel = HomeHubTab.rememberScreenModel { HomeHubScreenModel() }
+        val mangaScreenModel = HomeHubTab.rememberScreenModel { MangaHomeHubScreenModel() }
+        val novelScreenModel = HomeHubTab.rememberScreenModel { NovelHomeHubScreenModel() }
+
+        val profileScreenModel = when (profileSection) {
+            HomeHubSection.Anime -> animeScreenModel
+            HomeHubSection.Manga -> mangaScreenModel
+            HomeHubSection.Novel -> novelScreenModel
         }
         val headerState by profileScreenModel.state.collectAsStateWithLifecycle()
         val headerUserName = headerState.userName
@@ -796,174 +771,99 @@ object HomeHubTab : Tab {
         // Note: defer flag log is emitted from the early declaration point in first composition
         // (actual value becomes true on next recompose)
 
-        // Light defaults for first frame (no heavy collects or complex object creation)
-        var isNameEdited: Boolean
-        var showHomeGreeting: Boolean
-        var showHomeStreak: Boolean
-        var homeStreakCounterStyle: HomeStreakCounterStyle
-        var homeHeroCtaMode: HomeHeroCtaMode
-        var homeHubRecentCardMode: HomeHubRecentCardMode
-        var homeHeaderGreetingAlignRight: Boolean
-        var homeHeaderNicknameAlignRight: Boolean
-        var homeHeaderLayout: HomeHeaderLayoutSpec
-        var nicknameStyle: NicknameStyle
-        var greetingStyle: GreetingStyle
-        var avatarFrameStyleKey: String
-        var homeBadgeStyleKey: String
-        var profileTitleKey: String
-        var disableHomeHeaderScrollHide: Boolean
-
-        if (deferHeavyCustomization) {
-            logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH homehubtab-heavy-customization-start" }
-
-            // Deferred from top level
-            LaunchedEffect(Unit) {
-                userProfilePreferences.migrateGreetingDefaultsV026IfNeeded()
-            }
-            LaunchedEffect(Unit) {
-                activityDataRepository.getActivityData(days = 365)
-                    .collectLatest { currentStreak = calculateHomeOpenStreak(it) }
-            }
-
-            val _isNameEdited by userProfilePreferences.nameEdited().collectAsStateWithLifecycle()
-            isNameEdited = _isNameEdited
-            val _showHomeGreeting by userProfilePreferences.showHomeGreeting().collectAsStateWithLifecycle()
-            showHomeGreeting = _showHomeGreeting
-            val _showHomeStreak by userProfilePreferences.showHomeStreak().collectAsStateWithLifecycle()
-            showHomeStreak = _showHomeStreak
-
-            val homeStreakCounterStyleKey by userProfilePreferences.homeStreakCounterStyle().collectAsStateWithLifecycle()
-            homeStreakCounterStyle = HomeStreakCounterStyle.fromKey(homeStreakCounterStyleKey)
-            val homeHeroCtaModeKey by userProfilePreferences.homeHeroCtaMode().collectAsStateWithLifecycle()
-            homeHeroCtaMode = HomeHeroCtaMode.fromKey(homeHeroCtaModeKey)
-            val homeHubRecentCardModeKey by userProfilePreferences.homeHubRecentCardMode().collectAsStateWithLifecycle()
-            homeHubRecentCardMode = HomeHubRecentCardMode.fromKey(homeHubRecentCardModeKey)
-
-            val _homeHeaderGreetingAlignRight by userProfilePreferences
-                .homeHeaderGreetingAlignRight()
-                .collectAsStateWithLifecycle()
-            homeHeaderGreetingAlignRight = _homeHeaderGreetingAlignRight
-            val _homeHeaderNicknameAlignRight by userProfilePreferences
-                .homeHeaderNicknameAlignRight()
-                .collectAsStateWithLifecycle()
-            homeHeaderNicknameAlignRight = _homeHeaderNicknameAlignRight
-
-            val homeHeaderLayoutJson by userProfilePreferences.homeHeaderLayoutJson().collectAsStateWithLifecycle()
-            homeHeaderLayout = remember(homeHeaderLayoutJson) {
-                userProfilePreferences.getHomeHeaderLayoutOrDefault()
-            }
-
-            val nicknameFontKey by userProfilePreferences.nicknameFont().collectAsStateWithLifecycle()
-            val nicknameFontSize by userProfilePreferences.nicknameFontSize().collectAsStateWithLifecycle()
-            val nicknameColorKey by userProfilePreferences.nicknameColor().collectAsStateWithLifecycle()
-            val nicknameCustomColorHex by userProfilePreferences.nicknameCustomColorHex().collectAsStateWithLifecycle()
-            val nicknameOutline by userProfilePreferences.nicknameOutline().collectAsStateWithLifecycle()
-            val nicknameOutlineWidth by userProfilePreferences.nicknameOutlineWidth().collectAsStateWithLifecycle()
-            val nicknameGlow by userProfilePreferences.nicknameGlow().collectAsStateWithLifecycle()
-            val nicknameEffectKey by userProfilePreferences.nicknameEffect().collectAsStateWithLifecycle()
-            val _avatarFrameStyleKey by userProfilePreferences.avatarFrameStyle().collectAsStateWithLifecycle()
-            avatarFrameStyleKey = _avatarFrameStyleKey
-            val _homeBadgeStyleKey by userProfilePreferences.homeBadgeStyle().collectAsStateWithLifecycle()
-            homeBadgeStyleKey = _homeBadgeStyleKey
-            val _profileTitleKey by userProfilePreferences.profileTitle().collectAsStateWithLifecycle()
-            profileTitleKey = _profileTitleKey
-
-            nicknameStyle = NicknameStyle(
-                font = NicknameFontPreset.fromKey(nicknameFontKey),
-                fontSize = nicknameFontSize.coerceIn(14, 36),
-                color = NicknameColorPreset.fromKey(nicknameColorKey),
-                outline = nicknameOutline,
-                outlineWidth = nicknameOutlineWidth,
-                glow = nicknameGlow,
-                effect = NicknameEffectPreset.fromKey(nicknameEffectKey),
-                customColorHex = nicknameCustomColorHex,
-            )
-
-            val greetingFontKey by userProfilePreferences.greetingFont().collectAsStateWithLifecycle()
-            val greetingColorKey by userProfilePreferences.greetingColor().collectAsStateWithLifecycle()
-            val greetingCustomColorHex by userProfilePreferences.greetingCustomColorHex().collectAsStateWithLifecycle()
-            val greetingFontSize by userProfilePreferences.greetingFontSize().collectAsStateWithLifecycle()
-            val greetingAlpha by userProfilePreferences.greetingAlpha().collectAsStateWithLifecycle()
-            val greetingDecorationKey by userProfilePreferences.greetingDecoration().collectAsStateWithLifecycle()
-            val greetingItalic by userProfilePreferences.greetingItalic().collectAsStateWithLifecycle()
-            greetingStyle = GreetingStyle(
-                font = NicknameFontPreset.fromKey(greetingFontKey),
-                color = NicknameColorPreset.fromKey(greetingColorKey),
-                customColorHex = greetingCustomColorHex,
-                fontSize = greetingFontSize.coerceIn(10, 26),
-                alpha = greetingAlpha.coerceIn(10, 100),
-                decoration = GreetingDecorationPreset.fromKey(greetingDecorationKey),
-                italic = greetingItalic,
-            )
-
-            val _disableHomeHeaderScrollHide by uiPreferences.disableHomeHeaderScrollHide()
-                .collectAsStateWithLifecycle()
-            disableHomeHeaderScrollHide = _disableHomeHeaderScrollHide
-
-            logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH homehubtab-heavy-customization-ready" }
-        } else {
-            // Light path: use direct .get() to get *real* current user values for first frame.
-            // This makes the very first visible UI look correct (real styles + cached content)
-            // without the composition overhead of 15+ collectAsStateWithLifecycle + remembers.
-            // Full reactive collects take over on next recomposition (no visible change if values match).
-            isNameEdited = userProfilePreferences.nameEdited().get()
-            showHomeGreeting = userProfilePreferences.showHomeGreeting().get()
-            showHomeStreak = userProfilePreferences.showHomeStreak().get()
-            homeStreakCounterStyle = HomeStreakCounterStyle.fromKey(
-                userProfilePreferences.homeStreakCounterStyle().get()
-            )
-            homeHeroCtaMode = HomeHeroCtaMode.fromKey(
-                userProfilePreferences.homeHeroCtaMode().get()
-            )
-            homeHubRecentCardMode = HomeHubRecentCardMode.fromKey(
-                userProfilePreferences.homeHubRecentCardMode().get()
-            )
-            homeHeaderGreetingAlignRight = userProfilePreferences.homeHeaderGreetingAlignRight().get()
-            homeHeaderNicknameAlignRight = userProfilePreferences.homeHeaderNicknameAlignRight().get()
-            homeHeaderLayout = userProfilePreferences.getHomeHeaderLayoutOrDefault()
-
-            val nicknameFontKey = userProfilePreferences.nicknameFont().get()
-            val nicknameFontSize = userProfilePreferences.nicknameFontSize().get()
-            val nicknameColorKey = userProfilePreferences.nicknameColor().get()
-            val nicknameCustomColorHex = userProfilePreferences.nicknameCustomColorHex().get()
-            val nicknameOutline = userProfilePreferences.nicknameOutline().get()
-            val nicknameOutlineWidth = userProfilePreferences.nicknameOutlineWidth().get()
-            val nicknameGlow = userProfilePreferences.nicknameGlow().get()
-            val nicknameEffectKey = userProfilePreferences.nicknameEffect().get()
-            avatarFrameStyleKey = userProfilePreferences.avatarFrameStyle().get()
-            homeBadgeStyleKey = userProfilePreferences.homeBadgeStyle().get()
-            profileTitleKey = userProfilePreferences.profileTitle().get()
-
-            nicknameStyle = NicknameStyle(
-                font = NicknameFontPreset.fromKey(nicknameFontKey),
-                fontSize = nicknameFontSize.coerceIn(14, 36),
-                color = NicknameColorPreset.fromKey(nicknameColorKey),
-                outline = nicknameOutline,
-                outlineWidth = nicknameOutlineWidth,
-                glow = nicknameGlow,
-                effect = NicknameEffectPreset.fromKey(nicknameEffectKey),
-                customColorHex = nicknameCustomColorHex,
-            )
-
-            val greetingFontKey = userProfilePreferences.greetingFont().get()
-            val greetingColorKey = userProfilePreferences.greetingColor().get()
-            val greetingCustomColorHex = userProfilePreferences.greetingCustomColorHex().get()
-            val greetingFontSize = userProfilePreferences.greetingFontSize().get()
-            val greetingAlpha = userProfilePreferences.greetingAlpha().get()
-            val greetingDecorationKey = userProfilePreferences.greetingDecoration().get()
-            val greetingItalic = userProfilePreferences.greetingItalic().get()
-            greetingStyle = GreetingStyle(
-                font = NicknameFontPreset.fromKey(greetingFontKey),
-                color = NicknameColorPreset.fromKey(greetingColorKey),
-                customColorHex = greetingCustomColorHex,
-                fontSize = greetingFontSize.coerceIn(10, 26),
-                alpha = greetingAlpha.coerceIn(10, 100),
-                decoration = GreetingDecorationPreset.fromKey(greetingDecorationKey),
-                italic = greetingItalic,
-            )
-
-            disableHomeHeaderScrollHide = uiPreferences.disableHomeHeaderScrollHide().get()
+        LaunchedEffect(Unit) {
+            userProfilePreferences.migrateGreetingDefaultsV026IfNeeded()
         }
+        LaunchedEffect(Unit) {
+            activityDataRepository.getActivityData(days = 365)
+                .collectLatest { currentStreak = calculateHomeOpenStreak(it) }
+        }
+
+        val isNameEdited by userProfilePreferences.nameEdited().collectAsStateWithLifecycle()
+        val showHomeGreeting by userProfilePreferences.showHomeGreeting().collectAsStateWithLifecycle()
+        val showHomeStreak by userProfilePreferences.showHomeStreak().collectAsStateWithLifecycle()
+
+        val homeStreakCounterStyleKey by userProfilePreferences.homeStreakCounterStyle().collectAsStateWithLifecycle()
+        val homeStreakCounterStyle = HomeStreakCounterStyle.fromKey(homeStreakCounterStyleKey)
+        val homeHeroCtaModeKey by userProfilePreferences.homeHeroCtaMode().collectAsStateWithLifecycle()
+        val homeHeroCtaMode = HomeHeroCtaMode.fromKey(homeHeroCtaModeKey)
+        val homeHubRecentCardModeKey by userProfilePreferences.homeHubRecentCardMode().collectAsStateWithLifecycle()
+        val homeHubRecentCardMode = HomeHubRecentCardMode.fromKey(homeHubRecentCardModeKey)
+
+        val homeHeaderGreetingAlignRight by userProfilePreferences
+            .homeHeaderGreetingAlignRight()
+            .collectAsStateWithLifecycle()
+        val homeHeaderNicknameAlignRight by userProfilePreferences
+            .homeHeaderNicknameAlignRight()
+            .collectAsStateWithLifecycle()
+
+        val homeHeaderLayoutJson by userProfilePreferences.homeHeaderLayoutJson().collectAsStateWithLifecycle()
+        val homeHeaderLayout = remember(homeHeaderLayoutJson) {
+            userProfilePreferences.getHomeHeaderLayoutOrDefault()
+        }
+
+        val nicknameFontKey by userProfilePreferences.nicknameFont().collectAsStateWithLifecycle()
+        val nicknameFontSize by userProfilePreferences.nicknameFontSize().collectAsStateWithLifecycle()
+        val nicknameColorKey by userProfilePreferences.nicknameColor().collectAsStateWithLifecycle()
+        val nicknameCustomColorHex by userProfilePreferences.nicknameCustomColorHex().collectAsStateWithLifecycle()
+        val nicknameOutline by userProfilePreferences.nicknameOutline().collectAsStateWithLifecycle()
+        val nicknameOutlineWidth by userProfilePreferences.nicknameOutlineWidth().collectAsStateWithLifecycle()
+        val nicknameGlow by userProfilePreferences.nicknameGlow().collectAsStateWithLifecycle()
+        val nicknameEffectKey by userProfilePreferences.nicknameEffect().collectAsStateWithLifecycle()
+        val avatarFrameStyleKey by userProfilePreferences.avatarFrameStyle().collectAsStateWithLifecycle()
+        val homeBadgeStyleKey by userProfilePreferences.homeBadgeStyle().collectAsStateWithLifecycle()
+        val profileTitleKey by userProfilePreferences.profileTitle().collectAsStateWithLifecycle()
+
+        val nicknameStyle = remember(
+            nicknameFontKey,
+            nicknameFontSize,
+            nicknameColorKey,
+            nicknameOutline,
+            nicknameOutlineWidth,
+            nicknameGlow,
+            nicknameEffectKey,
+            nicknameCustomColorHex,
+        ) {
+            NicknameStyle(
+                font = NicknameFontPreset.fromKey(nicknameFontKey),
+                fontSize = nicknameFontSize.coerceIn(14, 36),
+                color = NicknameColorPreset.fromKey(nicknameColorKey),
+                outline = nicknameOutline,
+                outlineWidth = nicknameOutlineWidth,
+                glow = nicknameGlow,
+                effect = NicknameEffectPreset.fromKey(nicknameEffectKey),
+                customColorHex = nicknameCustomColorHex,
+            )
+        }
+
+        val greetingFontKey by userProfilePreferences.greetingFont().collectAsStateWithLifecycle()
+        val greetingColorKey by userProfilePreferences.greetingColor().collectAsStateWithLifecycle()
+        val greetingCustomColorHex by userProfilePreferences.greetingCustomColorHex().collectAsStateWithLifecycle()
+        val greetingFontSize by userProfilePreferences.greetingFontSize().collectAsStateWithLifecycle()
+        val greetingAlpha by userProfilePreferences.greetingAlpha().collectAsStateWithLifecycle()
+        val greetingDecorationKey by userProfilePreferences.greetingDecoration().collectAsStateWithLifecycle()
+        val greetingItalic by userProfilePreferences.greetingItalic().collectAsStateWithLifecycle()
+        val greetingStyle = remember(
+            greetingFontKey,
+            greetingColorKey,
+            greetingCustomColorHex,
+            greetingFontSize,
+            greetingAlpha,
+            greetingDecorationKey,
+            greetingItalic,
+        ) {
+            GreetingStyle(
+                font = NicknameFontPreset.fromKey(greetingFontKey),
+                color = NicknameColorPreset.fromKey(greetingColorKey),
+                customColorHex = greetingCustomColorHex,
+                fontSize = greetingFontSize.coerceIn(10, 26),
+                alpha = greetingAlpha.coerceIn(10, 100),
+                decoration = GreetingDecorationPreset.fromKey(greetingDecorationKey),
+                italic = greetingItalic,
+            )
+        }
+
+        val disableHomeHeaderScrollHide by uiPreferences.disableHomeHeaderScrollHide().collectAsStateWithLifecycle()
 
         val showNameEditHint = shouldShowNicknameEditHint(
             currentName = headerUserName,
@@ -1058,59 +958,63 @@ object HomeHubTab : Tab {
         // do not create brand new TabContent instances. This prevents the pager from remounting HomeHub pages,
         // which was causing repeated content-start logs and transient skeleton states.
         // Keys chosen so legitimate changes (search, selection, modes) still produce updated list.
-        val tabs = remember(sections, selectedSection, homeHeroCtaMode, homeHubRecentCardMode, profileScreenModel, animeSearchQuery, mangaSearchQuery, novelSearchQuery, scrollResetToken) {
+        val tabs = remember(
+            sections, selectedSection, homeHeroCtaMode, homeHubRecentCardMode,
+            animeScreenModel, mangaScreenModel, novelScreenModel,
+            animeSearchQuery, mangaSearchQuery, novelSearchQuery, scrollResetToken,
+        ) {
             sections.map { section ->
-            when (section) {
-                HomeHubSection.Anime -> TabContent(
-                    titleRes = AYMR.strings.label_anime,
-                    searchEnabled = true,
-                    content = { contentPadding, _ ->
-                        AnimeHomeHub(
-                            contentPadding = contentPadding,
-                            searchQuery = animeSearchQuery,
-                            heroCtaMode = homeHeroCtaMode,
-                            recentCardMode = homeHubRecentCardMode,
-                            activeSection = selectedSection,
-                            scrollResetToken = scrollResetToken,
-                            onScrollSignal = onScrollSignal,
-                            providedScreenModel = profileScreenModel as? HomeHubScreenModel,
-                        )
-                    },
-                )
-                HomeHubSection.Manga -> TabContent(
-                    titleRes = AYMR.strings.label_manga,
-                    searchEnabled = true,
-                    content = { contentPadding, _ ->
-                        MangaHomeHub(
-                            contentPadding = contentPadding,
-                            searchQuery = mangaSearchQuery,
-                            heroCtaMode = homeHeroCtaMode,
-                            recentCardMode = homeHubRecentCardMode,
-                            activeSection = selectedSection,
-                            scrollResetToken = scrollResetToken,
-                            onScrollSignal = onScrollSignal,
-                            providedScreenModel = profileScreenModel as? MangaHomeHubScreenModel,
-                        )
-                    },
-                )
-                HomeHubSection.Novel -> TabContent(
-                    titleRes = AYMR.strings.label_novel,
-                    searchEnabled = true,
-                    content = { contentPadding, _ ->
-                        NovelHomeHub(
-                            contentPadding = contentPadding,
-                            searchQuery = novelSearchQuery,
-                            heroCtaMode = homeHeroCtaMode,
-                            recentCardMode = homeHubRecentCardMode,
-                            activeSection = selectedSection,
-                            scrollResetToken = scrollResetToken,
-                            onScrollSignal = onScrollSignal,
-                            providedScreenModel = profileScreenModel as? NovelHomeHubScreenModel,
-                        )
-                    },
-                )
-            }
-        }.toPersistentList()
+                when (section) {
+                    HomeHubSection.Anime -> TabContent(
+                        titleRes = AYMR.strings.label_anime,
+                        searchEnabled = true,
+                        content = { contentPadding, _ ->
+                            AnimeHomeHub(
+                                contentPadding = contentPadding,
+                                searchQuery = animeSearchQuery,
+                                heroCtaMode = homeHeroCtaMode,
+                                recentCardMode = homeHubRecentCardMode,
+                                activeSection = selectedSection,
+                                scrollResetToken = scrollResetToken,
+                                onScrollSignal = onScrollSignal,
+                                providedScreenModel = animeScreenModel,
+                            )
+                        },
+                    )
+                    HomeHubSection.Manga -> TabContent(
+                        titleRes = AYMR.strings.label_manga,
+                        searchEnabled = true,
+                        content = { contentPadding, _ ->
+                            MangaHomeHub(
+                                contentPadding = contentPadding,
+                                searchQuery = mangaSearchQuery,
+                                heroCtaMode = homeHeroCtaMode,
+                                recentCardMode = homeHubRecentCardMode,
+                                activeSection = selectedSection,
+                                scrollResetToken = scrollResetToken,
+                                onScrollSignal = onScrollSignal,
+                                providedScreenModel = mangaScreenModel,
+                            )
+                        },
+                    )
+                    HomeHubSection.Novel -> TabContent(
+                        titleRes = AYMR.strings.label_novel,
+                        searchEnabled = true,
+                        content = { contentPadding, _ ->
+                            NovelHomeHub(
+                                contentPadding = contentPadding,
+                                searchQuery = novelSearchQuery,
+                                heroCtaMode = homeHeroCtaMode,
+                                recentCardMode = homeHubRecentCardMode,
+                                activeSection = selectedSection,
+                                scrollResetToken = scrollResetToken,
+                                onScrollSignal = onScrollSignal,
+                                providedScreenModel = novelScreenModel,
+                            )
+                        },
+                    )
+                }
+            }.toPersistentList()
         }
 
         val initialIndex = resolveHomeHubSectionIndex(sections, selectedSection)

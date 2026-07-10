@@ -39,6 +39,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -273,46 +274,27 @@ class MainActivity : BaseActivity() {
                         logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH ready-set-early" }
                     }
 
-                    // PERF: light first-frame defaults for UI state to reduce composition cost on launch.
-                    // Real values (and their collects) kick in on the next composition after defer.
-                    var deferNavigatorFirstFrame by remember { mutableStateOf(false) }
-                    LaunchedEffect(Unit) { deferNavigatorFirstFrame = true }
-
                     // PERF: move incognito and download/indexing inside to reduce root composition cost on app launch
                     var incognito by remember { mutableStateOf(false) }
                     var incognitoAnime by remember { mutableStateOf(false) }
                     var incognitoNovel by remember { mutableStateOf(false) }
 
-                    val globalIncognito by if (deferNavigatorFirstFrame) {
-                        preferences.incognitoMode().collectAsStateWithLifecycle()
-                    } else {
-                        remember { mutableStateOf(false) }
-                    }
-                    val novelReaderIncognito by if (deferNavigatorFirstFrame) {
-                        NovelReaderIncognitoState.active.collectAsStateWithLifecycle()
-                    } else {
-                        remember { mutableStateOf(false) }
-                    }
+                    val globalIncognito by preferences.incognitoMode().collectAsStateWithLifecycle()
+                    val novelReaderIncognito by NovelReaderIncognitoState.active.collectAsStateWithLifecycle()
                     val effectiveIncognito =
                         globalIncognito || incognito || incognitoAnime || incognitoNovel || novelReaderIncognito
                     LaunchedEffect(effectiveIncognito) {
                         ForegroundIncognitoState.set(effectiveIncognito)
                     }
 
-                    val downloadOnly by if (deferNavigatorFirstFrame) {
-                        preferences.downloadedOnly().collectAsStateWithLifecycle()
-                    } else {
-                        remember { mutableStateOf(false) }
+                    val downloadOnly by preferences.downloadedOnly().collectAsStateWithLifecycle()
+                    val indexing by produceState(initialValue = false) {
+                        val cache = withContext(Dispatchers.IO) { downloadCache }
+                        cache.isInitializing.collect { value = it }
                     }
-                    val indexing by if (deferNavigatorFirstFrame) {
-                        downloadCache.isInitializing.collectAsStateWithLifecycle()
-                    } else {
-                        remember { mutableStateOf(false) }
-                    }
-                    val indexingAnime by if (deferNavigatorFirstFrame) {
-                        animeDownloadCache.isInitializing.collectAsStateWithLifecycle()
-                    } else {
-                        remember { mutableStateOf(false) }
+                    val indexingAnime by produceState(initialValue = false) {
+                        val cache = withContext(Dispatchers.IO) { animeDownloadCache }
+                        cache.isInitializing.collect { value = it }
                     }
                     val isSystemInDarkTheme = isSystemInDarkTheme()
                     val statusBarBackgroundColor = when {
@@ -510,61 +492,67 @@ class MainActivity : BaseActivity() {
                         CheckForUpdates()
                         ShowOnboarding()
 
-                    // PERF: moved the migration/changelog inside the Navigator to lighten the outer setComposeContent composition (faster to HomeScreen.Content)
-                    var showChangelog by remember { mutableStateOf(false) }
-                    var installedRelease by remember { mutableStateOf<Release?>(null) }
-                    LaunchedEffect(migrationReady.value) {
-                        if (migrationReady.value) {
-                            val shouldShowChangelog = withContext(Dispatchers.IO) {
-                                val appUpdatePreferences = Injekt.get<AppUpdatePreferences>()
-                                val seenVersionPreference = appUpdatePreferences.lastSeenUpdatedChangelogVersionCode()
-                                val pendingPreviousVersionPreference =
-                                    appUpdatePreferences.pendingUpdatedChangelogPreviousVersionCode()
-                                val decision = resolveUpdatedChangelogPrompt(
-                                    currentVersionCode = BuildConfig.VERSION_CODE,
-                                    lastSeenVersionCode = seenVersionPreference.get(),
-                                    pendingPreviousVersionCode = pendingPreviousVersionPreference.get(),
-                                    isDebug = BuildConfig.DEBUG,
-                                )
+                        // PERF: moved the migration/changelog inside the Navigator to lighten
+                        // the outer setComposeContent composition (faster to HomeScreen.Content)
+                        var showChangelog by remember { mutableStateOf(false) }
+                        var installedRelease by remember { mutableStateOf<Release?>(null) }
+                        LaunchedEffect(migrationReady.value) {
+                            if (migrationReady.value) {
+                                val shouldShowChangelog = withContext(Dispatchers.IO) {
+                                    val appUpdatePreferences = Injekt.get<AppUpdatePreferences>()
+                                    val seenVersionPreference =
+                                        appUpdatePreferences.lastSeenUpdatedChangelogVersionCode()
+                                    val pendingPreviousVersionPreference =
+                                        appUpdatePreferences.pendingUpdatedChangelogPreviousVersionCode()
+                                    val decision = resolveUpdatedChangelogPrompt(
+                                        currentVersionCode = BuildConfig.VERSION_CODE,
+                                        lastSeenVersionCode = seenVersionPreference.get(),
+                                        pendingPreviousVersionCode = pendingPreviousVersionPreference.get(),
+                                        isDebug = BuildConfig.DEBUG,
+                                    )
 
-                                if (decision.nextSeenVersionCode != seenVersionPreference.get()) {
-                                    seenVersionPreference.set(decision.nextSeenVersionCode)
-                                }
-                                if (decision.nextPendingPreviousVersionCode != pendingPreviousVersionPreference.get()) {
-                                    pendingPreviousVersionPreference.set(decision.nextPendingPreviousVersionCode)
-                                }
-
-                                decision.shouldPrompt
-                            }
-
-                            if (shouldShowChangelog) {
-                                installedRelease = withContext(Dispatchers.IO) {
-                                    runCatching {
-                                        Injekt.get<GetApplicationRelease>().awaitCurrent(
-                                            GetApplicationRelease.Arguments(
-                                                isPreview = isPreviewBuildType,
-                                                commitCount = BuildConfig.COMMIT_COUNT.toInt(),
-                                                versionName = BuildConfig.VERSION_NAME,
-                                                repository = GITHUB_REPO,
-                                                forceCheck = true,
-                                            ),
+                                    if (decision.nextSeenVersionCode != seenVersionPreference.get()) {
+                                        seenVersionPreference.set(decision.nextSeenVersionCode)
+                                    }
+                                    if (decision.nextPendingPreviousVersionCode !=
+                                        pendingPreviousVersionPreference.get()
+                                    ) {
+                                        pendingPreviousVersionPreference.set(
+                                            decision.nextPendingPreviousVersionCode,
                                         )
-                                    }.getOrNull()
+                                    }
+
+                                    decision.shouldPrompt
                                 }
-                                showChangelog = true
+
+                                if (shouldShowChangelog) {
+                                    installedRelease = withContext(Dispatchers.IO) {
+                                        runCatching {
+                                            Injekt.get<GetApplicationRelease>().awaitCurrent(
+                                                GetApplicationRelease.Arguments(
+                                                    isPreview = isPreviewBuildType,
+                                                    commitCount = BuildConfig.COMMIT_COUNT.toInt(),
+                                                    versionName = BuildConfig.VERSION_NAME,
+                                                    repository = GITHUB_REPO,
+                                                    forceCheck = true,
+                                                ),
+                                            )
+                                        }.getOrNull()
+                                    }
+                                    showChangelog = true
+                                }
                             }
                         }
-                    }
-                    if (showChangelog) {
-                        val release = installedRelease
-                        UpdatedChangelogScreen(
-                            versionName = release?.version ?: "v${BuildConfig.VERSION_NAME}",
-                            releaseDate = release?.releaseDate.orEmpty(),
-                            changelogInfo = release?.info.orEmpty(),
-                            onOpenInBrowser = { openInBrowser(release?.releaseLink ?: RELEASE_URL) },
-                            onDismiss = { showChangelog = false },
-                        )
-                    }
+                        if (showChangelog) {
+                            val release = installedRelease
+                            UpdatedChangelogScreen(
+                                versionName = release?.version ?: "v${BuildConfig.VERSION_NAME}",
+                                releaseDate = release?.releaseDate.orEmpty(),
+                                changelogInfo = release?.info.orEmpty(),
+                                onOpenInBrowser = { openInBrowser(release?.releaseLink ?: RELEASE_URL) },
+                                onDismiss = { showChangelog = false },
+                            )
+                        }
                     } // end deferSideEffects
                 }
             }
