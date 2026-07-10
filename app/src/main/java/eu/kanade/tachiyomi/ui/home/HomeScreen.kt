@@ -48,9 +48,11 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -140,30 +142,54 @@ object HomeScreen : Screen() {
     override fun Content() {
         val context = LocalContext.current
         logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH homescreen-content-start" }
-        val navStyle by uiPreferences.navStyle().collectAsState()
-        val bottomNavAppearance by uiPreferences.bottomNavAppearance().collectAsState()
+
+        // PERF: defer navStyle and bottomNavAppearance on first composition (light defaults)
+        // to reduce cost before TabNavigator. Real values on recompose after defer.
+        var deferHomeDetails by remember { mutableStateOf(false) }
+        LaunchedEffect(Unit) { deferHomeDetails = true }
+        logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH homescreen-defer-details-set" }
+
+        val navStyle by if (deferHomeDetails) {
+            uiPreferences.navStyle().collectAsState()
+        } else {
+            remember { mutableStateOf(eu.kanade.domain.ui.model.NavStyle.MOVE_MANGA_TO_MORE) }
+        }
+        val bottomNavAppearance by if (deferHomeDetails) {
+            uiPreferences.bottomNavAppearance().collectAsState()
+        } else {
+            remember { mutableStateOf(eu.kanade.domain.ui.model.BottomNavAppearance.Aurora) }
+        }
         val isEInkMode = LocalIsEInkMode.current
+
         val selectedTransitionMode by uiPreferences.navigationTransitionMode().collectAsState()
         val resolvedTransitionMode by remember(
             selectedTransitionMode,
             context.animatorDurationScale,
             context.powerManager.isPowerSaveMode,
             isEInkMode,
+            deferHomeDetails,
         ) {
             derivedStateOf {
-                resolveNavigationTransitionMode(
-                    selectedMode = selectedTransitionMode,
-                    animatorDurationScale = context.animatorDurationScale,
-                    isPowerSaveMode = context.powerManager.isPowerSaveMode,
-                    isEInkMode = isEInkMode,
-                )
+                if (!deferHomeDetails) {
+                    // Light default for first frame
+                    ResolvedNavigationTransitionMode.NONE
+                } else {
+                    resolveNavigationTransitionMode(
+                        selectedMode = selectedTransitionMode,
+                        animatorDurationScale = context.animatorDurationScale,
+                        isPowerSaveMode = context.powerManager.isPowerSaveMode,
+                        isEInkMode = isEInkMode,
+                    )
+                }
             }
         }
+
         val currentMoreTab = navStyle.moreTab
         val theme by uiPreferences.appTheme().collectAsState()
-        val isAuroraTheme = theme.isAuroraStyle
-        val useNavigationRail = isTabletUi() && !isAuroraTheme
-        val useAuroraBottomNav = bottomNavAppearance == BottomNavAppearance.Aurora
+        val isAuroraTheme = if (deferHomeDetails) theme.isAuroraStyle else true
+        val useNavigationRail = if (deferHomeDetails) (isTabletUi() && !isAuroraTheme) else false
+        val useAuroraBottomNav = if (deferHomeDetails) (bottomNavAppearance == BottomNavAppearance.Aurora) else true
+
         val navigator = LocalNavigator.currentOrThrow
         val bottomNavVisibilityController = remember { BottomNavVisibilityController() }
         val hazeState = remember { HazeState() }
@@ -179,7 +205,8 @@ object HomeScreen : Screen() {
                         coachMarkState.isBottomBarVisible = false
                     }
                 }
-                LaunchedEffect(coachMarkState.activeTip) {
+                LaunchedEffect(coachMarkState.activeTip, deferHomeDetails) {
+                    if (!deferHomeDetails) return@LaunchedEffect
                     val activeTip = coachMarkState.activeTip ?: return@LaunchedEffect
                     val targetTabName = when (activeTip.anchor) {
                         eu.kanade.presentation.tutorial.TipAnchor.LIBRARY_TAB -> "Library"
@@ -212,11 +239,13 @@ object HomeScreen : Screen() {
                 logcat(LogPriority.DEBUG) {
                     "TADAMI_PERF_LAUNCH homescreen-tabnavigator-ready current=${tabNavigator.current}"
                 }
+                logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH homescreen-tabnavigator-inside" }
                 // Provide usable navigator to content screen
                 CompositionLocalProvider(
                     LocalNavigator provides navigator,
                     LocalBottomNavVisibilityController provides bottomNavVisibilityController,
                 ) {
+                    logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH homescreen-before-scaffold" }
                     Scaffold(
                         startBar = {
                             if (useNavigationRail) {
@@ -229,14 +258,20 @@ object HomeScreen : Screen() {
                         },
                         bottomBar = {
                             if (!useNavigationRail) {
-                                val bottomNavVisible by produceState(initialValue = true) {
-                                    showBottomNavEvent.receiveAsFlow().collectLatest { value = it }
+                                val bottomNavVisible by if (deferHomeDetails) {
+                                    produceState(initialValue = true) {
+                                        showBottomNavEvent.receiveAsFlow().collectLatest { value = it }
+                                    }
+                                } else {
+                                    remember { mutableStateOf(true) }
                                 }
                                 val showBottomNav = bottomNavVisible &&
                                     bottomNavVisibilityController.isVisible &&
                                     tabNavigator.current != currentMoreTab
-                                LaunchedEffect(showBottomNav) {
-                                    coachMarkState.isBottomBarVisible = showBottomNav
+                                LaunchedEffect(showBottomNav, deferHomeDetails) {
+                                    if (deferHomeDetails) {
+                                        coachMarkState.isBottomBarVisible = showBottomNav
+                                    }
                                 }
                                 val auroraColors = if (useAuroraBottomNav) AuroraTheme.colorsForCurrentTheme() else null
                                 val navBarShape = if (useAuroraBottomNav) {

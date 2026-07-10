@@ -256,6 +256,7 @@ class MainActivity : BaseActivity() {
                 val isAurora = theme.isAuroraStyle
 
                 logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH before-navigator" }
+                logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH navigator-start" }
                 Navigator(
                     screen = HomeScreen,
                     disposeBehavior = NavigatorDisposeBehavior(
@@ -263,21 +264,56 @@ class MainActivity : BaseActivity() {
                         disposeSteps = true,
                     ),
                 ) { navigator ->
+                    logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH navigator-lambda-start" }
+
+                    // Make splash dismiss as soon as the main home content starts rendering its first (light) frame.
+                    // Previously ready was set only at the end of handleIntentAction, which delayed splash removal.
+                    if (isLaunch) {
+                        ready = true
+                        logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH ready-set-early" }
+                    }
+
+                    // PERF: light first-frame defaults for UI state to reduce composition cost on launch.
+                    // Real values (and their collects) kick in on the next composition after defer.
+                    var deferNavigatorFirstFrame by remember { mutableStateOf(false) }
+                    LaunchedEffect(Unit) { deferNavigatorFirstFrame = true }
+
                     // PERF: move incognito and download/indexing inside to reduce root composition cost on app launch
                     var incognito by remember { mutableStateOf(false) }
                     var incognitoAnime by remember { mutableStateOf(false) }
                     var incognitoNovel by remember { mutableStateOf(false) }
-                    val globalIncognito by preferences.incognitoMode().collectAsStateWithLifecycle()
-                    val novelReaderIncognito by NovelReaderIncognitoState.active.collectAsStateWithLifecycle()
+
+                    val globalIncognito by if (deferNavigatorFirstFrame) {
+                        preferences.incognitoMode().collectAsStateWithLifecycle()
+                    } else {
+                        remember { mutableStateOf(false) }
+                    }
+                    val novelReaderIncognito by if (deferNavigatorFirstFrame) {
+                        NovelReaderIncognitoState.active.collectAsStateWithLifecycle()
+                    } else {
+                        remember { mutableStateOf(false) }
+                    }
                     val effectiveIncognito =
                         globalIncognito || incognito || incognitoAnime || incognitoNovel || novelReaderIncognito
                     LaunchedEffect(effectiveIncognito) {
                         ForegroundIncognitoState.set(effectiveIncognito)
                     }
 
-                    val downloadOnly by preferences.downloadedOnly().collectAsStateWithLifecycle()
-                    val indexing by downloadCache.isInitializing.collectAsStateWithLifecycle()
-                    val indexingAnime by animeDownloadCache.isInitializing.collectAsStateWithLifecycle()
+                    val downloadOnly by if (deferNavigatorFirstFrame) {
+                        preferences.downloadedOnly().collectAsStateWithLifecycle()
+                    } else {
+                        remember { mutableStateOf(false) }
+                    }
+                    val indexing by if (deferNavigatorFirstFrame) {
+                        downloadCache.isInitializing.collectAsStateWithLifecycle()
+                    } else {
+                        remember { mutableStateOf(false) }
+                    }
+                    val indexingAnime by if (deferNavigatorFirstFrame) {
+                        animeDownloadCache.isInitializing.collectAsStateWithLifecycle()
+                    } else {
+                        remember { mutableStateOf(false) }
+                    }
                     val isSystemInDarkTheme = isSystemInDarkTheme()
                     val statusBarBackgroundColor = when {
                         indexing || indexingAnime -> IndexingBannerBackgroundColor
@@ -370,6 +406,7 @@ class MainActivity : BaseActivity() {
                         }
                     }
                     val scaffoldInsets = WindowInsets.navigationBars.only(WindowInsetsSides.Horizontal)
+                    logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH before-scaffold-in-navigator" }
                     Scaffold(
                         containerColor = readerBackdropColor ?: MaterialTheme.colorScheme.background,
                         topBar = {
