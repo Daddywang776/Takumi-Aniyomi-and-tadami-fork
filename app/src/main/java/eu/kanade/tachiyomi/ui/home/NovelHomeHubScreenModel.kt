@@ -7,7 +7,9 @@ import eu.kanade.tachiyomi.ui.novel.resolveNovelResumeChapter
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
+import logcat.LogPriority
 import tachiyomi.core.common.util.lang.launchIO
+import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.category.novel.interactor.GetNovelCategories
 import tachiyomi.domain.entries.novel.interactor.GetLibraryNovel
 import tachiyomi.domain.entries.novel.interactor.GetNovelWithChapters
@@ -64,7 +66,9 @@ internal class NovelHomeHubScreenModel(
 
     init {
         val cached = fastCache.load()
-        if (!cached.isEmpty || cached.isInitialized) {
+        val hadCache = !cached.isEmpty || cached.isInitialized
+
+        if (hadCache) {
             originalHeroChapterId = cached.hero?.subId
             mutableState.update {
                 it.copy(
@@ -102,9 +106,13 @@ internal class NovelHomeHubScreenModel(
                     showFilteredEmpty = cached.isInitialized && cached.isEmpty,
                 )
             }
+            logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH home-cache-applied novel hadCache=true" }
+        } else {
+            logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH home-cache-applied novel hadCache=false" }
         }
 
-        initializeGreeting()
+        // PERF: Defer expensive DB work until after first frame
+        initializeGreetingDeferred()
 
         cached.hero?.let { hero ->
             screenModelScope.launchIO {

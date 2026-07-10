@@ -1,5 +1,6 @@
 package eu.kanade.tachiyomi.ui.home
 
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.graphics.res.animatedVectorResource
@@ -36,6 +37,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,6 +52,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
@@ -82,6 +85,8 @@ import eu.kanade.tachiyomi.ui.home.components.isTreasury
 import kotlinx.collections.immutable.toPersistentList
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import logcat.LogPriority
+import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.achievement.model.DayActivity
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.aniyomi.AYMR
@@ -702,10 +707,15 @@ object HomeHubTab : Tab {
 
     @Composable
     override fun Content() {
+        logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH homehubtab-content-start" }
+
+        var hasReportedDrawn by remember { mutableStateOf(false) }
+
         LaunchedEffect(Unit) {
             userProfilePreferences.migrateGreetingDefaultsV026IfNeeded()
         }
 
+        // PERF: derive sections once; this + key above reduces recomps after first cache apply
         val showAnimeSection by uiPreferences.showAnimeSection().collectAsStateWithLifecycle()
         val showMangaSection by uiPreferences.showMangaSection().collectAsStateWithLifecycle()
         val showNovelSection by uiPreferences.showNovelSection().collectAsStateWithLifecycle()
@@ -812,10 +822,13 @@ object HomeHubTab : Tab {
         )
 
         val profileSection = resolveHomeHubProfileSection(sections, selectedSection)
-        val profileScreenModel: BaseHomeHubScreenModel = when (profileSection) {
-            HomeHubSection.Anime -> HomeHubTab.rememberScreenModel { HomeHubScreenModel() }
-            HomeHubSection.Manga -> HomeHubTab.rememberScreenModel { MangaHomeHubScreenModel() }
-            HomeHubSection.Novel -> HomeHubTab.rememberScreenModel { NovelHomeHubScreenModel() }
+        // PERF: key both the model and the heavy header/content to cut recompositions after cache apply
+        val profileScreenModel: BaseHomeHubScreenModel = androidx.compose.runtime.key(profileSection) {
+            when (profileSection) {
+                HomeHubSection.Anime -> HomeHubTab.rememberScreenModel { HomeHubScreenModel() }
+                HomeHubSection.Manga -> HomeHubTab.rememberScreenModel { MangaHomeHubScreenModel() }
+                HomeHubSection.Novel -> HomeHubTab.rememberScreenModel { NovelHomeHubScreenModel() }
+            }
         }
         val headerState by profileScreenModel.state.collectAsStateWithLifecycle()
         val headerUserName = headerState.userName
@@ -827,6 +840,15 @@ object HomeHubTab : Tab {
             currentName = headerUserName,
             isNameEdited = isNameEdited,
         )
+
+        // PERF: report fully drawn when we have cached content on launch for faster perceived startup
+        val context = LocalContext.current
+        LaunchedEffect(headerState.isLoading) {
+            if (!headerState.isLoading && !hasReportedDrawn) {
+                (context as? ComponentActivity)?.reportFullyDrawn()
+                hasReportedDrawn = true
+            }
+        }
 
         val photoPickerLauncher = rememberLauncherForActivityResult(
             ActivityResultContracts.GetContent(),

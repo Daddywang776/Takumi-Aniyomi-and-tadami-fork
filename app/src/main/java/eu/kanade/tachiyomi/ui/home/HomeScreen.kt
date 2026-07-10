@@ -46,6 +46,7 @@ import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -104,8 +105,10 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import logcat.LogPriority
 import soup.compose.material.motion.animation.materialFadeThroughIn
 import soup.compose.material.motion.animation.materialFadeThroughOut
+import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.NavigationBar
@@ -136,16 +139,26 @@ object HomeScreen : Screen() {
     @Composable
     override fun Content() {
         val context = LocalContext.current
+        logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH homescreen-content-start" }
         val navStyle by uiPreferences.navStyle().collectAsState()
         val bottomNavAppearance by uiPreferences.bottomNavAppearance().collectAsState()
         val isEInkMode = LocalIsEInkMode.current
         val selectedTransitionMode by uiPreferences.navigationTransitionMode().collectAsState()
-        val resolvedTransitionMode = resolveNavigationTransitionMode(
-            selectedMode = selectedTransitionMode,
-            animatorDurationScale = context.animatorDurationScale,
-            isPowerSaveMode = context.powerManager.isPowerSaveMode,
-            isEInkMode = isEInkMode,
-        )
+        val resolvedTransitionMode by remember(
+            selectedTransitionMode,
+            context.animatorDurationScale,
+            context.powerManager.isPowerSaveMode,
+            isEInkMode,
+        ) {
+            derivedStateOf {
+                resolveNavigationTransitionMode(
+                    selectedMode = selectedTransitionMode,
+                    animatorDurationScale = context.animatorDurationScale,
+                    isPowerSaveMode = context.powerManager.isPowerSaveMode,
+                    isEInkMode = isEInkMode,
+                )
+            }
+        }
         val currentMoreTab = navStyle.moreTab
         val theme by uiPreferences.appTheme().collectAsState()
         val isAuroraTheme = theme.isAuroraStyle
@@ -154,6 +167,7 @@ object HomeScreen : Screen() {
         val navigator = LocalNavigator.currentOrThrow
         val bottomNavVisibilityController = remember { BottomNavVisibilityController() }
         val hazeState = remember { HazeState() }
+        logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH homescreen-pre-tabnavigator" }
         eu.kanade.presentation.tutorial.TutorialHost {
             TabNavigator(
                 tab = defaultTab,
@@ -194,6 +208,9 @@ object HomeScreen : Screen() {
                             }
                         }
                     }
+                }
+                logcat(LogPriority.DEBUG) {
+                    "TADAMI_PERF_LAUNCH homescreen-tabnavigator-ready current=${tabNavigator.current}"
                 }
                 // Provide usable navigator to content screen
                 CompositionLocalProvider(

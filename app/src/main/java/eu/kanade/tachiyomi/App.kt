@@ -124,6 +124,9 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
     @SuppressLint("LaunchActivityFromNotification")
     @OptIn(DelicateCoilApi::class)
     override fun onCreate() {
+        val launchStart = System.currentTimeMillis()
+        logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH app-oncreate-start" }
+
         LogcatLogger.install(AndroidLogcatLogger(LogPriority.VERBOSE))
         super<Application>.onCreate()
         patchInjekt()
@@ -333,6 +336,10 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
 
         if (isMainProcess) {
             initializeMigrator()
+        }
+
+        logcat(LogPriority.DEBUG) {
+            "TADAMI_PERF_LAUNCH app-oncreate-done took=${System.currentTimeMillis() - launchStart}ms"
         }
     }
 

@@ -1,10 +1,14 @@
 package eu.kanade.tachiyomi.ui.home
 
+import android.os.Handler
+import android.os.Looper
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.domain.ui.UserProfilePreferences
 import kotlinx.coroutines.flow.update
+import logcat.LogPriority
 import tachiyomi.core.common.util.lang.launchIO
+import tachiyomi.core.common.util.system.logcat
 
 internal abstract class BaseHomeHubScreenModel(
     protected val context: android.content.Context,
@@ -36,6 +40,19 @@ internal abstract class BaseHomeHubScreenModel(
     protected fun initializeGreeting() {
         screenModelScope.launchIO {
             resolveAndSetGreeting()
+        }
+    }
+
+    /**
+     * PERF: Defer greeting + heavy stats loading until after the first frame.
+     * This is critical for fast Home screen appearance on cold start.
+     */
+    protected fun initializeGreetingDeferred() {
+        Handler(Looper.getMainLooper()).post {
+            screenModelScope.launchIO {
+                logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH home-greeting-real-load-started" }
+                resolveAndSetGreeting()
+            }
         }
     }
 
