@@ -749,7 +749,7 @@ object HomeHubTab : Tab {
         var mangaSearchQuery by rememberSaveable { mutableStateOf<String?>(null) }
         var novelSearchQuery by rememberSaveable { mutableStateOf<String?>(null) }
         val scope = rememberCoroutineScope()
-        var currentStreak by remember { mutableIntStateOf(0) }
+        var currentStreak by remember { mutableIntStateOf(userProfilePreferences.lastKnownStreak().get()) }
 
         val profileSection = resolveHomeHubProfileSection(sections, selectedSection)
         val animeScreenModel = HomeHubTab.rememberScreenModel { HomeHubScreenModel() }
@@ -776,7 +776,13 @@ object HomeHubTab : Tab {
         }
         LaunchedEffect(Unit) {
             activityDataRepository.getActivityData(days = 365)
-                .collectLatest { currentStreak = calculateHomeOpenStreak(it) }
+                .collectLatest { activities ->
+                    val calculatedStreak = calculateHomeOpenStreak(activities)
+                    if (currentStreak != calculatedStreak) {
+                        currentStreak = calculatedStreak
+                        userProfilePreferences.lastKnownStreak().set(calculatedStreak)
+                    }
+                }
         }
 
         val isNameEdited by userProfilePreferences.nameEdited().collectAsStateWithLifecycle()

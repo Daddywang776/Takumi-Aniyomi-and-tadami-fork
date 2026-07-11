@@ -63,7 +63,7 @@ internal class NovelHomeHubScreenModel(
                 },
                 userName = cached.userName,
                 userAvatar = cached.userAvatar,
-                greeting = AYMR.strings.aurora_welcome_back,
+                greeting = GreetingProvider.getInitialGreeting(userProfilePreferences),
                 greetingReady = true,
                 isLoading = false,
                 showWelcome = !cached.isInitialized && cached.isEmpty,

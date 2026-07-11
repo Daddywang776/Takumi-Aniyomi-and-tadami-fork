@@ -29,11 +29,26 @@ internal abstract class BaseHomeHubScreenModel(
             userProfilePreferences = userProfilePreferences,
             stats = stats,
         )
-        mutableState.update {
-            it.copy(
-                greeting = greetingSelection.greeting,
-                greetingReady = true,
-            )
+
+        val calendar = java.util.Calendar.getInstance()
+        val hour = calendar.get(java.util.Calendar.HOUR_OF_DAY)
+        val currentTimeOfDay = when (hour) {
+            in 5..11 -> 0
+            in 12..16 -> 1
+            in 17..21 -> 2
+            else -> 3
+        }
+        userProfilePreferences.lastGreetingId().set(greetingSelection.greetingId)
+        userProfilePreferences.lastGreetingTimeOfDay().set(currentTimeOfDay)
+
+        val wasReady = state.value.greetingReady
+        if (!wasReady) {
+            mutableState.update {
+                it.copy(
+                    greeting = greetingSelection.greeting,
+                    greetingReady = true,
+                )
+            }
         }
     }
 
