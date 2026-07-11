@@ -170,6 +170,9 @@ fun AnimeScreen(
 
     // For tags menu
     onTagSearch: (String) -> Unit,
+    onGenreClick: ((String) -> Unit)? = null,
+    onGenreLongClick: ((String) -> Unit)? = null,
+    onGenresSearch: ((List<String>) -> Unit)? = null,
 
     onFilterButtonClicked: () -> Unit,
     onRefresh: () -> Unit,
@@ -259,6 +262,9 @@ fun AnimeScreen(
             onWebViewLongClicked = onWebViewLongClicked,
             onTrackingClicked = onTrackingClicked,
             onTagSearch = onTagSearch,
+            onGenreClick = onGenreClick,
+            onGenreLongClick = onGenreLongClick,
+            onGenresSearch = onGenresSearch,
             onFilterButtonClicked = onFilterButtonClicked,
             onRefresh = onRefresh,
             onContinueWatching = onContinueWatching,

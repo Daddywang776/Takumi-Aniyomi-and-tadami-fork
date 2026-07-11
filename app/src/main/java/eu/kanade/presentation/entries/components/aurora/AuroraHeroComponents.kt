@@ -3,6 +3,7 @@ package eu.kanade.presentation.entries.components.aurora
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,7 +16,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
@@ -27,12 +30,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import eu.kanade.presentation.theme.AuroraTheme
+import tachiyomi.i18n.MR
+import tachiyomi.presentation.core.i18n.stringResource
 
 @Composable
 fun AuroraHeroScaffold(
@@ -174,6 +180,11 @@ fun AuroraHeroGenreChips(
     genres: List<String>?,
     modifier: Modifier = Modifier,
     max: Int = 3,
+    selectedGenres: Set<String> = emptySet(),
+    onGenreClick: ((String) -> Unit)? = null,
+    onGenreLongClick: ((String) -> Unit)? = null,
+    onSearchSelected: (() -> Unit)? = null,
+    onClearSelected: (() -> Unit)? = null,
 ) {
     val normalized = remember(genres) { normalizeAuroraHeroGenres(genres) }
     if (normalized.isEmpty()) return
@@ -187,22 +198,103 @@ fun AuroraHeroGenreChips(
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         normalized.take(max).forEach { genre ->
+            val isSelected = genre in selectedGenres
+            val baseModifier = Modifier
+                .clip(chipShape)
+                .background(
+                    if (isSelected) {
+                        colors.accent.copy(alpha = 0.24f)
+                    } else {
+                        resolveAuroraHeroChipContainerColor(colors)
+                    },
+                )
+                .then(
+                    if (colors.isDark) {
+                        Modifier
+                    } else {
+                        Modifier.border(
+                            1.dp,
+                            if (isSelected) {
+                                colors.accent.copy(
+                                    alpha = 0.5f,
+                                )
+                            } else {
+                                resolveAuroraHeroChipBorderColor(colors)
+                            },
+                            chipShape,
+                        )
+                    },
+                )
+                .sizeIn(minWidth = 40.dp, minHeight = 26.dp)
+
+            val interactiveModifier = if (onGenreClick != null || onGenreLongClick != null) {
+                Modifier.pointerInput(genre, selectedGenres) {
+                    detectTapGestures(
+                        onTap = {
+                            if (selectedGenres.isNotEmpty()) {
+                                onGenreLongClick?.invoke(genre)
+                            } else {
+                                onGenreClick?.invoke(genre)
+                            }
+                        },
+                        onLongPress = {
+                            onGenreLongClick?.invoke(genre)
+                        },
+                    )
+                }
+            } else {
+                Modifier
+            }
+
+            Box(
+                modifier = baseModifier
+                    .padding(horizontal = 6.dp, vertical = 3.dp)
+                    .then(interactiveModifier),
+            ) {
+                Text(
+                    text = genre,
+                    color = if (isSelected) colors.accent else resolveAuroraHeroChipTextColor(colors),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+        }
+
+        if (selectedGenres.isNotEmpty()) {
+            // Search Selected button
             Box(
                 modifier = Modifier
-                    .clip(chipShape)
+                    .clip(CircleShape)
+                    .background(colors.accent.copy(alpha = 0.8f))
+                    .clickable { onSearchSelected?.invoke() }
+                    .padding(horizontal = 8.dp, vertical = 3.dp),
+            ) {
+                Text(
+                    text = "🔎 ${stringResource(MR.strings.action_search)} (${selectedGenres.size})",
+                    color = colors.textOnAccent,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+
+            // Clear Selection button
+            Box(
+                modifier = Modifier
+                    .clip(CircleShape)
                     .background(resolveAuroraHeroChipContainerColor(colors))
                     .then(
                         if (colors.isDark) {
                             Modifier
                         } else {
-                            Modifier.border(1.dp, resolveAuroraHeroChipBorderColor(colors), chipShape)
+                            Modifier.border(1.dp, resolveAuroraHeroChipBorderColor(colors), CircleShape)
                         },
                     )
-                    .padding(horizontal = 6.dp, vertical = 3.dp),
+                    .clickable { onClearSelected?.invoke() }
+                    .padding(horizontal = 8.dp, vertical = 3.dp),
             ) {
                 Text(
-                    text = genre,
-                    color = resolveAuroraHeroChipTextColor(colors),
+                    text = "✕",
+                    color = colors.textPrimary,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
                 )

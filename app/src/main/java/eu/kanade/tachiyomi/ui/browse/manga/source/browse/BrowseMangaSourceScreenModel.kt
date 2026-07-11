@@ -141,19 +141,50 @@ class BrowseMangaSourceScreenModel(
         screenModelScope.launch {
             val loadedFilters = loadSourceFilters()
             mutableState.update { state ->
-                val updatedListing = when (val listing = state.listing) {
-                    is Listing.Search -> if (listing.filters.isEmpty()) {
-                        listing.copy(
-                            filters = loadedFilters,
-                        )
-                    } else {
-                        listing
+                val currentListing = state.listing
+                val updatedListing = when {
+                    currentListing is Listing.Search && currentListing.filters.isEmpty() -> {
+                        val q = currentListing.query
+                        if (!q.isNullOrBlank()) {
+                            var genreFound = false
+                            filter@ for (sourceFilter in loadedFilters) {
+                                if (sourceFilter is SourceModelFilter.Group<*>) {
+                                    for (filter in sourceFilter.state) {
+                                        if (filter is SourceModelFilter<*> && filter.name.equals(q, true)) {
+                                            when (filter) {
+                                                is SourceModelFilter.TriState -> filter.state = 1
+                                                is SourceModelFilter.CheckBox -> filter.state = true
+                                                else -> {}
+                                            }
+                                            genreFound = true
+                                            break@filter
+                                        }
+                                    }
+                                } else if (sourceFilter is SourceModelFilter.Select<*>) {
+                                    val idx = sourceFilter.values.filterIsInstance<String>()
+                                        .indexOfFirst { it.equals(q, true) }
+                                    if (idx != -1) {
+                                        sourceFilter.state = idx
+                                        genreFound = true
+                                        break
+                                    }
+                                }
+                            }
+                            if (genreFound) {
+                                currentListing.copy(query = null, filters = loadedFilters)
+                            } else {
+                                currentListing.copy(filters = loadedFilters)
+                            }
+                        } else {
+                            currentListing.copy(filters = loadedFilters)
+                        }
                     }
-                    else -> listing
+                    else -> currentListing
                 }
                 state.copy(
                     listing = updatedListing,
                     filters = if (state.filters.isEmpty()) loadedFilters else state.filters,
+                    toolbarQuery = (updatedListing as? Listing.Search)?.query,
                 )
             }
         }
@@ -410,8 +441,55 @@ class BrowseMangaSourceScreenModel(
         }
     }
 
+    fun searchGenres(genres: List<String>) {
+        if (source !is CatalogueSource || genres.isEmpty()) return
+
+        screenModelScope.launch {
+            val defaultFilters = loadSourceFilters()
+            var anyExists = false
+
+            for (genreName in genres) {
+                filter@ for (sourceFilter in defaultFilters) {
+                    if (sourceFilter is SourceModelFilter.Group<*>) {
+                        for (filter in sourceFilter.state) {
+                            if (filter is SourceModelFilter<*> && filter.name.equals(genreName, true)) {
+                                when (filter) {
+                                    is SourceModelFilter.TriState -> filter.state = 1
+                                    is SourceModelFilter.CheckBox -> filter.state = true
+                                    else -> {}
+                                }
+                                anyExists = true
+                                break@filter
+                            }
+                        }
+                    } else if (sourceFilter is SourceModelFilter.Select<*>) {
+                        val idx = sourceFilter.values.filterIsInstance<String>()
+                            .indexOfFirst { it.equals(genreName, true) }
+                        if (idx != -1) {
+                            sourceFilter.state = idx
+                            anyExists = true
+                            break@filter
+                        }
+                    }
+                }
+            }
+
+            mutableState.update {
+                val listing = if (anyExists) {
+                    Listing.Search(query = null, filters = defaultFilters)
+                } else {
+                    Listing.Search(query = genres.firstOrNull(), filters = defaultFilters)
+                }
+                it.copy(
+                    filters = defaultFilters,
+                    listing = listing,
+                    toolbarQuery = listing.query,
+                )
+            }
+        }
+    }
+
     /**
-     * Adds or removes a manga from the library.
      *
      * @param manga the manga to update.
      */

@@ -114,7 +114,6 @@ import eu.kanade.tachiyomi.ui.deeplink.manga.DeepLinkMangaScreen
 import eu.kanade.tachiyomi.ui.deeplink.novel.DeepLinkNovelScreen
 import eu.kanade.tachiyomi.ui.entries.anime.AnimeScreen
 import eu.kanade.tachiyomi.ui.entries.manga.MangaScreen
-import eu.kanade.tachiyomi.ui.entries.novel.NovelScreen
 import eu.kanade.tachiyomi.ui.home.HomeScreen
 import eu.kanade.tachiyomi.ui.more.NewUpdateScreen
 import eu.kanade.tachiyomi.ui.more.OnboardingScreen
@@ -346,28 +345,34 @@ class MainActivity : BaseActivity() {
                     // These only matter when the user actually navigates to a source screen.
                     LaunchedEffect(navigator.lastItem) {
                         val item = navigator.lastItem
-                        if (item is BrowseMangaSourceScreen || (item is MangaScreen && item.fromSource)) {
-                            (item as? BrowseMangaSourceScreen)?.sourceId
-                                ?.let { getMangaIncognitoState.subscribe(it) }
-                                ?.collectLatest { incognito = it }
+                        val sourceId = (item as? BrowseMangaSourceScreen)?.sourceId
+                        if (sourceId != null) {
+                            getMangaIncognitoState.subscribe(sourceId)
+                                .collectLatest { incognito = it }
+                        } else {
+                            incognito = false
                         }
                     }
 
                     LaunchedEffect(navigator.lastItem) {
                         val item = navigator.lastItem
-                        if (item is BrowseAnimeSourceScreen || (item is AnimeScreen && item.fromSource)) {
-                            (item as? BrowseAnimeSourceScreen)?.sourceId
-                                ?.let { getAnimeIncognitoState.subscribe(it) }
-                                ?.collectLatest { incognitoAnime = it }
+                        val sourceId = (item as? BrowseAnimeSourceScreen)?.sourceId
+                        if (sourceId != null) {
+                            getAnimeIncognitoState.subscribe(sourceId)
+                                .collectLatest { incognitoAnime = it }
+                        } else {
+                            incognitoAnime = false
                         }
                     }
 
                     LaunchedEffect(navigator.lastItem) {
                         val item = navigator.lastItem
-                        if (item is BrowseNovelSourceScreen || (item is NovelScreen && item.fromSource)) {
-                            (item as? BrowseNovelSourceScreen)?.sourceId
-                                ?.let { getNovelIncognitoState.subscribe(it) }
-                                ?.collectLatest { incognitoNovel = it }
+                        val sourceId = (item as? BrowseNovelSourceScreen)?.sourceId
+                        if (sourceId != null) {
+                            getNovelIncognitoState.subscribe(sourceId)
+                                .collectLatest { incognitoNovel = it }
+                        } else {
+                            incognitoNovel = false
                         }
                     }
 

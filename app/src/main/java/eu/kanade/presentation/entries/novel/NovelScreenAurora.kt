@@ -190,8 +190,12 @@ fun NovelScreenAuroraImpl(
     onClickEditInfo: (() -> Unit)? = null,
     onRetrySuggestions: () -> Unit = {},
     onOpenSuggestions: () -> Unit = {},
+    onGenreClick: ((String) -> Unit)? = null,
+    onGenreLongClick: ((String) -> Unit)? = null,
+    onGenresSearch: ((List<String>) -> Unit)? = null,
 ) {
     val novel = state.novel
+    var selectedGenres by remember { mutableStateOf(emptySet<String>()) }
     LaunchedEffect(
         novel.id,
         novel.thumbnailUrl,
@@ -468,6 +472,20 @@ fun NovelScreenAuroraImpl(
                                     onEditNotesClicked = onEditNotesClicked,
                                     onContinueReading = onStartReading,
                                     isReading = isReading,
+                                    onGenreClick = onGenreClick,
+                                    onGenreLongClick = { genre ->
+                                        selectedGenres = if (genre in selectedGenres) {
+                                            selectedGenres - genre
+                                        } else {
+                                            selectedGenres + genre
+                                        }
+                                    },
+                                    selectedGenres = selectedGenres,
+                                    onSearchSelected = {
+                                        onGenresSearch?.invoke(selectedGenres.toList())
+                                        selectedGenres = emptySet()
+                                    },
+                                    onClearSelected = { selectedGenres = emptySet() },
                                     modifier = Modifier.fillMaxWidth(),
                                 )
                                 Spacer(modifier = Modifier.height(if (colors.isDark) 8.dp else 16.dp))
@@ -484,11 +502,25 @@ fun NovelScreenAuroraImpl(
                                 NovelInfoCard(
                                     novel = novel,
                                     translation = auroraEntryTranslation,
-                                    onTagSearch = { tag -> onSearch(tag, true) },
+                                    onTagSearch = onGenreClick ?: { tag -> onSearch(tag, true) },
                                     descriptionExpanded = descriptionExpanded,
                                     genresExpanded = genresExpanded,
                                     onToggleDescription = { descriptionExpanded = !descriptionExpanded },
                                     onToggleGenres = { genresExpanded = !genresExpanded },
+                                    selectedGenres = selectedGenres,
+                                    onGenreClick = onGenreClick,
+                                    onGenreLongClick = { genre ->
+                                        selectedGenres = if (genre in selectedGenres) {
+                                            selectedGenres - genre
+                                        } else {
+                                            selectedGenres + genre
+                                        }
+                                    },
+                                    onSearchSelected = {
+                                        onGenresSearch?.invoke(selectedGenres.toList())
+                                        selectedGenres = emptySet()
+                                    },
+                                    onClearSelected = { selectedGenres = emptySet() },
                                     modifier = Modifier.fillMaxWidth(),
                                 )
 
@@ -1207,6 +1239,20 @@ fun NovelScreenAuroraImpl(
                                 genresExpanded = genresExpanded,
                                 onToggleDescription = { descriptionExpanded = !descriptionExpanded },
                                 onToggleGenres = { genresExpanded = !genresExpanded },
+                                selectedGenres = selectedGenres,
+                                onGenreClick = onGenreClick,
+                                onGenreLongClick = { genre ->
+                                    selectedGenres = if (genre in selectedGenres) {
+                                        selectedGenres - genre
+                                    } else {
+                                        selectedGenres + genre
+                                    }
+                                },
+                                onSearchSelected = {
+                                    onGenresSearch?.invoke(selectedGenres.toList())
+                                    selectedGenres = emptySet()
+                                },
+                                onClearSelected = { selectedGenres = emptySet() },
                                 modifier = Modifier.fillMaxWidth(),
                             )
 
@@ -1596,6 +1642,20 @@ fun NovelScreenAuroraImpl(
                         onEditNotesClicked = onEditNotesClicked,
                         onContinueReading = onStartReading,
                         isReading = isReading,
+                        onGenreClick = onGenreClick,
+                        onGenreLongClick = { genre ->
+                            selectedGenres = if (genre in selectedGenres) {
+                                selectedGenres - genre
+                            } else {
+                                selectedGenres + genre
+                            }
+                        },
+                        selectedGenres = selectedGenres,
+                        onSearchSelected = {
+                            onGenresSearch?.invoke(selectedGenres.toList())
+                            selectedGenres = emptySet()
+                        },
+                        onClearSelected = { selectedGenres = emptySet() },
                     )
                 }
             }

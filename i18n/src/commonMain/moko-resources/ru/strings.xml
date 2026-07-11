@@ -335,7 +335,7 @@
     <string name="action_webview_forward">Вперед</string>
     <string name="action_webview_refresh">Обновить</string>
     <string name="pref_category_library">Библиотека</string>
-    <string name="ext_obsolete">Осиротевшее</string>
+    <string name="ext_obsolete">Автономное</string>
     <string name="obsolete_extension_message">Это расширение не связано ни с одним хранилищем. Оно не будет получать обновления, может работать неправильно и вызывать проблемы в приложении. Рекомендуется удалить его.</string>
     <string name="pref_date_format">Формат даты</string>
     <string name="pref_category_library_update">Глобальное обновление</string>

@@ -180,6 +180,11 @@ class MangaScreen(
                 }
             },
             onTagSearch = { scope.launch { performGenreSearch(navigator, it, screenModel.source!!) } },
+            onGenreClick = { genre -> scope.launch { performGenreSearch(navigator, genre, screenModel.source!!) } },
+            onGenreLongClick = null, // handled internally in AuroraImpl as state toggle
+            onGenresSearch = { genres ->
+                scope.launch { performGenresSearch(navigator, genres, screenModel.source!!) }
+            },
             onFilterButtonClicked = screenModel::showSettingsDialog,
             showScanlatorSelector = showScanlatorSelector,
             scanlatorChapterCounts = successState.scanlatorChapterCounts,
@@ -499,25 +504,46 @@ class MangaScreen(
 
     /**
      * Performs a genre search using the provided genre name.
-     *
-     * @param genreName the search genre to the parent controller
+     * Always targets the specific source of this title.
      */
     private suspend fun performGenreSearch(
         navigator: Navigator,
         genreName: String,
         source: MangaSource,
     ) {
-        if (navigator.size < 2) {
+        val sourceId = source.id
+        val existing = navigator.items.firstOrNull { screen ->
+            screen is BrowseMangaSourceScreen && screen.sourceId == sourceId
+        } as? BrowseMangaSourceScreen
+
+        if (existing != null) {
+            navigator.popUntil { it == existing }
+            existing.searchGenre(genreName)
             return
         }
 
-        val previousController = navigator.items[navigator.size - 2]
-        if (previousController is BrowseMangaSourceScreen && source is HttpSource) {
-            navigator.pop()
-            previousController.searchGenre(genreName)
-        } else {
-            performSearch(navigator, genreName, global = false)
+        navigator.push(BrowseMangaSourceScreen(sourceId, genreName))
+    }
+
+    private suspend fun performGenresSearch(
+        navigator: Navigator,
+        genres: List<String>,
+        source: MangaSource,
+    ) {
+        if (genres.isEmpty()) return
+        val sourceId = source.id
+        val existing = navigator.items.firstOrNull { screen ->
+            screen is BrowseMangaSourceScreen && screen.sourceId == sourceId
+        } as? BrowseMangaSourceScreen
+        if (existing != null) {
+            navigator.popUntil { it == existing }
+            existing.searchGenres(genres)
+            return
         }
+
+        val newScreen = BrowseMangaSourceScreen(sourceId, null)
+        navigator.push(newScreen)
+        newScreen.searchGenres(genres)
     }
 
     /**

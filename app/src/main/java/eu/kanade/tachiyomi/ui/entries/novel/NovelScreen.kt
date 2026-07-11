@@ -404,6 +404,17 @@ class NovelScreen(
                     )
                 }
             },
+            onGenreClick = { genre ->
+                coroutineScope.launch {
+                    performGenreSearch(navigator, genre, successState.source)
+                }
+            },
+            onGenreLongClick = null, // handled internally in AuroraImpl as state toggle
+            onGenresSearch = { genres ->
+                coroutineScope.launch {
+                    performGenresSearch(navigator, genres, successState.source)
+                }
+            },
             onSuggestionClick = { item ->
                 coroutineScope.launch {
                     navigator.push(item.toDirectEntryScreenOrNull() ?: item.toGlobalSearchScreen())
@@ -930,6 +941,51 @@ class NovelScreen(
                 navigator.push(BrowseNovelSourceScreen(previousController.sourceId, query))
             }
         }
+    }
+
+    /**
+     * Performs a genre search using the provided genre name.
+     * Always targets the specific source of this novel.
+     */
+    private suspend fun performGenreSearch(
+        navigator: cafe.adriel.voyager.navigator.Navigator,
+        genreName: String,
+        source: eu.kanade.tachiyomi.novelsource.NovelSource,
+    ) {
+        val sourceId = source.id
+        val existing = navigator.items.firstOrNull { screen ->
+            screen is BrowseNovelSourceScreen && screen.sourceId == sourceId
+        } as? BrowseNovelSourceScreen
+
+        if (existing != null) {
+            navigator.popUntil { it == existing }
+            existing.searchGenre(genreName)
+            return
+        }
+
+        navigator.push(BrowseNovelSourceScreen(sourceId, genreName))
+    }
+
+    private suspend fun performGenresSearch(
+        navigator: cafe.adriel.voyager.navigator.Navigator,
+        genres: List<String>,
+        source: eu.kanade.tachiyomi.novelsource.NovelSource,
+    ) {
+        if (genres.isEmpty()) return
+        val sourceId = source.id
+        val existing = navigator.items.firstOrNull { screen ->
+            screen is BrowseNovelSourceScreen && screen.sourceId == sourceId
+        } as? BrowseNovelSourceScreen
+
+        if (existing != null) {
+            navigator.popUntil { it == existing }
+            existing.searchGenres(genres)
+            return
+        }
+
+        val newScreen = BrowseNovelSourceScreen(sourceId, null)
+        navigator.push(newScreen)
+        newScreen.searchGenres(genres)
     }
 
     private fun openNovelInWebView(

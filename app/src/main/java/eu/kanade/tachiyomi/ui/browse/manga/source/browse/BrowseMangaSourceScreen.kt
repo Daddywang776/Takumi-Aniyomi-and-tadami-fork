@@ -367,6 +367,7 @@ data class BrowseMangaSourceScreen(
                     when (it) {
                         is SearchType.Genre -> screenModel.searchGenre(it.txt)
                         is SearchType.Text -> screenModel.search(it.txt)
+                        is SearchType.Genres -> screenModel.searchGenres(it.txts)
                     }
                 }
         }
@@ -374,14 +375,20 @@ data class BrowseMangaSourceScreen(
 
     suspend fun search(query: String) = queryEvent.send(SearchType.Text(query))
     suspend fun searchGenre(name: String) = queryEvent.send(SearchType.Genre(name))
+    suspend fun searchGenres(names: List<String>) {
+        if (names.isNotEmpty()) {
+            queryEvent.send(SearchType.Genres(names))
+        }
+    }
 
     companion object {
         private val queryEvent = Channel<SearchType>()
     }
 
-    sealed class SearchType(val txt: String) {
-        class Text(txt: String) : SearchType(txt)
-        class Genre(txt: String) : SearchType(txt)
+    sealed interface SearchType {
+        data class Text(val txt: String) : SearchType
+        data class Genre(val txt: String) : SearchType
+        data class Genres(val txts: List<String>) : SearchType
     }
 }
 

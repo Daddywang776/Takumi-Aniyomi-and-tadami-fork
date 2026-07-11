@@ -37,6 +37,11 @@ fun MangaHeroContent(
     onEditNotesClicked: (() -> Unit)?,
     hasProgress: Boolean,
     onContinueReading: () -> Unit,
+    onGenreClick: ((String) -> Unit)? = null,
+    onGenreLongClick: ((String) -> Unit)? = null,
+    selectedGenres: Set<String> = emptySet(),
+    onSearchSelected: (() -> Unit)? = null,
+    onClearSelected: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val colors = AuroraTheme.colors
@@ -52,6 +57,11 @@ fun MangaHeroContent(
         AuroraHeroGenreChips(
             genres = manga.displayGenre,
             modifier = Modifier.fillMaxWidth(),
+            selectedGenres = selectedGenres,
+            onGenreClick = onGenreClick,
+            onGenreLongClick = onGenreLongClick,
+            onSearchSelected = onSearchSelected,
+            onClearSelected = onClearSelected,
         )
 
         Text(
