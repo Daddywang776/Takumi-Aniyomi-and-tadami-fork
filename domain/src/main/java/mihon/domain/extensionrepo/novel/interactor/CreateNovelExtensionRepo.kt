@@ -2,16 +2,16 @@ package mihon.domain.extensionrepo.novel.interactor
 
 import eu.kanade.tachiyomi.util.lang.Hash
 import logcat.LogPriority
-import mihon.domain.extensionrepo.exception.SaveExtensionRepoException
 import mihon.domain.extensionrepo.model.ExtensionRepo
-import mihon.domain.extensionrepo.novel.repository.NovelExtensionRepoRepository
-import mihon.domain.extensionrepo.service.ExtensionRepoService
+import mihon.domain.extensionstore.model.ExtensionStore
+import mihon.domain.extensionstore.model.legacyBaseUrl
+import mihon.domain.extensionstore.novel.repository.NovelExtensionStoreRepository
+import mihon.domain.extensionstore.toExtensionRepo
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import tachiyomi.core.common.util.system.logcat
 
 class CreateNovelExtensionRepo(
-    private val repository: NovelExtensionRepoRepository,
-    private val service: ExtensionRepoService,
+    private val repository: NovelExtensionStoreRepository,
 ) {
     private val indexSuffix = "/index.min.json"
     private val pluginsSuffixes = setOf("/plugins.min.json", "/plugins.json")
@@ -24,50 +24,80 @@ class CreateNovelExtensionRepo(
         val normalizedUrl = url.toHttpUrlOrNull()?.toString() ?: return Result.InvalidUrl
 
         return when {
-            normalizedUrl.endsWith(indexSuffix) -> {
-                // Mihon-style extension repo (expects repo.json at baseUrl)
-                val baseUrl = normalizedUrl.removeSuffix(indexSuffix)
-                val repoDetails = service.fetchRepoDetails(baseUrl)
-                if (repoDetails != null) {
-                    insert(
-                        repoDetails.copy(
-                            name = displayName.takeIf { !it.isNullOrBlank() } ?: repoDetails.name,
-                        ),
-                    )
+            normalizedUrl.endsWith(indexSuffix) || normalizedUrl.endsWith("/repo.json") -> {
+                val insertResult = repository.insert(normalizedUrl)
+                if (insertResult.isSuccess) {
+                    applyDisplayName(normalizedUrl, displayName)
+                    Result.Success
                 } else if (forceLocalInsert) {
-                    val fingerprint = "NOFINGERPRINT-${Hash.sha256(baseUrl)}"
-                    val name = displayName.takeIf { !it.isNullOrBlank() } ?: extractRepoName(baseUrl)
-                    insert(
-                        ExtensionRepo(
-                            baseUrl = baseUrl,
-                            name = name,
-                            shortName = null,
-                            website = baseUrl,
-                            signingKeyFingerprint = fingerprint,
-                        ),
-                    )
+                    val baseUrl = normalizedUrl.removeSuffix(indexSuffix).removeSuffix("/repo.json")
+                    insertPluginStyleStore(baseUrl, displayName)
+                    Result.Success
                 } else {
-                    Result.InvalidUrl
+                    handleInsertionError(normalizedUrl, displayName, baseUrlHint = normalizedUrl)
                 }
             }
             pluginsSuffixes.any { normalizedUrl.endsWith(it) } -> {
-                // LNReader-style novel plugin index repo
                 val suffix = pluginsSuffixes.first { normalizedUrl.endsWith(it) }
                 val baseUrl = normalizedUrl.removeSuffix(suffix)
-                val fingerprint = "NOFINGERPRINT-${Hash.sha256(baseUrl)}"
-                val name = displayName.takeIf { !it.isNullOrBlank() } ?: extractRepoName(baseUrl)
-                insert(
-                    ExtensionRepo(
-                        baseUrl = baseUrl,
-                        name = name,
-                        shortName = null,
-                        website = baseUrl,
-                        signingKeyFingerprint = fingerprint,
-                    ),
-                )
+                insertPluginStyleStore(baseUrl, displayName)
             }
-            else -> Result.InvalidUrl
+            else -> {
+                val insertResult = repository.insert(normalizedUrl)
+                if (insertResult.isSuccess) {
+                    applyDisplayName(normalizedUrl, displayName)
+                    Result.Success
+                } else if (forceLocalInsert) {
+                    repository.insertFromPreference(
+                        normalizedUrl,
+                        displayName?.takeIf { it.isNotBlank() } ?: extractRepoName(normalizedUrl),
+                    )
+                    Result.Success
+                } else {
+                    handleInsertionError(normalizedUrl, displayName, baseUrlHint = normalizedUrl)
+                }
+            }
         }
+    }
+
+    private suspend fun insertPluginStyleStore(baseUrl: String, displayName: String?): Result {
+        val fingerprint = "NOFINGERPRINT-${Hash.sha256(baseUrl)}"
+        val name = displayName.takeIf { !it.isNullOrBlank() } ?: extractRepoName(baseUrl)
+        val stores = repository.getAll()
+        if (stores.any { it.indexUrl.trimEnd('/') == baseUrl.trimEnd('/') }) {
+            return Result.RepoAlreadyExists
+        }
+        val matching = stores.find { it.signingKey == fingerprint }
+        if (matching != null) {
+            return Result.DuplicateFingerprint(
+                matching.toExtensionRepo(),
+                ExtensionRepo(
+                    baseUrl = baseUrl,
+                    name = name,
+                    shortName = null,
+                    website = baseUrl,
+                    signingKeyFingerprint = fingerprint,
+                ),
+            )
+        }
+        repository.upsertStore(
+            ExtensionStore(
+                indexUrl = baseUrl,
+                name = name,
+                badgeLabel = name,
+                signingKey = fingerprint,
+                contact = ExtensionStore.Contact(website = baseUrl, discord = null),
+                isLegacy = true,
+                extensionListUrl = null,
+            ),
+        )
+        return Result.Success
+    }
+
+    private suspend fun applyDisplayName(indexUrl: String, displayName: String?) {
+        if (displayName.isNullOrBlank()) return
+        val store = repository.getAll().find { it.indexUrl == indexUrl } ?: return
+        repository.upsertStore(store.copy(name = displayName, badgeLabel = displayName))
     }
 
     private fun extractRepoName(baseUrl: String): String {
@@ -87,32 +117,29 @@ class CreateNovelExtensionRepo(
         }
     }
 
-    private suspend fun insert(repo: ExtensionRepo): Result {
-        return try {
-            repository.insertRepo(
-                repo.baseUrl,
-                repo.name,
-                repo.shortName,
-                repo.website,
-                repo.signingKeyFingerprint,
-            )
-            Result.Success
-        } catch (e: SaveExtensionRepoException) {
-            logcat(LogPriority.WARN, e) { "SQL Conflict attempting to add new novel repository ${repo.baseUrl}" }
-            return handleInsertionError(repo)
-        }
-    }
-
-    private suspend fun handleInsertionError(repo: ExtensionRepo): Result {
-        val repoExists = repository.getRepo(repo.baseUrl)
-        if (repoExists != null) {
+    private suspend fun handleInsertionError(
+        indexUrl: String,
+        displayName: String?,
+        baseUrlHint: String,
+    ): Result {
+        val stores = repository.getAll()
+        if (stores.any { it.indexUrl == indexUrl }) {
             return Result.RepoAlreadyExists
         }
-        val matchingFingerprintRepo = repository.getRepoBySigningKeyFingerprint(repo.signingKeyFingerprint)
-        if (matchingFingerprintRepo != null) {
-            return Result.DuplicateFingerprint(matchingFingerprintRepo, repo)
+        val fingerprint = "NOFINGERPRINT-${Hash.sha256(baseUrlHint)}"
+        val matching = stores.find { it.signingKey == fingerprint }
+        if (matching != null) {
+            val newRepo = ExtensionRepo(
+                baseUrl = baseUrlHint.removeSuffix(indexSuffix).removeSuffix("/repo.json"),
+                name = displayName?.takeIf { it.isNotBlank() } ?: extractRepoName(baseUrlHint),
+                shortName = null,
+                website = baseUrlHint,
+                signingKeyFingerprint = fingerprint,
+            )
+            return Result.DuplicateFingerprint(matching.toExtensionRepo(), newRepo)
         }
-        return Result.Error
+        logcat(LogPriority.WARN) { "Failed to add novel extension store $indexUrl" }
+        return Result.InvalidUrl
     }
 
     sealed interface Result {
@@ -123,26 +150,18 @@ class CreateNovelExtensionRepo(
         data object Error : Result
     }
 
-    /** One-time migration: update names for LNReader-style repos that show raw URLs */
     suspend fun migrateRepoNames() {
-        for (repo in repository.getAll()) {
-            if (!repo.signingKeyFingerprint.startsWith("NOFINGERPRINT")) continue
-            if (repo.name != repo.baseUrl) continue
-            val newName = extractRepoName(repo.baseUrl)
-            if (newName != repo.baseUrl) {
-                repository.upsertRepo(
-                    repo.baseUrl,
-                    newName,
-                    repo.shortName,
-                    repo.website,
-                    repo.signingKeyFingerprint,
-                )
+        for (store in repository.getAll()) {
+            if (!store.signingKey.startsWith("NOFINGERPRINT")) continue
+            if (store.name != store.legacyBaseUrl()) continue
+            val newName = extractRepoName(store.legacyBaseUrl())
+            if (newName != store.legacyBaseUrl()) {
+                repository.upsertStore(store.copy(name = newName, badgeLabel = newName))
             }
         }
     }
 
     companion object {
-        /* prefs key to run the migration only once */
         const val MIGRATION_DONE_KEY = "NovelExtensionRepoNameMigrationDone"
     }
 }

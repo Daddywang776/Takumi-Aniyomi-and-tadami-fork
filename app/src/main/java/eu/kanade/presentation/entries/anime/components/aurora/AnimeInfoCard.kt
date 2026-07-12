@@ -2,6 +2,7 @@ package eu.kanade.presentation.entries.anime.components.aurora
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -64,6 +66,11 @@ fun AnimeInfoCard(
     genresExpanded: Boolean,
     onToggleDescription: () -> Unit,
     onToggleGenres: () -> Unit,
+    selectedGenres: Set<String> = emptySet(),
+    onGenreClick: ((String) -> Unit)? = null,
+    onGenreLongClick: ((String) -> Unit)? = null,
+    onSearchSelected: (() -> Unit)? = null,
+    onClearSelected: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val colors = AuroraTheme.colors
@@ -143,19 +150,67 @@ fun AnimeInfoCard(
                     ) {
                         val genresToShow = if (genresExpanded) anime.displayGenre!! else anime.displayGenre!!.take(3)
                         genresToShow.forEach { genre ->
+                            val isSelected = genre in selectedGenres
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(colors.accent.copy(alpha = 0.15f))
-                                    .clickable { onTagSearch(genre) }
+                                    .background(
+                                        if (isSelected) {
+                                            colors.accent.copy(
+                                                alpha = 0.3f,
+                                            )
+                                        } else {
+                                            colors.accent.copy(alpha = 0.15f)
+                                        },
+                                    )
+                                    .pointerInput(genre, selectedGenres) {
+                                        detectTapGestures(
+                                            onTap = {
+                                                if (selectedGenres.isNotEmpty()) {
+                                                    onGenreLongClick?.invoke(genre)
+                                                } else {
+                                                    onTagSearch(genre)
+                                                }
+                                            },
+                                            onLongPress = {
+                                                onGenreLongClick?.invoke(genre)
+                                            },
+                                        )
+                                    }
                                     .padding(horizontal = 8.dp, vertical = 4.dp),
                             ) {
                                 Text(
                                     text = genre,
                                     fontSize = 11.sp,
-                                    color = colors.accent,
+                                    color = if (isSelected) colors.accent else colors.accent,
                                     fontWeight = FontWeight.Medium,
                                 )
+                            }
+                        }
+
+                        if (selectedGenres.isNotEmpty()) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(colors.accent.copy(alpha = 0.8f))
+                                    .clickable { onSearchSelected?.invoke() }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                            ) {
+                                Text(
+                                    text = "🔎 Search (${selectedGenres.size})",
+                                    color = colors.textPrimary,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(colors.accent.copy(alpha = 0.15f))
+                                    .clickable { onClearSelected?.invoke() }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                            ) {
+                                Text("✕", color = colors.accent, fontSize = 11.sp)
                             }
                         }
                     }

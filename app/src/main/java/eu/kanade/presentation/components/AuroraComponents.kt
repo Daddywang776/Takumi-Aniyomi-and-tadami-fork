@@ -481,7 +481,7 @@ private fun AuroraSpecialBackgroundCanvas(
 ) {
     if (styleKey == "none" || colors.isEInk) return
 
-    var timeMillis by remember { mutableStateOf(0L) }
+    var timeMillis by remember { mutableStateOf(android.os.SystemClock.uptimeMillis()) }
 
     val facePath = remember { Path() }
     val lensPath = remember { Path() }
@@ -651,9 +651,8 @@ private fun AuroraSpecialBackgroundCanvas(
 
     if (animate) {
         LaunchedEffect(Unit) {
-            val startTime = android.os.SystemClock.uptimeMillis()
             while (true) {
-                timeMillis = android.os.SystemClock.uptimeMillis() - startTime
+                timeMillis = android.os.SystemClock.uptimeMillis()
                 kotlinx.coroutines.delay(33) // ~30 FPS throttling
             }
         }
@@ -690,9 +689,35 @@ private fun AuroraSpecialBackgroundCanvas(
             null
         }
     }
+    val weepingVoid = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            WeepingVoidShader.getInstance()
+        } else {
+            null
+        }
+    }
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         when (styleKey) {
+            "void_weeping_red" -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && weepingVoid != null) {
+                    val time = if (animate) elapsedSeconds else 0f
+                    with(weepingVoid) { drawWeepingVoid(light = !colors.isDark, time = time) }
+                } else {
+                    // Fallback < Android 13
+                    drawRect(
+                        brush = Brush.radialGradient(
+                            colors = if (colors.isDark) {
+                                listOf(Color(0xFF3A000A), Color(0xFF140004), Color(0xFF070001))
+                            } else {
+                                listOf(Color(0x55B00020), Color(0x1AB00020), Color(0xFFE9E1DC))
+                            },
+                            center = center,
+                            radius = size.minDimension * 0.75f,
+                        ),
+                    )
+                }
+            }
             "petal_storm" -> {
                 val petalColor = if (colors.isDark) {
                     Color(0xFFFFA7C8)

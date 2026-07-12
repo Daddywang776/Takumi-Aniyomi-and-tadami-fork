@@ -40,6 +40,7 @@ import eu.kanade.presentation.theme.colorscheme.TachiyomiColorScheme
 import eu.kanade.presentation.theme.colorscheme.TakoColorScheme
 import eu.kanade.presentation.theme.colorscheme.TealTurqoiseColorScheme
 import eu.kanade.presentation.theme.colorscheme.TidalWaveColorScheme
+import eu.kanade.presentation.theme.colorscheme.VoidRedColorScheme
 import eu.kanade.presentation.theme.colorscheme.YinYangColorScheme
 import eu.kanade.presentation.theme.colorscheme.YotsubaColorScheme
 import tachiyomi.presentation.core.util.collectAsState
@@ -215,4 +216,5 @@ private val colorSchemes: Map<AppTheme, BaseColorScheme> = mapOf(
     AppTheme.SAKURA_NOIR to SakuraNoirColorScheme,
     AppTheme.NEBULA_TIDE to NebulaTideColorScheme,
     AppTheme.EVENT_HORIZON to EventHorizonColorScheme,
+    AppTheme.VOID_RED to VoidRedColorScheme,
 )

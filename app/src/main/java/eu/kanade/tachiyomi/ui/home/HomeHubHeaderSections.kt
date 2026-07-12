@@ -74,6 +74,7 @@ import eu.kanade.presentation.theme.AuroraTheme
 import eu.kanade.presentation.theme.aurora.adaptive.auroraCenteredMaxWidth
 import eu.kanade.presentation.theme.aurora.adaptive.rememberAuroraAdaptiveSpec
 import eu.kanade.tachiyomi.ui.home.components.AvatarFrameDecorations
+import eu.kanade.tachiyomi.ui.home.components.avatarGlitch
 import tachiyomi.i18n.aniyomi.AYMR
 import tachiyomi.presentation.core.i18n.stringResource
 import kotlin.math.roundToInt
@@ -669,7 +670,6 @@ private fun HomeHubProfileHeaderCanvas(
                         Box(
                             modifier = Modifier
                                 .size(48.dp)
-                                .clipToBounds()
                                 .clickable(onClick = onAvatarClick),
                             contentAlignment = Alignment.Center,
                         ) {
@@ -683,6 +683,7 @@ private fun HomeHubProfileHeaderCanvas(
                                     },
                                 )
                                 .clip(CircleShape)
+                                .avatarGlitch(avatarFrameStyleKey)
 
                             if (userAvatar.isNotEmpty()) {
                                 AsyncImage(

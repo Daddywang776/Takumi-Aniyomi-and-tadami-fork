@@ -134,8 +134,6 @@ rights of others. See [DISCLAIMER.md](DISCLAIMER.md) for the full statement and
 > исходным кодом и **не являются оплатой контента**. Они не поддерживают и не
 > финансируют какие-либо сторонние источники, расширения или нелегальные материалы._
 
-If you'd like to support the work on the code, here are a few optional ways:
-
 <div align="center">
 
 If you'd like to support the work on the code, here are a few optional ways.
@@ -166,7 +164,6 @@ If you'd like to support the work on the code, here are a few optional ways.
 
 - [Mihon](https://github.com/mihonapp/mihon)
 - [Aniyomi](https://github.com/aniyomiorg/aniyomi)
-- [LNreader](https://github.com/LNReader/lnreader)
 
 ## License
 

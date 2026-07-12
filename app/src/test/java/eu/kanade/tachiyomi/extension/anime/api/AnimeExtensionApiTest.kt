@@ -2,6 +2,7 @@ package eu.kanade.tachiyomi.extension.anime.api
 
 import android.content.Context
 import eu.kanade.tachiyomi.extension.anime.AnimeExtensionManager
+import eu.kanade.tachiyomi.extension.anime.util.AnimeExtensionLoader
 import io.kotest.matchers.shouldBe
 import io.mockk.coEvery
 import io.mockk.coJustRun
@@ -11,14 +12,12 @@ import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
-import mihon.domain.extensionrepo.anime.interactor.GetAnimeExtensionRepo
+import mihon.data.extension.model.AvailableExtensionData
+import mihon.data.extension.repository.ExtensionStoreFetcher
 import mihon.domain.extensionrepo.anime.interactor.UpdateAnimeExtensionRepo
-import mihon.domain.extensionrepo.model.ExtensionRepo
-import okhttp3.OkHttpClient
-import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
-import okhttp3.mockwebserver.RecordedRequest
+import mihon.domain.extensionstore.anime.repository.AnimeExtensionStoreRepository
+import mihon.domain.extensionstore.model.ExtensionStore
+import mihon.domain.extensionstore.model.legacyBaseUrl
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import tachiyomi.core.common.preference.Preference
@@ -51,11 +50,10 @@ class AnimeExtensionApiTest {
 
         api = AnimeExtensionApi(
             preferenceStore = preferenceStore,
-            getExtensionRepo = mockk<GetAnimeExtensionRepo>(relaxed = true),
+            storeRepository = mockk<AnimeExtensionStoreRepository>(relaxed = true),
+            storeFetcher = mockk<ExtensionStoreFetcher>(relaxed = true),
             updateExtensionRepo = updateExtensionRepo,
             animeExtensionManager = animeExtensionManager,
-            networkService = mockk(relaxed = true),
-            json = Json.Default,
             timeProvider = { nowMs },
         )
     }
@@ -88,104 +86,81 @@ class AnimeExtensionApiTest {
     }
 
     @Test
-    fun `find extensions keeps repo variants and repo names`() {
+    fun `supported library versions list contains all intermediate versions`() {
+        AnimeExtensionLoader.SUPPORTED_LIB_VERSIONS shouldBe listOf(12.0, 13.0, 14.0, 15.0, 16.0)
+    }
+
+    @Test
+    fun `find extensions keeps store variants and store names`() {
         runTest {
-            val getExtensionRepo = mockk<GetAnimeExtensionRepo>()
-            val networkService = mockk<eu.kanade.tachiyomi.network.NetworkHelper>(relaxed = true)
-            val server = MockWebServer()
-            server.dispatcher = object : okhttp3.mockwebserver.Dispatcher() {
-                override fun dispatch(request: RecordedRequest): MockResponse {
-                    return when (request.path) {
-                        "/alpha/index.min.json" -> MockResponse().setResponseCode(200).setBody(
-                            extensionPayload(
-                                name = "Aniyomi: Alpha Source",
-                                versionCode = 10,
-                                version = "12.0",
-                            ),
-                        )
-                        "/beta/index.min.json" -> MockResponse().setResponseCode(200).setBody(
-                            extensionPayload(
-                                name = "Aniyomi: Beta Source",
-                                versionCode = 11,
-                                version = "12.1",
-                            ),
-                        )
-                        else -> MockResponse().setResponseCode(404)
-                    }
-                }
-            }
-            server.start()
+            val storeRepository = mockk<AnimeExtensionStoreRepository>()
+            val storeFetcher = mockk<ExtensionStoreFetcher>()
+            val alphaStore = legacyStore(
+                baseUrl = "https://alpha.example",
+                badgeLabel = "Alpha Store",
+            )
+            val betaStore = legacyStore(
+                baseUrl = "https://beta.example",
+                badgeLabel = "Beta Store",
+            )
+            coEvery { storeRepository.getAll() } returns listOf(alphaStore, betaStore)
+            coEvery { storeFetcher.fetchExtensions(any()) } returns listOf(
+                availableExtension(alphaStore, versionCode = 10),
+                availableExtension(betaStore, versionCode = 11),
+            )
 
-            try {
-                val repoUrlAlpha = server.url("/alpha").toString()
-                val repoUrlBeta = server.url("/beta").toString()
-                coEvery { getExtensionRepo.getAll() } returns listOf(
-                    ExtensionRepo(
-                        baseUrl = repoUrlAlpha,
-                        name = "",
-                        shortName = "Alpha Repo",
-                        website = "https://alpha.example",
-                        signingKeyFingerprint = "alpha",
-                    ),
-                    ExtensionRepo(
-                        baseUrl = repoUrlBeta,
-                        name = "",
-                        shortName = null,
-                        website = "https://beta.example",
-                        signingKeyFingerprint = "beta",
-                    ),
-                )
-                every { networkService.client } returns OkHttpClient.Builder().build()
+            val api = AnimeExtensionApi(
+                preferenceStore = preferenceStore,
+                storeRepository = storeRepository,
+                storeFetcher = storeFetcher,
+                updateExtensionRepo = updateExtensionRepo,
+                animeExtensionManager = animeExtensionManager,
+                timeProvider = { nowMs },
+            )
 
-                val api = AnimeExtensionApi(
-                    preferenceStore = preferenceStore,
-                    getExtensionRepo = getExtensionRepo,
-                    updateExtensionRepo = updateExtensionRepo,
-                    animeExtensionManager = animeExtensionManager,
-                    networkService = networkService,
-                    json = Json.Default,
-                    timeProvider = { nowMs },
-                )
+            val extensions = api.findExtensions()
 
-                val extensions = api.findExtensions()
-
-                extensions.size shouldBe 2
-                extensions.map { it.pkgName }.distinct().size shouldBe 1
-                extensions.map { it.repoName } shouldBe listOf(
-                    "Alpha Repo",
-                    repoUrlBeta,
-                )
-            } finally {
-                server.shutdown()
-            }
+            extensions.size shouldBe 2
+            extensions.map { it.pkgName }.distinct().size shouldBe 1
+            extensions.map { it.repoName } shouldBe listOf(
+                "Alpha Store",
+                "Beta Store",
+            )
         }
     }
 
-    private fun extensionPayload(
-        name: String,
-        versionCode: Long,
-        version: String,
-    ): String {
-        return """
-            [
-              {
-                "name": "$name",
-                "pkg": "pkg.example",
-                "apk": "pkg.example.apk",
-                "lang": "en",
-                "code": $versionCode,
-                "version": "$version",
-                "nsfw": 0,
-                "sources": [
-                  {
-                    "id": 1,
-                    "lang": "en",
-                    "name": "Source",
-                    "baseUrl": "https://example.org/source"
-                  }
-                ]
-              }
-            ]
-        """.trimIndent()
+    private fun legacyStore(baseUrl: String, badgeLabel: String): ExtensionStore {
+        return ExtensionStore(
+            indexUrl = "$baseUrl/repo.json",
+            name = badgeLabel,
+            badgeLabel = badgeLabel,
+            signingKey = "fp",
+            contact = ExtensionStore.Contact(website = baseUrl, discord = null),
+            isLegacy = true,
+            extensionListUrl = null,
+        )
+    }
+
+    private fun availableExtension(store: ExtensionStore, versionCode: Long): AvailableExtensionData {
+        return AvailableExtensionData(
+            name = "Source",
+            pkgName = "pkg.example",
+            apkUrl = "${store.legacyBaseUrl()}/apk/pkg.example.apk",
+            iconUrl = "${store.legacyBaseUrl()}/icon/pkg.example.png",
+            libVersion = AnimeExtensionLoader.LIB_VERSION_MIN,
+            versionCode = versionCode,
+            versionName = "${AnimeExtensionLoader.LIB_VERSION_MIN}.0.0",
+            lang = "en",
+            isNsfw = false,
+            sources = listOf(
+                AvailableExtensionData.Source(
+                    id = 1,
+                    lang = "en",
+                    name = "Source",
+                    baseUrl = "https://example.org/source",
+                ),
+            ),
+            store = store,
+        )
     }
 }

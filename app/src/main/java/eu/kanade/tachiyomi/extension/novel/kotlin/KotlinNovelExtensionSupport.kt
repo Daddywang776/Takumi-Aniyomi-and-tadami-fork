@@ -50,6 +50,7 @@ import eu.kanade.tachiyomi.util.lang.Hash
 import eu.kanade.tachiyomi.util.storage.copyAndSetReadOnlyTo
 import eu.kanade.tachiyomi.util.storage.getUriCompat
 import eu.kanade.tachiyomi.util.system.ChildFirstPathClassLoader
+import eu.kanade.tachiyomi.util.system.isPackageInstalled
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -125,12 +126,14 @@ class KotlinNovelExtensionInstaller(
         withContext(Dispatchers.IO) {
             KotlinNovelExtensionLoader.uninstallPrivateExtension(context, pkgName)
         }
-        runCatching {
-            Intent(Intent.ACTION_DELETE, Uri.parse("package:$pkgName"))
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                .let(context::startActivity)
-        }.onFailure {
-            logcat(LogPriority.WARN, it) { "Failed to launch system uninstall for Kotlin novel extension $pkgName" }
+        if (context.isPackageInstalled(pkgName)) {
+            runCatching {
+                Intent(Intent.ACTION_DELETE, Uri.parse("package:$pkgName"))
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    .let(context::startActivity)
+            }.onFailure {
+                logcat(LogPriority.WARN, it) { "Failed to launch system uninstall for Kotlin novel extension $pkgName" }
+            }
         }
     }
 }
@@ -168,10 +171,15 @@ object KotlinNovelExtensionLoader {
     private const val METADATA_SOURCE_CLASS = "tachiyomi.novelextension.class"
     private const val METADATA_SOURCE_FACTORY = "tachiyomi.novelextension.factory"
     private const val METADATA_NSFW = "tachiyomi.novelextension.nsfw"
+    private const val METADATA_NAME = "tachiyomix.name"
+    private const val METADATA_CONTENT_WARNING = "tachiyomix.contentWarning"
     private const val METADATA_NOVEL = "tachiyomi.novelextension.novel"
+    private const val METADATA_EXTENSION_LIB = "tachiyomix.extensionLib"
     private const val PRIVATE_EXTENSION_EXTENSION = "ext"
     private const val LIB_VERSION_MIN = 1.4
     private const val LIB_VERSION_MAX = 1.5
+
+    val SUPPORTED_LIB_VERSIONS = listOf(LIB_VERSION_MIN, LIB_VERSION_MAX)
 
     private val preferences: SourcePreferences by injectLazy()
     private val trustExtension: TrustNovelExtension by injectLazy()
@@ -189,6 +197,11 @@ object KotlinNovelExtensionLoader {
         file: File,
         pkgName: String,
     ): Boolean {
+        if (!pkgName.matches(Regex("^[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)+$"))) {
+            logcat(LogPriority.ERROR) { "Invalid package name: $pkgName" }
+            return false
+        }
+
         val pkgManager = context.packageManager
         val archiveInfo = pkgManager.getPackageArchiveInfo(file.absolutePath, PACKAGE_FLAGS)
             ?.takeIf { isPackageAnExtension(it) }
@@ -302,13 +315,15 @@ object KotlinNovelExtensionLoader {
         val appInfo = pkgInfo.applicationInfo ?: return null
         val pkgName = pkgInfo.packageName
         val appLabel = pkgManager.getApplicationLabel(appInfo).toString()
-        val extName = appLabel
-            .substringAfter("Tsundoku: ")
-            .substringAfter("NovelApp: ")
+        val extName = appInfo.metaData?.getString(METADATA_NAME)
+            ?: appLabel.substringAfter("Tsundoku: ").substringAfter("NovelApp: ")
         val versionName = pkgInfo.versionName ?: return null
         val versionCode = PackageInfoCompat.getLongVersionCode(pkgInfo).toInt()
-        val libVersion = versionName.substringBeforeLast('.').toDoubleOrNull()
-        if (libVersion == null || libVersion < LIB_VERSION_MIN || libVersion > LIB_VERSION_MAX) {
+        val rawLibVersion = appInfo.metaData?.getDouble(METADATA_EXTENSION_LIB)?.takeUnless { it == 0.0 }
+            ?: appInfo.metaData?.getFloat(METADATA_EXTENSION_LIB)?.toDouble()?.takeUnless { it == 0.0 }
+            ?: versionName.substringBeforeLast('.').toDoubleOrNull()
+        val libVersion = if (rawLibVersion != null) kotlin.math.round(rawLibVersion * 100.0) / 100.0 else null
+        if (libVersion == null || libVersion !in SUPPORTED_LIB_VERSIONS) {
             logcat(LogPriority.WARN) { "Kotlin novel extension $pkgName has unsupported lib version $libVersion" }
             return null
         }
@@ -317,7 +332,8 @@ object KotlinNovelExtensionLoader {
             logcat(LogPriority.WARN) { "Kotlin novel extension $pkgName is not signed" }
             return null
         }
-        val isNsfw = appInfo.metaData?.getInt(METADATA_NSFW) == 1
+        val isNsfw = (appInfo.metaData?.getInt(METADATA_CONTENT_WARNING) ?: 0) > 0 ||
+            appInfo.metaData?.getInt(METADATA_NSFW) == 1
         if (!preferences.showNsfwSource().get() && isNsfw) {
             logcat(LogPriority.WARN) { "NSFW Kotlin novel extension $pkgName not allowed" }
             return null
@@ -345,6 +361,7 @@ object KotlinNovelExtensionLoader {
                     pkgName = pkgName,
                     signatureHash = signatures.last(),
                     isKotlinExtension = true,
+                    isNsfw = isNsfw,
                 ),
                 sources = emptyList(),
             )
@@ -409,6 +426,7 @@ object KotlinNovelExtensionLoader {
             pkgName = pkgName,
             apkUrl = null,
             isKotlinExtension = true,
+            isNsfw = isNsfw,
         )
         return KotlinNovelExtensionLoadResult(plugin, sources)
     }

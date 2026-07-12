@@ -10,6 +10,7 @@ private val previewAuraUnlockables = setOf(
     "aura_deep_focus",
     "aura_shadow_monarch",
     "aura_ascendant_gold",
+    "aura_void_broadcast_red",
 )
 
 private val previewPresetUnlockables = setOf(
@@ -20,6 +21,7 @@ private val previewPresetUnlockables = setOf(
     "title_rank_4",
     "profile_nickname_effect_aurora_crown",
     "profile_nickname_effect_glitch_rune",
+    "profile_nickname_effect_glitch_rune_red",
     "profile_nickname_effect_cipher",
     "profile_nickname_effect_trinity_prism",
     "profile_nickname_effect_shadow_crown",
@@ -31,6 +33,7 @@ private val previewPresetUnlockables = setOf(
     "avatar_frame_deep_archive",
     "avatar_frame_hybrid_scroll",
     "avatar_frame_ascendant",
+    "avatar_frame_glitch_red",
     "home_badge_orbit",
     "home_badge_crown",
     "home_badge_shuriken",
@@ -44,6 +47,7 @@ private val previewPresetUnlockables = setOf(
     "special_background_deep_space_archive",
     "special_background_shadow_realm",
     "special_background_event_horizon_library",
+    "special_background_void_weeping_red",
     "special_tab_glow",
 )
 

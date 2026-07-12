@@ -1,9 +1,11 @@
 package mihon.domain.extensionrepo.anime.interactor
 
-import mihon.domain.extensionrepo.anime.repository.AnimeExtensionRepoRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
+import mihon.domain.extensionstore.anime.repository.AnimeExtensionStoreRepository
 
 class GetAnimeExtensionRepoCount(
-    private val repository: AnimeExtensionRepoRepository,
+    private val repository: AnimeExtensionStoreRepository,
 ) {
-    fun subscribe() = repository.getCount()
+    fun subscribe(): Flow<Int> = repository.getCountAsFlow().map { it.toInt() }
 }

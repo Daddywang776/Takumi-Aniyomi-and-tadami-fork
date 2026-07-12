@@ -54,6 +54,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import logcat.LogPriority
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.storage.extension
+import tachiyomi.core.common.storage.renameToOrCopy
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.withIOContext
 import tachiyomi.core.common.util.lang.withUIContext
@@ -194,6 +195,20 @@ class AnimeDownloader(
                 it.status = AnimeDownload.State.QUEUE
                 it.currentSpeedBytesPerSecond = 0L
             }
+    }
+
+    /**
+     * Pauses active downloads while the worker waits for network recovery.
+     */
+    fun pauseForNetwork(reason: String) {
+        cancelDownloaderJob()
+        queueState.value
+            .filter { it.status == AnimeDownload.State.DOWNLOADING }
+            .forEach {
+                it.status = AnimeDownload.State.QUEUE
+                it.currentSpeedBytesPerSecond = 0L
+            }
+        notifier.onWarning(reason)
     }
 
     /**
@@ -394,11 +409,11 @@ class AnimeDownloader(
 
             val filename = DiskUtil.buildValidFilename("${download.anime.title} - ${download.episode.name}")
             tmpDir.findFile("${filename}_tmp.mkv")?.delete()
-            tmpDir.renameTo(episodeDirname)
+            val episodeDir = tmpDir.renameToOrCopy(episodeDirname)
 
             cache.addEpisode(episodeDirname, animeDir, download.anime)
 
-            DiskUtil.createNoMediaFile(tmpDir, context)
+            DiskUtil.createNoMediaFile(episodeDir, context)
 
             download.status = AnimeDownload.State.DOWNLOADED
             download.currentSpeedBytesPerSecond = 0L
@@ -604,7 +619,7 @@ class AnimeDownloader(
                 {
                     if (it.returnCode.isValueSuccess) {
                         tmpDir.findFile("$filename.tmp")?.apply {
-                            renameTo("$filename.mkv")
+                            renameToOrCopy("$filename.mkv")
                         }
                         continuation.resume(it)
                     } else {
@@ -824,11 +839,11 @@ class AnimeDownloader(
             // Only rename the directory if it's downloaded
             val filename = DiskUtil.buildValidFilename("${download.anime.title} - ${download.episode.name}")
             tmpDir.findFile("${filename}_tmp.mkv")?.delete()
-            tmpDir.renameTo(dirname)
+            val episodeDir = tmpDir.renameToOrCopy(dirname)
 
             cache.addEpisode(dirname, animeDir, download.anime)
 
-            DiskUtil.createNoMediaFile(tmpDir, context)
+            DiskUtil.createNoMediaFile(episodeDir, context)
             AnimeDownload.State.DOWNLOADED
         } else {
             throw Exception("Unable to finalize download")

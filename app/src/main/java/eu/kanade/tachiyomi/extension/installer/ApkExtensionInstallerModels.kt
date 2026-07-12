@@ -19,6 +19,7 @@ enum class ApkInstallBackend {
     PACKAGE_INSTALLER,
     LEGACY,
     SHIZUKU,
+    DHIZUKU,
     PRIVATE,
 }
 

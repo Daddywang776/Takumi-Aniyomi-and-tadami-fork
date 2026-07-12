@@ -183,6 +183,11 @@ class AnimeScreen(
                 }
             }.takeIf { successState.anime.fetchType == FetchType.Episodes },
             onTagSearch = { scope.launch { performGenreSearch(navigator, it, screenModel.source!!) } },
+            onGenreClick = { genre -> scope.launch { performGenreSearch(navigator, genre, screenModel.source!!) } },
+            onGenreLongClick = null, // handled internally in AuroraImpl as state toggle
+            onGenresSearch = { genres ->
+                scope.launch { performGenresSearch(navigator, genres, screenModel.source!!) }
+            },
             onFilterButtonClicked = screenModel::showSettingsDialog,
             onRefresh = screenModel::fetchAllFromSource,
             onContinueWatching = {
@@ -595,25 +600,48 @@ class AnimeScreen(
 
     /**
      * Performs a genre search using the provided genre name.
-     *
-     * @param genreName the search genre to the parent controller
+     * Always targets the specific source of this title.
      */
     private suspend fun performGenreSearch(
         navigator: Navigator,
         genreName: String,
         source: AnimeSource,
     ) {
-        if (navigator.size < 2) {
+        val sourceId = source.id
+        // Smart stack: if we already have the browse for this exact source, pop to it and use searchGenre
+        val existing = navigator.items.firstOrNull { screen ->
+            screen is BrowseAnimeSourceScreen && screen.sourceId == sourceId
+        } as? BrowseAnimeSourceScreen
+
+        if (existing != null) {
+            navigator.popUntil { it == existing }
+            existing.searchGenre(genreName)
             return
         }
 
-        val previousController = navigator.items[navigator.size - 2]
-        if (previousController is BrowseAnimeSourceScreen && source is AnimeHttpSource) {
-            navigator.pop()
-            previousController.searchGenre(genreName)
-        } else {
-            performSearch(navigator, genreName, global = false)
+        // Otherwise push fresh browse for this source (will use text query; filter activation can be improved in browse model)
+        navigator.push(BrowseAnimeSourceScreen(sourceId, genreName))
+    }
+
+    private suspend fun performGenresSearch(
+        navigator: Navigator,
+        genres: List<String>,
+        source: AnimeSource,
+    ) {
+        if (genres.isEmpty()) return
+        val sourceId = source.id
+        val existing = navigator.items.firstOrNull { screen ->
+            screen is BrowseAnimeSourceScreen && screen.sourceId == sourceId
+        } as? BrowseAnimeSourceScreen
+        if (existing != null) {
+            navigator.popUntil { it == existing }
+            existing.searchGenres(genres)
+            return
         }
+
+        val newScreen = BrowseAnimeSourceScreen(sourceId, null)
+        navigator.push(newScreen)
+        newScreen.searchGenres(genres)
     }
 
     /**

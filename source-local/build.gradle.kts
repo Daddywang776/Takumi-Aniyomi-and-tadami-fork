@@ -16,7 +16,7 @@ kotlin {
     }
 
     sourceSets {
-        val commonMain by getting {
+        getByName("commonMain") {
             dependencies {
                 implementation(projects.sourceApi)
                 api(projects.i18n)
@@ -25,7 +25,7 @@ kotlin {
                 implementation(libs.unifile)
             }
         }
-        val androidMain by getting {
+        getByName("androidMain") {
             dependencies {
                 implementation(projects.core.archive)
                 implementation(projects.core.common)
@@ -39,7 +39,7 @@ kotlin {
                 implementation(aniyomilibs.ffmpeg.kit)
             }
         }
-        val androidHostTest by getting {
+        getByName("androidHostTest") {
             dependencies {
                 implementation(libs.bundles.test)
                 runtimeOnly(libs.junitPlatformLauncher)

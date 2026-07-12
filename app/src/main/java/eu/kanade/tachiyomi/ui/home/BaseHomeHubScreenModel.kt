@@ -1,10 +1,14 @@
 package eu.kanade.tachiyomi.ui.home
 
+import android.os.Handler
+import android.os.Looper
 import cafe.adriel.voyager.core.model.StateScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.domain.ui.UserProfilePreferences
 import kotlinx.coroutines.flow.update
+import logcat.LogPriority
 import tachiyomi.core.common.util.lang.launchIO
+import tachiyomi.core.common.util.system.logcat
 
 internal abstract class BaseHomeHubScreenModel(
     protected val context: android.content.Context,
@@ -25,17 +29,45 @@ internal abstract class BaseHomeHubScreenModel(
             userProfilePreferences = userProfilePreferences,
             stats = stats,
         )
-        mutableState.update {
-            it.copy(
-                greeting = greetingSelection.greeting,
-                greetingReady = true,
-            )
+
+        val calendar = java.util.Calendar.getInstance()
+        val hour = calendar.get(java.util.Calendar.HOUR_OF_DAY)
+        val currentTimeOfDay = when (hour) {
+            in 5..11 -> 0
+            in 12..16 -> 1
+            in 17..21 -> 2
+            else -> 3
+        }
+        userProfilePreferences.lastGreetingId().set(greetingSelection.greetingId)
+        userProfilePreferences.lastGreetingTimeOfDay().set(currentTimeOfDay)
+
+        val wasReady = state.value.greetingReady
+        if (!wasReady) {
+            mutableState.update {
+                it.copy(
+                    greeting = greetingSelection.greeting,
+                    greetingReady = true,
+                )
+            }
         }
     }
 
     protected fun initializeGreeting() {
         screenModelScope.launchIO {
             resolveAndSetGreeting()
+        }
+    }
+
+    /**
+     * PERF: Defer greeting + heavy stats loading until after the first frame.
+     * This is critical for fast Home screen appearance on cold start.
+     */
+    protected fun initializeGreetingDeferred() {
+        Handler(Looper.getMainLooper()).post {
+            screenModelScope.launchIO {
+                logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH home-greeting-real-load-started" }
+                resolveAndSetGreeting()
+            }
         }
     }
 

@@ -24,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -54,6 +55,9 @@ import eu.kanade.tachiyomi.ui.browse.novel.migration.search.MigrateNovelDialogSc
 import eu.kanade.tachiyomi.ui.category.CategoriesTab
 import eu.kanade.tachiyomi.ui.entries.novel.NovelScreen
 import eu.kanade.tachiyomi.ui.webview.WebViewScreen
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.receiveAsFlow
 import mihon.presentation.core.util.collectAsLazyPagingItems
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import tachiyomi.core.common.util.lang.launchIO
@@ -68,17 +72,38 @@ data class BrowseNovelSourceScreen(
     val sourceId: Long,
     private val listingQuery: String?,
     private val savedSearchId: Long? = null,
+    private val parentScreen: cafe.adriel.voyager.core.screen.Screen? = null,
 ) : Screen() {
 
     @Composable
     override fun Content() {
-        val screenModel = rememberScreenModel { BrowseNovelSourceScreenModel(sourceId, listingQuery, savedSearchId) }
+        val screenModel = if (parentScreen != null) {
+            parentScreen.rememberScreenModel(tag = sourceId.toString()) {
+                BrowseNovelSourceScreenModel(sourceId, listingQuery, savedSearchId)
+            }
+        } else {
+            rememberScreenModel {
+                BrowseNovelSourceScreenModel(sourceId, listingQuery, savedSearchId)
+            }
+        }
         val state by screenModel.state.collectAsStateWithLifecycle()
         val favoriteNovelUrls by screenModel.favoriteNovelUrls.collectAsStateWithLifecycle()
         val navigator = LocalNavigator.currentOrThrow
         val snackbarHostState = remember { SnackbarHostState() }
         val scope = rememberCoroutineScope()
         val haptic = LocalHapticFeedback.current
+
+        LaunchedEffect(Unit) {
+            queryEvent.receiveAsFlow()
+                .collectLatest {
+                    when (it) {
+                        is SearchType.Genre -> screenModel.searchGenre(it.txt)
+                        is SearchType.Text -> screenModel.search(it.txt)
+                        is SearchType.Genres -> screenModel.searchGenres(it.txts)
+                    }
+                }
+        }
+
         val navigateUp: () -> Unit = {
             when {
                 !state.isUserQuery && state.toolbarQuery != null -> screenModel.setToolbarQuery(null)
@@ -312,6 +337,24 @@ data class BrowseNovelSourceScreen(
                 null -> Unit
             }
         }
+    }
+
+    suspend fun search(query: String) = queryEvent.send(SearchType.Text(query))
+    suspend fun searchGenre(name: String) = queryEvent.send(SearchType.Genre(name))
+    suspend fun searchGenres(names: List<String>) {
+        if (names.isNotEmpty()) {
+            queryEvent.send(SearchType.Genres(names))
+        }
+    }
+
+    companion object {
+        private val queryEvent = Channel<SearchType>()
+    }
+
+    sealed interface SearchType {
+        data class Text(val txt: String) : SearchType
+        data class Genre(val txt: String) : SearchType
+        data class Genres(val txts: List<String>) : SearchType
     }
 }
 

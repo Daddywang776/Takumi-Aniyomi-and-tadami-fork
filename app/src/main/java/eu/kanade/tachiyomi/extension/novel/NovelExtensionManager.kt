@@ -33,4 +33,12 @@ interface NovelExtensionManager {
     fun getPluginIconUrlForSource(sourceId: Long): String?
 
     fun getCapabilitiesForSource(sourceId: Long): NovelPluginCapabilities?
+
+    fun getPluginId(sourceId: Long): String?
+
+    fun getPluginIdAsFlow(sourceId: Long): Flow<String?>
+
+    fun isNsfwForSource(sourceId: Long): Boolean
+
+    fun isNsfwForSourceAsFlow(sourceId: Long): Flow<Boolean>
 }

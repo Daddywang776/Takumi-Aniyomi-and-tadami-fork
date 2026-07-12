@@ -7,6 +7,8 @@ import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.entries.novel.model.toSNovel
 import eu.kanade.domain.items.novelchapter.interactor.SyncNovelChaptersWithSource
 import eu.kanade.domain.items.novelchapter.model.toSNovelChapter
+import eu.kanade.domain.source.interactor.NovelReaderIncognitoState
+import eu.kanade.domain.source.novel.interactor.GetNovelIncognitoState
 import eu.kanade.domain.track.novel.interactor.TrackNovelChapter
 import eu.kanade.presentation.reader.novel.NovelAutoScrollHandoffState
 import eu.kanade.presentation.reader.novel.NovelReaderAutoScrollHandoffPolicy
@@ -181,6 +183,7 @@ class NovelReaderScreenModel(
     private val pluginStorage: NovelPluginStorage = Injekt.get(),
     private val historyRepository: NovelHistoryRepository? = null,
     private val basePreferences: BasePreferences = Injekt.get(),
+    private val getIncognitoState: GetNovelIncognitoState = Injekt.get(),
     private val novelReaderPreferences: NovelReaderPreferences = Injekt.get(),
     private val ttsChapterRepository: NovelTtsChapterRepository = NovelTtsChapterRepository(
         novelChapterRepository = novelChapterRepository,
@@ -470,6 +473,7 @@ class NovelReaderScreenModel(
     private var ttsRuntimeGeneration: Long = 0L
     private val pendingProgressPersistenceByChapterId = linkedMapOf<Long, PendingProgressPersistence>()
     private var progressPersistenceJob: Job? = null
+    private var incognitoObservationJob: Job? = null
 
     @Volatile
     private var progressPersistenceScheduled = false
@@ -526,10 +530,10 @@ class NovelReaderScreenModel(
         }
         val chapter = snapshot.chapter
         val novel = snapshot.novel
-        val source = sourceManager.get(novel.source)
-            ?: return setError("Source not found")
+        val source = sourceManager.getOrStub(novel.source)
         clearChapterTransientState()
         currentNovel = novel
+        observeIncognitoForNovel(novel)
         currentChapter = chapter
         fullChapterOrderList = snapshot.chapterOrderList
         chapterOrderList = NovelReaderChapterWindow.resolveWindow(
@@ -1209,7 +1213,7 @@ class NovelReaderScreenModel(
 
     private suspend fun resolveTtsChapter(targetChapterId: Long): NovelTtsResolvedChapter? {
         val snapshot = ttsChapterRepository.loadChapterSnapshot(targetChapterId)
-        val source = sourceManager.get(snapshot.novel.source) ?: return null
+        val source = sourceManager.getOrStub(snapshot.novel.source)
         val normalizedHtml = withContext(Dispatchers.Default) {
             val withHeading = prependChapterHeadingIfMissing(
                 rawHtml = snapshot.rawHtml.normalizeStructuredChapterPayload(),
@@ -1814,7 +1818,9 @@ class NovelReaderScreenModel(
                 next
             }
 
-            if (basePreferences.incognitoMode().get()) return
+            if (getIncognitoState.shouldPauseHistory(currentNovel?.source, currentNovel?.favorite == true)) {
+                return
+            }
 
             novelChapterRepository.updateChapter(
                 NovelChapterUpdate(
@@ -2120,13 +2126,27 @@ class NovelReaderScreenModel(
         pendingProgressPersistenceByChapterId.clear()
         progressPersistenceScheduled = false
         ttsWordProgressJob?.cancel()
+        incognitoObservationJob?.cancel()
+        NovelReaderIncognitoState.set(false)
         clearChapterTransientState()
         ttsAudioFocusManager.abandonPlaybackFocus()
         ttsEngine.shutdown()
         super.onDispose()
     }
 
+    private fun observeIncognitoForNovel(novel: Novel) {
+        incognitoObservationJob?.cancel()
+        incognitoObservationJob = screenModelScope.launch {
+            getIncognitoState.subscribe(novel.source).collect { active ->
+                NovelReaderIncognitoState.set(active)
+            }
+        }
+    }
+
     private fun clearChapterTransientState() {
+        incognitoObservationJob?.cancel()
+        incognitoObservationJob = null
+        NovelReaderIncognitoState.set(false)
         currentNovel = null
         currentChapter = null
         chapterOrderList = mutableListOf()
@@ -4112,7 +4132,9 @@ class NovelReaderScreenModel(
         return geminiPrivateUnlocked || GeminiPrivateBridge.isUnlocked()
     }
     private suspend fun saveHistorySnapshot(chapterId: Long, sessionReadDurationMs: Long) {
-        if (basePreferences.incognitoMode().get()) return
+        if (getIncognitoState.shouldPauseHistory(currentNovel?.source, currentNovel?.favorite == true)) {
+            return
+        }
         runCatching {
             resolvedHistoryRepository?.upsertNovelHistory(
                 NovelHistoryUpdate(

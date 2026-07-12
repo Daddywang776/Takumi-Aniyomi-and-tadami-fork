@@ -28,6 +28,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -66,12 +67,14 @@ import eu.kanade.presentation.components.DropdownMenu
 import eu.kanade.presentation.components.NestedMenuItem
 import eu.kanade.presentation.components.TabContent
 import eu.kanade.presentation.download.DownloadEngineCard
+import eu.kanade.presentation.download.DownloadNetworkBanner
 import eu.kanade.presentation.download.DownloadPowerPolicyBanner
 import eu.kanade.presentation.download.NovelDownloadThrottleSettingsDialog
 import eu.kanade.presentation.more.settings.AuroraTopBarIconButton
 import eu.kanade.presentation.more.settings.AuroraTopBarLayout
 import eu.kanade.presentation.theme.AuroraTheme
 import eu.kanade.presentation.util.Tab
+import eu.kanade.tachiyomi.data.download.DownloadNetworkStatus
 import eu.kanade.tachiyomi.data.download.anime.AnimeDownloadManager
 import eu.kanade.tachiyomi.data.download.anime.model.AnimeDownload
 import eu.kanade.tachiyomi.data.download.engine.DownloadEngineFacade
@@ -186,6 +189,13 @@ data object DownloadsTab : Tab {
         }
         val engineScreenModel = rememberScreenModel { DownloadEngineScreenModel(engineFacade) }
         val engineSnapshot by engineScreenModel.state.collectAsStateWithLifecycle()
+        val networkStatus by engineScreenModel.networkStatus.collectAsStateWithLifecycle()
+        val networkWarningMessage = when (networkStatus) {
+            DownloadNetworkStatus.Available -> null
+            DownloadNetworkStatus.NoNetwork -> stringResource(MR.strings.download_notifier_no_network)
+            DownloadNetworkStatus.NoWifi -> stringResource(MR.strings.download_notifier_text_only_wifi)
+        }
+        val resumeBlockedMessage = networkWarningMessage?.takeIf { engineSnapshot.hasWork }
         val animeDownloadList by animeScreenModel.state.collectAsStateWithLifecycle()
         val mangaDownloadList by mangaScreenModel.state.collectAsStateWithLifecycle()
         val novelDownloadsState by novelScreenModel.state.collectAsStateWithLifecycle()
@@ -232,6 +242,7 @@ data object DownloadsTab : Tab {
         val screenContent: @Composable () -> Unit = {
             Scaffold(
                 containerColor = if (isAurora) Color.Transparent else MaterialTheme.colorScheme.background,
+                snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
                 topBar = {
                     if (isAurora) {
                         AuroraTopBarLayout(
@@ -395,10 +406,26 @@ data object DownloadsTab : Tab {
                     DownloadEngineCard(
                         snapshot = engineSnapshot,
                         onPauseAll = engineScreenModel::pauseAll,
-                        onResumeAll = engineScreenModel::resumeAll,
+                        onResumeAll = {
+                            val blockedMessage = resumeBlockedMessage
+                            if (blockedMessage != null) {
+                                scope.launch {
+                                    snackbarHostState.showSnackbar(blockedMessage)
+                                }
+                            } else {
+                                engineScreenModel.resumeAll()
+                            }
+                        },
                         onCancelAll = engineScreenModel::cancelAll,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     )
+
+                    resumeBlockedMessage?.let { message ->
+                        DownloadNetworkBanner(
+                            message = message,
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        )
+                    }
 
                     if (engineSnapshot.hasWork) {
                         DownloadPowerPolicyBanner(

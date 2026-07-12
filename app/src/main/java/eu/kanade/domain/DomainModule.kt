@@ -54,6 +54,7 @@ import eu.kanade.domain.source.manga.interactor.ToggleMangaSource
 import eu.kanade.domain.source.manga.interactor.ToggleMangaSourcePin
 import eu.kanade.domain.source.novel.interactor.GetEnabledNovelSources
 import eu.kanade.domain.source.novel.interactor.GetLanguagesWithNovelSources
+import eu.kanade.domain.source.novel.interactor.GetNovelIncognitoState
 import eu.kanade.domain.source.novel.interactor.GetNovelSourcesWithFavoriteCount
 import eu.kanade.domain.source.novel.interactor.ToggleNovelIncognito
 import eu.kanade.domain.source.novel.interactor.ToggleNovelSource
@@ -75,32 +76,36 @@ import eu.kanade.domain.track.service.ResolveTrackProgressSync
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.domain.ui.UserProfilePreferences
 import eu.kanade.tachiyomi.data.updater.AppUpdateFileManager
+import eu.kanade.tachiyomi.network.NetworkHelper
 import eu.kanade.tachiyomi.ui.player.utils.TrackSelect
-import mihon.data.repository.anime.AnimeExtensionRepoRepositoryImpl
-import mihon.data.repository.manga.MangaExtensionRepoRepositoryImpl
-import mihon.data.repository.novel.NovelExtensionRepoRepositoryImpl
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.protobuf.ProtoBuf
+import mihon.data.extension.repository.ExtensionStoreFetcher
+import mihon.data.extension.service.ExtensionStoreService
+import mihon.data.repository.anime.AnimeExtensionStoreRepositoryImpl
+import mihon.data.repository.manga.MangaExtensionStoreRepositoryImpl
+import mihon.data.repository.novel.NovelExtensionStoreRepositoryImpl
 import mihon.domain.extensionrepo.anime.interactor.CreateAnimeExtensionRepo
 import mihon.domain.extensionrepo.anime.interactor.DeleteAnimeExtensionRepo
 import mihon.domain.extensionrepo.anime.interactor.GetAnimeExtensionRepo
 import mihon.domain.extensionrepo.anime.interactor.GetAnimeExtensionRepoCount
 import mihon.domain.extensionrepo.anime.interactor.ReplaceAnimeExtensionRepo
 import mihon.domain.extensionrepo.anime.interactor.UpdateAnimeExtensionRepo
-import mihon.domain.extensionrepo.anime.repository.AnimeExtensionRepoRepository
 import mihon.domain.extensionrepo.manga.interactor.CreateMangaExtensionRepo
 import mihon.domain.extensionrepo.manga.interactor.DeleteMangaExtensionRepo
 import mihon.domain.extensionrepo.manga.interactor.GetMangaExtensionRepo
 import mihon.domain.extensionrepo.manga.interactor.GetMangaExtensionRepoCount
 import mihon.domain.extensionrepo.manga.interactor.ReplaceMangaExtensionRepo
 import mihon.domain.extensionrepo.manga.interactor.UpdateMangaExtensionRepo
-import mihon.domain.extensionrepo.manga.repository.MangaExtensionRepoRepository
 import mihon.domain.extensionrepo.novel.interactor.CreateNovelExtensionRepo
 import mihon.domain.extensionrepo.novel.interactor.DeleteNovelExtensionRepo
 import mihon.domain.extensionrepo.novel.interactor.GetNovelExtensionRepo
 import mihon.domain.extensionrepo.novel.interactor.GetNovelExtensionRepoCount
 import mihon.domain.extensionrepo.novel.interactor.ReplaceNovelExtensionRepo
 import mihon.domain.extensionrepo.novel.interactor.UpdateNovelExtensionRepo
-import mihon.domain.extensionrepo.novel.repository.NovelExtensionRepoRepository
-import mihon.domain.extensionrepo.service.ExtensionRepoService
+import mihon.domain.extensionstore.anime.repository.AnimeExtensionStoreRepository
+import mihon.domain.extensionstore.manga.repository.MangaExtensionStoreRepository
+import mihon.domain.extensionstore.novel.repository.NovelExtensionStoreRepository
 import mihon.domain.items.chapter.interactor.FilterChaptersForDownload
 import mihon.domain.items.episode.interactor.FilterEpisodesForDownload
 import mihon.domain.upcoming.anime.interactor.GetUpcomingAnime
@@ -126,6 +131,9 @@ import tachiyomi.data.entries.anime.AnimeRepositoryImpl
 import tachiyomi.data.entries.manga.MangaRepositoryImpl
 import tachiyomi.data.entries.novel.NovelRepositoryImpl
 import tachiyomi.data.extension.novel.NovelPluginRepositoryImpl
+import tachiyomi.data.handlers.anime.AnimeDatabaseHandler
+import tachiyomi.data.handlers.manga.MangaDatabaseHandler
+import tachiyomi.data.handlers.novel.NovelDatabaseHandler
 import tachiyomi.data.history.anime.AnimeHistoryRepositoryImpl
 import tachiyomi.data.history.manga.MangaHistoryRepositoryImpl
 import tachiyomi.data.history.novel.NovelHistoryRepositoryImpl
@@ -409,6 +417,36 @@ class DomainModule : InjektModule {
         addFactory {
             eu.kanade.tachiyomi.data.anixart.ImportAnixartEntries(get(), get(), get(), get(), get())
         }
+        addFactory { eu.kanade.tachiyomi.data.anixart.AnixartTrackerSync(get(), get()) }
+        addFactory { eu.kanade.tachiyomi.data.shikimori.FetchShikimoriImportEntries(get()) }
+        addFactory {
+            eu.kanade.tachiyomi.data.shikimori.ImportShikimoriEntries(get(), get(), get(), get(), get(), get(), get())
+        }
+        addFactory {
+            eu.kanade.tachiyomi.data.shikimori.ImportShikimoriMangaEntries(
+                get(),
+                get(),
+                get(),
+                get(),
+                get(),
+                get(),
+                get(),
+            )
+        }
+        addFactory {
+            eu.kanade.tachiyomi.data.shikimori.ImportShikimoriNovelEntries(
+                get(),
+                get(),
+                get(),
+                get(),
+                get(),
+                get(),
+                get(),
+            )
+        }
+        addFactory {
+            eu.kanade.tachiyomi.data.shikimori.ImportShikimoriExecutor(get(), get(), get())
+        }
         addFactory { UpdateAnime(get(), get()) }
         addFactory { SetAnimeCategories(get()) }
         addFactory { ShouldUpdateDbSeason() }
@@ -616,36 +654,50 @@ class DomainModule : InjektModule {
         addFactory { ToggleNovelSource(get<SourcePreferences>().disabledNovelSources()) }
         addFactory { ToggleNovelSourcePin(get<SourcePreferences>().pinnedNovelSources()) }
 
-        addFactory { ExtensionRepoService(get(), get()) }
+        addSingletonFactory<ExtensionStoreService> {
+            ExtensionStoreService(
+                network = get<NetworkHelper>(),
+                json = get<Json>(),
+                protoBuf = get<ProtoBuf>(),
+            )
+        }
+        addSingletonFactory<ExtensionStoreFetcher> { ExtensionStoreFetcher(get<ExtensionStoreService>()) }
 
-        addSingletonFactory<AnimeExtensionRepoRepository> { AnimeExtensionRepoRepositoryImpl(get()) }
-        addFactory { GetAnimeExtensionRepo(get()) }
-        addFactory { GetAnimeExtensionRepoCount(get()) }
-        addFactory { CreateAnimeExtensionRepo(get(), get()) }
-        addFactory { DeleteAnimeExtensionRepo(get()) }
-        addFactory { ReplaceAnimeExtensionRepo(get()) }
-        addFactory { UpdateAnimeExtensionRepo(get(), get()) }
+        addSingletonFactory<AnimeExtensionStoreRepository> {
+            AnimeExtensionStoreRepositoryImpl(get<AnimeDatabaseHandler>(), get<ExtensionStoreService>())
+        }
+        addFactory<GetAnimeExtensionRepo> { GetAnimeExtensionRepo(get()) }
+        addFactory<GetAnimeExtensionRepoCount> { GetAnimeExtensionRepoCount(get()) }
+        addFactory<CreateAnimeExtensionRepo> { CreateAnimeExtensionRepo(get()) }
+        addFactory<DeleteAnimeExtensionRepo> { DeleteAnimeExtensionRepo(get()) }
+        addFactory<ReplaceAnimeExtensionRepo> { ReplaceAnimeExtensionRepo(get()) }
+        addFactory<UpdateAnimeExtensionRepo> { UpdateAnimeExtensionRepo(get()) }
         addFactory { ToggleAnimeIncognito(get()) }
         addFactory { GetAnimeIncognitoState(get(), get(), get()) }
 
-        addSingletonFactory<MangaExtensionRepoRepository> { MangaExtensionRepoRepositoryImpl(get()) }
-        addFactory { GetMangaExtensionRepo(get()) }
-        addFactory { GetMangaExtensionRepoCount(get()) }
-        addFactory { CreateMangaExtensionRepo(get(), get()) }
-        addFactory { DeleteMangaExtensionRepo(get()) }
-        addFactory { ReplaceMangaExtensionRepo(get()) }
-        addFactory { UpdateMangaExtensionRepo(get(), get()) }
+        addSingletonFactory<MangaExtensionStoreRepository> {
+            MangaExtensionStoreRepositoryImpl(get<MangaDatabaseHandler>(), get<ExtensionStoreService>())
+        }
+        addFactory<GetMangaExtensionRepo> { GetMangaExtensionRepo(get()) }
+        addFactory<GetMangaExtensionRepoCount> { GetMangaExtensionRepoCount(get()) }
+        addFactory<CreateMangaExtensionRepo> { CreateMangaExtensionRepo(get()) }
+        addFactory<DeleteMangaExtensionRepo> { DeleteMangaExtensionRepo(get()) }
+        addFactory<ReplaceMangaExtensionRepo> { ReplaceMangaExtensionRepo(get()) }
+        addFactory<UpdateMangaExtensionRepo> { UpdateMangaExtensionRepo(get()) }
         addFactory { ToggleMangaIncognito(get()) }
         addFactory { GetMangaIncognitoState(get(), get(), get()) }
 
-        addSingletonFactory<NovelExtensionRepoRepository> { NovelExtensionRepoRepositoryImpl(get()) }
-        addFactory { GetNovelExtensionRepo(get()) }
-        addFactory { GetNovelExtensionRepoCount(get()) }
-        addFactory { CreateNovelExtensionRepo(get(), get()) }
-        addFactory { DeleteNovelExtensionRepo(get()) }
-        addFactory { ReplaceNovelExtensionRepo(get()) }
-        addFactory { UpdateNovelExtensionRepo(get(), get()) }
+        addSingletonFactory<NovelExtensionStoreRepository> {
+            NovelExtensionStoreRepositoryImpl(get<NovelDatabaseHandler>(), get<ExtensionStoreService>())
+        }
+        addFactory<GetNovelExtensionRepo> { GetNovelExtensionRepo(get()) }
+        addFactory<GetNovelExtensionRepoCount> { GetNovelExtensionRepoCount(get()) }
+        addFactory<CreateNovelExtensionRepo> { CreateNovelExtensionRepo(get()) }
+        addFactory<DeleteNovelExtensionRepo> { DeleteNovelExtensionRepo(get()) }
+        addFactory<ReplaceNovelExtensionRepo> { ReplaceNovelExtensionRepo(get()) }
+        addFactory<UpdateNovelExtensionRepo> { UpdateNovelExtensionRepo(get()) }
         addFactory { ToggleNovelIncognito(get()) }
+        addFactory { GetNovelIncognitoState(get(), get(), get()) }
 
         addSingletonFactory<CustomButtonRepository> { CustomButtonRepositoryImpl(get()) }
         addFactory { CreateCustomButton(get()) }

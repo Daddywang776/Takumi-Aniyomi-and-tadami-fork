@@ -24,11 +24,11 @@ fun AnimeTrack.toShikimoriStatus() = when (status) {
 }
 
 fun toTrackStatus(status: String) = when (status) {
-    "watching" -> Shikimori.READING
+    "watching", "reading" -> Shikimori.READING
     "completed" -> Shikimori.COMPLETED
     "on_hold" -> Shikimori.ON_HOLD
     "dropped" -> Shikimori.DROPPED
     "planned" -> Shikimori.PLAN_TO_READ
-    "rewatching" -> Shikimori.REREADING
+    "rewatching", "rereading" -> Shikimori.REREADING
     else -> Shikimori.PLAN_TO_READ
 }

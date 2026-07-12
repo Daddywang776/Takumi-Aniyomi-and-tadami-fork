@@ -19,7 +19,6 @@ import tachiyomi.domain.history.manga.model.MangaHistoryWithRelations
 import tachiyomi.domain.items.chapter.model.Chapter
 import tachiyomi.domain.library.manga.LibraryManga
 import tachiyomi.domain.source.manga.service.MangaSourceManager
-import tachiyomi.i18n.aniyomi.AYMR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import uy.kohesive.injekt.injectLazy
@@ -29,14 +28,58 @@ internal class MangaHomeHubScreenModel(
     userProfilePreferences: UserProfilePreferences = Injekt.get(),
 ) : BaseHomeHubScreenModel(
     context = context,
-    initialState = HomeHubUiState(
-        userName = userProfilePreferences.name().get(),
-        userAvatar = userProfilePreferences.avatarUrl().get(),
-        greeting = AYMR.strings.aurora_welcome_back,
-        greetingReady = false,
-        isLoading = true,
-        showWelcome = true,
-    ),
+    initialState = run {
+        val tempCache = HomeHubFastCache(context, HomeHubSection.Manga)
+        val cached = tempCache.loadCachedState()
+        val hadCache = !cached.isEmpty || cached.isInitialized
+        if (hadCache) {
+            HomeHubUiState(
+                hero = cached.hero?.let { h ->
+                    HomeHubHero(
+                        entryId = h.entryId,
+                        title = h.title,
+                        progressNumber = h.progressNumber,
+                        coverData = MangaCover(h.entryId, -1, true, h.coverUrl, h.coverLastModified),
+                    )
+                },
+                history = cached.history.map { h ->
+                    HomeHubHistory(
+                        entryId = h.entryId,
+                        title = h.title,
+                        progressNumber = h.progressNumber,
+                        coverData = MangaCover(h.entryId, -1, true, h.coverUrl, h.coverLastModified),
+                        section = HomeHubSection.Manga,
+                    )
+                },
+                recommendations = cached.recommendations.map { r ->
+                    HomeHubRecommendation(
+                        entryId = r.entryId,
+                        title = r.title,
+                        coverData = MangaCover(r.entryId, -1, true, r.coverUrl, r.coverLastModified),
+                        section = HomeHubSection.Manga,
+                        progressNumerator = r.progressNumerator,
+                        progressDenominator = r.totalCount,
+                    )
+                },
+                userName = cached.userName,
+                userAvatar = cached.userAvatar,
+                greeting = GreetingProvider.getInitialGreeting(userProfilePreferences),
+                greetingReady = true,
+                isLoading = false,
+                showWelcome = !cached.isInitialized && cached.isEmpty,
+                showFilteredEmpty = cached.isInitialized && cached.isEmpty,
+            )
+        } else {
+            HomeHubUiState(
+                userName = userProfilePreferences.name().get(),
+                userAvatar = userProfilePreferences.avatarUrl().get(),
+                greeting = tachiyomi.i18n.aniyomi.AYMR.strings.aurora_welcome_back,
+                greetingReady = false,
+                isLoading = true,
+                showWelcome = true,
+            )
+        }
+    },
     userProfilePreferences = userProfilePreferences,
 ) {
 
@@ -66,50 +109,13 @@ internal class MangaHomeHubScreenModel(
     }
 
     init {
-        val cached = fastCache.load()
-        if (!cached.isEmpty || cached.isInitialized) {
-            originalHeroChapterId = cached.hero?.subId
-            mutableState.update {
-                it.copy(
-                    hero = cached.hero?.let { h ->
-                        HomeHubHero(
-                            entryId = h.entryId,
-                            title = h.title,
-                            progressNumber = h.progressNumber,
-                            coverData = MangaCover(h.entryId, -1, true, h.coverUrl, h.coverLastModified),
-                        )
-                    },
-                    history = cached.history.map { h ->
-                        HomeHubHistory(
-                            entryId = h.entryId,
-                            title = h.title,
-                            progressNumber = h.progressNumber,
-                            coverData = MangaCover(h.entryId, -1, true, h.coverUrl, h.coverLastModified),
-                            section = HomeHubSection.Manga,
-                        )
-                    },
-                    recommendations = cached.recommendations.map { r ->
-                        HomeHubRecommendation(
-                            entryId = r.entryId,
-                            title = r.title,
-                            coverData = MangaCover(r.entryId, -1, true, r.coverUrl, r.coverLastModified),
-                            section = HomeHubSection.Manga,
-                            progressNumerator = r.progressNumerator,
-                            progressDenominator = r.totalCount,
-                        )
-                    },
-                    userName = cached.userName,
-                    userAvatar = cached.userAvatar,
-                    isLoading = false,
-                    showWelcome = !cached.isInitialized && cached.isEmpty,
-                    showFilteredEmpty = cached.isInitialized && cached.isEmpty,
-                )
-            }
-        }
+        // Initial state is now computed from cache in the constructor for instant first frame without skeleton flicker.
+        // The live updates will refresh with fresh data.
+        // PERF: Defer expensive DB work until after first frame
+        initializeGreetingDeferred()
 
-        initializeGreeting()
-
-        cached.hero?.let { hero ->
+        // Load hero episode if we had one in initial (re-load cache for this, cheap)
+        fastCache.load().hero?.let { hero ->
             screenModelScope.launchIO {
                 loadHeroChapter(hero.entryId, hero.subId)
             }

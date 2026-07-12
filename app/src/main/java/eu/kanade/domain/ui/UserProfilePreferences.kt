@@ -67,6 +67,10 @@ class UserProfilePreferences(
     fun greetingAlpha() = preferenceStore.getInt("user_profile_greeting_alpha", 60)
     fun homeHeaderLayoutJson() = preferenceStore.getString("user_profile_home_header_layout_json", "")
 
+    fun lastGreetingId() = preferenceStore.getString("user_profile_last_greeting_id", "")
+    fun lastGreetingTimeOfDay() = preferenceStore.getInt("user_profile_last_greeting_time_of_day", -1)
+    fun lastKnownStreak() = preferenceStore.getInt("user_profile_last_known_streak", 0)
+
     fun getHomeHeaderLayoutOrNull(): HomeHeaderLayoutSpec? {
         return HomeHeaderLayoutSpec.fromJsonOrNull(homeHeaderLayoutJson().get())
     }

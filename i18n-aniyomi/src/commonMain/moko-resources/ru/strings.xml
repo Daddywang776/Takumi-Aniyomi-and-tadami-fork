@@ -66,7 +66,7 @@
     <string name="pref_disable_home_header_scroll_hide">Закрепить шапку</string>
     <string name="pref_disable_home_header_scroll_hide_summary">Оставлять шапку с приветствием всегда видимой и не скрывать её при прокрутке.</string>
     <string name="pref_aurora_library_swipe_switches_categories">Свайп переключает категории</string>
-    <string name="pref_aurora_library_swipe_switches_categories_summary">Гор��зонтальные свайпы в библиотеке переключают категории вместо разделов (аниме/манга/ранобэ).</string>
+    <string name="pref_aurora_library_swipe_switches_categories_summary">Горизонтальные свайпы в библиотеке переключают категории вместо разделов (аниме/манга/ранобэ).</string>
     <string name="label_player_settings">Настройки проигрывателя</string>
     <string name="action_search_player_settings">Поиск по настройкам проигрывателя</string>
     <string name="pref_player_internal">Внутренний проигрыватель</string>
@@ -137,7 +137,7 @@
     <string name="single_action_switch">Поменять эпизод</string>
     <string name="single_action_custom">Своё</string>
     <string name="pref_category_long_press">Долгое нажатие</string>
-    <string name="pref_long_press_action">��ействие при долгом нажатии</string>
+    <string name="pref_long_press_action">Действие при долгом нажатии</string>
     <string name="long_press_action_none">Нет</string>
     <string name="long_press_action_screenshot">Сделать скриншот</string>
     <string name="long_press_action_playback_speed">Динамическое изменение скорости</string>
@@ -345,6 +345,10 @@
     <string name="novel_reader_editing_global">Редактируются глобальные настройки</string>
     <string name="novel_reader_editing_source">Редактируется переопределение источника</string>
     <string name="novel_reader_font_size">Размер шрифта</string>
+    <string name="novel_reader_typography_scale_preset">Шкала типографики</string>
+    <string name="novel_reader_typography_scale_preset_custom">Вручную</string>
+    <string name="novel_reader_typography_scale_preset_supergolden">Сверхзолотое сечение (1.465)</string>
+    <string name="novel_reader_typography_scale_preset_golden">Золотое сечение (1.618)</string>
     <string name="novel_reader_line_height">Межстрочный интервал</string>
     <string name="novel_reader_margins">Поля</string>
     <string name="novel_reader_paragraph_spacing">Интервал между абзацами</string>
@@ -443,7 +447,7 @@
     <string name="novel_reader_renderer_disabled_webview_summary">Недоступно, пока глава открыта в WebView.</string>
     <string name="novel_reader_renderer_disabled_bionic_summary">Недоступно, пока включено Bionic Reading.</string>
     <string name="novel_reader_settings_surface_strategy">Доступность настроек</string>
-    <string name="novel_reader_quick_dialog_global_policy_summary">Подробные политики выравнивания текста источника и кэш�� глав остаются в глобальных настройках; это быстрое меню оставлено для часто меняемых параметров во время чтения.</string>
+    <string name="novel_reader_quick_dialog_global_policy_summary">Подробные политики выравнивания текста источника и кэша глав остаются в глобальных настройках; это быстрое меню оставлено для часто меняемых параметров во время чтения.</string>
     <string name="novel_reader_global_settings_quick_dialog_summary">Глобальные настройки хранят долгоживущие значения по умолчанию, вроде выравнивания текста источника и кэша глав; быстрое меню в ридере оставлено для параметров, которые меняют прямо во время чтения.</string>
     <string name="novel_reader_clear_chapter_cache">Очистить кэш глав</string>
     <string name="novel_reader_clear_chapter_cache_summary">Удалить весь кэш прочитанных глав (не влияет на загрузки)</string>
@@ -590,7 +594,7 @@
     <string name="novel_reader_gemini_top_k">Top K</string>
     <string name="novel_reader_gemini_source_lang">Язык источника</string>
     <string name="novel_reader_gemini_target_lang">Язык перевода</string>
-    <string name="novel_reader_translation_languages">Языки перев��да</string>
+    <string name="novel_reader_translation_languages">Языки перевода</string>
     <string name="novel_reader_translation_languages_summary">Выберите язык исходного текста и язык, на который нужно переводить.</string>
     <string name="novel_reader_gemini_prompt_mode">Режим промпта</string>
     <string name="novel_reader_gemini_prompt_mode_classic">Классический</string>
@@ -612,7 +616,7 @@
     <string name="novel_reader_gemini_show_translation">Показать перевод</string>
     <string name="novel_reader_gemini_advanced_show">Доп. настройки</string>
     <string name="novel_reader_gemini_advanced_hide">Скрыть доп. настройки</string>
-    <string name="novel_reader_gemini_private_python_like_mode">Python-like режим (цельная глава, о��вет до ***)</string>
+    <string name="novel_reader_gemini_private_python_like_mode">Python-like режим (цельная глава, ответ до ***)</string>
     <string name="novel_reader_gemini_action_start">Старт</string>
     <string name="novel_reader_gemini_action_clear">Очистить</string>
     <string name="novel_reader_gemini_action_close">Закрыть</string>
@@ -767,7 +771,7 @@
     <string name="novel_reader_gemini_generation_dialogue_plus_advantage">Речь персонажей звучит естественнее и эмоциональнее</string>
     <string name="novel_reader_gemini_generation_private_pulse_title">18+ Импульс</string>
     <string name="novel_reader_gemini_generation_private_pulse_scenario">Эротические и напряжённые сцены</string>
-    <string name="novel_reader_gemini_generation_private_pulse_advantage">Максимум чу��ственности, экспрессии и «живого» ритма</string>
+    <string name="novel_reader_gemini_generation_private_pulse_advantage">Максимум чувственности, экспрессии и «живого» ритма</string>
     <string name="novel_reader_gemini_generation_unbound_title">Без тормозов</string>
     <string name="novel_reader_gemini_generation_unbound_scenario">Экспериментальный режим для самых дерзких глав</string>
     <string name="novel_reader_gemini_generation_unbound_advantage">Пиковая креативность и вариативность слога</string>
@@ -1039,16 +1043,15 @@
     <string name="pref_parallel_page_downloads">Параллельные загрузки страниц</string>
     <string name="parallel_page_downloads_info">Больше значение может ускорить загрузку страниц, но некоторые источники лучше работают с меньшими значениями.</string>
     <string name="unseen">Не просмотрено</string>
-    <string name="label_manga_extension_repos">Репозитории расширений манги</string>
-    <string name="label_anime_extension_repos">Репозитории расширений аниме</string>
-    <string name="label_novel_extension_repos">Репозитории расширений ранобэ</string>
+    <string name="label_manga_extension_repos">Хранилища расширений манги</string>
+    <string name="label_anime_extension_repos">Хранилища расширений аниме</string>
+    <string name="label_novel_extension_repos">Хранилища расширений ранобэ</string>
     <string name="onboarding_storage_action_create_folder">Создать папку Aniyomi по умолчанию</string>
     <string name="download_speed_limit">Ограничение скорости загрузки</string>
     <string name="download_speed_limit_hint">Установите значение 0, чтобы отключить ограничение скорости.</string>
     <string name="action_stop">Стоп</string>
     <string name="action_continue">Продолжить</string>
     <string name="manga">Манга</string>
-    <string name="action_add_repo_message">Добавьте дополнительные репозитории к %s. Должно быть URL на окончании которого будет \"index.min.json\".</string>
     <string name="download_ahead_info">Работает только если нынешняя и следующая глава/серия уже скачана.</string>
     <string name="non_library_settings">Все прочитанные/просмотренные тайтлы</string>
     <string name="action_sort_last_manga_update">Последнему обновленному тайтлу</string>
@@ -1130,7 +1133,7 @@
     <string name="pref_behavior">Поведение главы</string>
     <string name="pref_auto_update_manga_on_mark_read">Обновлять прогресс, когда отмечено как Прочитано/Просмотрено</string>
     <string name="pref_clear_chapter_cache">Очистить кэш глав и серий</string>
-    <string name="pref_auto_clear_chapter_cache">Очистить кэш глав/серий при запуске пр��ложения</string>
+    <string name="pref_auto_clear_chapter_cache">Очистить кэш глав/серий при запуске приложения</string>
     <string name="clear_database_confirmation">Вы уверены? Завершенные серии и главы а также прогресс не библиотечного контента будет потерян</string>
     <string name="pref_incognito_mode_summary">Приостанавливает историю чтения</string>
     <string name="manga_from_library">Из библиотеки</string>
@@ -1326,7 +1329,7 @@
     <string name="aurora_greeting_library_100">100+ тайтлов! Твой бэклог вызывает трепет (и сочувствие)</string>
 
     <!-- Weekend/Special Days Greetings -->
-    <string name="aurora_greeting_weekend_time">Ура, выходные! Можно легально стать овощем ��еред экраном</string>
+    <string name="aurora_greeting_weekend_time">Ура, выходные! Можно легально стать овощем перед экраном</string>
     <string name="aurora_greeting_saturday_perfect">Суббота, вкусняшки, плед и аниме. План капкан!</string>
     <string name="aurora_greeting_sunday_marathon">Воскресенье — официальный день марафонов. Никаких сожалений!</string>
     <string name="aurora_greeting_weekend_relax">Выходные созданы для того, чтобы забыть о 3D-мире</string>
@@ -1395,7 +1398,7 @@
     <string name="aurora_greeting_night_red_eyes">У тебя уже Шаринган от недосыпа открылся, иди спать! 👁️🩸</string>
     <string name="aurora_greeting_night_3am">Глубокая ночь — идеальное время для драмы, чтобы поплакать в подушку 😭</string>
     <string name="aurora_greeting_weekend_pajamas">Выходные — это значит не снимать пижаму до понедельника 👘</string>
-    <string name="aurora_greeting_weekend_marathon_prep">Готовь снеки, закрывай штор�� — начинается великий марафон! 🏃‍♂️💨</string>
+    <string name="aurora_greeting_weekend_marathon_prep">Готовь снеки, закрывай шторы — начинается великий марафон! 🏃‍♂️💨</string>
     <string name="aurora_greeting_weekend_no_regrets">Никаких сожалений о потраченном времени. Оно потрачено на искусство! 🎨</string>
     <string name="aurora_greeting_weekday_survival">Пережить будни — это тоже своего рода хардкор-квест 🛡️</string>
     <string name="aurora_greeting_weekday_motivation">Сделай вид, что ты в монтаже тренировок. Скоро выходные! 🎬</string>
@@ -1458,7 +1461,7 @@
     <string name="aurora_greeting_ui_update_check">Свайпай вниз, чтобы обновить. Вдруг автор внезапно выпустил экстру? ⬇️</string>
     <string name="aurora_greeting_ui_dark_mode">Тёмная тема — друг молодёжи и спонсор бессонных ночей 🌙</string>
     <string name="aurora_greeting_ui_haptic">Чувствуешь вибрацию? Это новые главы стучатся к тебе в библиотеку 📳</string>
-    <string name="aurora_greeting_ui_welcome_master">Библиотека отсортирована, обновления проверены. Ждём ваших указаний! ����</string>
+    <string name="aurora_greeting_ui_welcome_master">Библиотека отсортирована, обновления проверены. Ждём ваших указаний! 👑</string>
     <!-- Browse Screen -->
     <string name="aurora_browse">Обзор</string>
     <string name="aurora_discover_sources">Открыть источники</string>
@@ -1732,7 +1735,7 @@
 
     <string name="achievement_secret_weeb_awakening_hint_vague">Примите культуру во всех её проявлениях.</string>
     <string name="achievement_secret_weeb_awakening_hint_direct">Ваша библиотека должна охватывать мангу, аниме и ранобэ.</string>
-    <string name="achievement_secret_weeb_awakening_hint_obvious">Соберите 50+ тайтлов во всех трёх медиа-форматах (Манга, А��име, Ранобэ).</string>
+    <string name="achievement_secret_weeb_awakening_hint_obvious">Соберите 50+ тайтлов во всех трёх медиа-форматах (Манга, Аниме, Ранобэ).</string>
 
     <string name="achievement_first_chapter_title">Первые шаги</string>
     <string name="achievement_first_chapter_desc">Прочитайте свою первую главу</string>
@@ -2171,7 +2174,7 @@
     <string name="novel_reader_google_translate_translated">Перевод</string>
     <string name="novel_reader_google_translate_clear">Очистить перевод</string>
     <string name="novel_reader_google_translate_progress">Перевод: %1$d%%</string>
-    <string name="novel_reader_google_translate_preparing">Подготовк�� перевода…</string>
+    <string name="novel_reader_google_translate_preparing">Подготовка перевода…</string>
     <string name="novel_reader_google_translate_backend_simple">Перевод Google онлайн</string>
     <string name="novel_reader_google_translate_show_translation">Показать перевод</string>
     <string name="novel_reader_google_translate_hide_translation">Скрыть перевод</string>
@@ -2487,6 +2490,7 @@
     <string name="anixart_import_pick_file">Выбрать CSV-файл</string>
     <string name="anixart_import_pick_file_hint">В Anixart: Управление данными → Экспорт закладок → CSV</string>
     <string name="anixart_import_select_sources">Выберите источники для поиска совпадений</string>
+    <string name="anixart_import_start_matching">Искать совпадения</string>
     <string name="anixart_import_searching">Поиск совпадений…</string>
     <string name="anixart_import_review_title">Проверка совпадений</string>
     <string name="anixart_import_group_exact">Точное совпадение</string>
@@ -2509,8 +2513,159 @@
     <string name="anixart_import_change_match">Изменить совпадение</string>
     <string name="anixart_import_score_match">Схожесть: %1$d%%</string>
     <string name="anixart_import_preference_group_title">Импорт</string>
+    <string name="anixart_import_export_hint">При экспорте в Anixart включите «Ориг.» или «Все». Для больших списков экспортируйте по одному списку.</string>
+    <string name="anixart_import_warning_missing_original">У %1$d из %2$d записей нет оригинального названия — матчинг может быть менее точным.</string>
+    <string name="anixart_import_warning_large">%1$d записей — сопоставление может занять несколько минут.</string>
+    <string name="anixart_import_source_warning">Может давать неточные совпадения для аниме-названий</string>
+    <string name="anixart_import_status_filter_title">Статусы для импорта</string>
+    <string name="anixart_import_sync_shikimori">Синхронизировать статус и оценку в Shikimori после импорта</string>
+    <string name="anixart_import_matched_query">Найдено по запросу: %1$s</string>
+    <string name="anixart_import_matched_source">Источник: %1$s</string>
+    <string name="anixart_import_matching_report">Авто %1$d · Проверка %2$d · Не найдено %3$d</string>
+    <string name="anixart_import_background_started">Импорт продолжается в фоне. По завершении придёт уведомление.</string>
+    <string name="anixart_import_tracker_report">Shikimori: синхр. %1$d, пропущено %2$d, ошибок %3$d</string>
+
+    <!-- Shikimori library import -->
+    <string name="shikimori_import_title">Импорт из Shikimori</string>
+    <string name="shikimori_import_summary">Импорт списков аниме, манги и ранобэ из Shikimori в библиотеку</string>
+    <string name="shikimori_import_tab_anime">Аниме</string>
+    <string name="shikimori_import_tab_manga">Манга</string>
+    <string name="shikimori_import_tab_ranobe">Ранобэ</string>
+    <string name="shikimori_import_not_logged_in">Сначала войдите в Shikimori в настройках трекинга</string>
+    <string name="shikimori_import_empty_anime">В списке Shikimori не найдено аниме</string>
+    <string name="shikimori_import_empty_manga">В списке Shikimori не найдена манга</string>
+    <string name="shikimori_import_empty_ranobe">В списке Shikimori не найдено ранобэ</string>
+    <string name="shikimori_import_status_reading">Читаю</string>
+    <string name="shikimori_import_status_planned">В планах</string>
+    <string name="shikimori_import_status_on_hold">Отложено</string>
+    <string name="shikimori_import_status_rewatching">Пересматриваю</string>
+    <string name="shikimori_import_status_rereading">Перечитываю</string>
+    <string name="shikimori_import_report">Добавлено %1$d, уже в библиотеке %2$d, ошибок %3$d, привязано к Shikimori %4$d</string>
+    <string name="shikimori_import_error_network">Не удалось загрузить список Shikimori. Проверьте подключение и попробуйте снова.</string>
+    <string name="shikimori_import_error_rate_limited">Превышен лимит запросов Shikimori. Подождите минуту и попробуйте снова.</string>
+    <string name="shikimori_import_error_canceled">Импорт отменён</string>
+    <string name="shikimori_import_error_failed">Импорт не удался</string>
+    <string name="shikimori_import_background_started">Импорт продолжается в фоне. По завершении придёт уведомление.</string>
+    <string name="shikimori_import_manual_search">Искать вручную</string>
+    <string name="shikimori_import_manual_search_title">Поиск в источниках</string>
+    <string name="shikimori_import_manual_search_hint">Введите название так же, как в каталоге источника</string>
     <!-- Time Paradox Achievement -->
     <string name="achievement_time_paradox_title">Временной парадокс</string>
     <string name="achievement_time_paradox_desc">Почитайте или посмотрите что-то ровно в 11:11</string>
     <string name="achievement_time_paradox_hint">Симметрия времени</string>
+
+    <!-- Glitch Easter Egg & Red Sector -->
+    <string name="achievement_void_broadcast_unlocked_title">Сигнал потерян</string>
+    <string name="achievement_void_broadcast_unlocked_desc">Ева готова к запуску. Третий Удар свершился — сигнал человечества растворился в багровом море LCL. Предохранители ядра молчат. Остаётся только красный.</string>
+    <string name="achievement_void_broadcast_unlocked_hint_vague">Мир превратился в склеп, где ошметки человеческой воли тщетно цеплялись за свои хрупкие, изношенные тела. На остывающем экране слабо пульсировал шрам пустой строки — шлюз, ведущий прямиком в мертвую пустоту комнат Гафа. Стоило вверить этой темноте название завершающего триаду сокрушения, ради которого когда-то пролилась кровь Антарктиды, как кости и мысли превратились в единую кипящую багровую жижу. Стены сознания рухнули, захлебываясь в чужой боли, и терзаемый судорогами передатчик навсегда лишился несущей частоты.</string>
+    <string name="achievement_void_broadcast_unlocked_hint_direct">Багровое море ждёт зова. Произнеси имя катастрофы там, где ищут все миры.</string>
+    <string name="achievement_void_broadcast_unlocked_hint_obvious">Введи «Третий Удар» в глобальный поиск, чтобы сжечь предохранители ядра.</string>
+    <string name="theme_void_red">Кровь Лилит</string>
+    <string name="treasury_tagline_void_red">Сбой энергоблока Евы-01</string>
+    <string name="treasury_reward_glitch_rune_red_title">Эффект ника "Багровый глитч"</string>
+    <string name="treasury_reward_glitch_rune_red_description">Багровые цифровые помехи и руны ошибок</string>
+    <string name="unlockable_aura_void_broadcast_red">Плавление Ядра</string>
+    <string name="unlockable_aura_void_broadcast_red_desc">Вибрирующие линии развертки угасающего сигнала</string>
+    <string name="aurora_nickname_effect_glitch_rune_red">Глитч Руна (Красная)</string>
+    <string name="treasury_reward_glitch_frame_red_title">Багровая рамка аватара</string>
+    <string name="treasury_reward_glitch_frame_red_description">Вибрирующая рамка с багровым кольцом и искажениями белых блоков</string>
+
+    <!-- Meltdown Glitch System (Easter Egg & Ritual) -->
+    <string name="meltdown_initiation_title">[ СБОЙ СИСТЕМНОЙ ЦЕЛОСТНОСТИ ]</string>
+    <string name="meltdown_initiation_message">[CRITICAL_ERROR]: ТЕМПЕРАТУРА ЯДРА КРИТИЧЕСКАЯ. СТЕРЖНИ ОХЛАЖДЕНИЯ СКРЫТЫ ГЛУБЖЕ, КУДА ЗАХОДЯТ ЛИШЬ ИНЖЕНЕРЫ.</string>
+    <string name="meltdown_initiation_button">ОТКЛЮЧИТЬ СИСТЕМНОЕ УПРАВЛЕНИЕ</string>
+    
+    <string name="meltdown_rift_title">[ РАЗРУШЕНИЕ СИСТЕМЫ ]</string>
+    <string name="meltdown_rift_message">WARNING: SYNC RATE 400% EXCEEDED. LCL FUSION COMMENCING.\nДВЕРЬ ОТКРОЕТСЯ ЛИШЬ ТОМУ, КТО:\n— УТОНЕТ В АБСОЛЮТНОЙ ТЬМЕ,\n— ПЕРЕРЕЖЕТ ВСЕ НИТИ СВЯЗИ С МИРОМ,\n— ДОЧИТАЕТ ЧУЖУЮ ИСТОРИЮ ДО ПОСЛЕДНЕЙ СТРОКИ,\n— И ПЯТЬ РАЗ ШАГНЕТ В ПУСТОТУ ЗА ЕЁ КРАЕМ.</string>
+    <string name="meltdown_rift_button">УДЕРЖИВАТЬ :: ПРИНЯТЬ СБОЙ ЦЕЛОСТНОСТИ</string>
+    
+    <string name="meltdown_directive_title">// РАЗЛОМ ОТКРЫТ</string>
+    <string name="meltdown_directive_step_1">УТОНИ В АБСОЛЮТНОЙ ТЬМЕ.</string>
+    <string name="meltdown_directive_step_2">ОБОРВИ ВСЕ НИТИ СВЯЗИ С МИРОМ.</string>
+    <string name="meltdown_directive_step_3">ДОЙДИ ДО КОНЦА ЧУЖОЙ ИСТОРИИ.</string>
+    <string name="meltdown_directive_step_4">ШАГНИ ПЯТЬ РАЗ В ПУСТОТУ ЗА КРАЙ.</string>
+    <string name="meltdown_directive_enter_void">ВОЙТИ В ПУСТОТУ</string>
+    
+    <string name="meltdown_ritual_reveal_title">СИГНАЛ ПОТЕРЯН</string>
+    <string name="meltdown_ritual_achievement_unlocked">ДОСТИЖЕНИЕ РАЗБЛОКИРОВАНО</string>
+    <string name="meltdown_ritual_rewards_count">&gt; РАЗБЛОКИРОВАНО [%1$d]</string>
+    <string name="meltdown_ritual_apply_all">▶ ПРИМЕНИТЬ ВСЁ</string>
+    <string name="meltdown_ritual_enter_treasury">ВОЙТИ В СОКРОВИЩНИЦУ ▶</string>
+    <string name="meltdown_ritual_reward_active">✓ АКТИВНО</string>
+    <string name="meltdown_ritual_reward_apply">ПРИМЕНИТЬ</string>
+    <string name="meltdown_ritual_reveal_desc">Ты произнёс имя, которое не произносят. Третий Удар прошёл сквозь экран — сигнал человечества растворился в багровом море LCL. Из пепла остаётся лишь одно: КРАСНЫЙ СЕКТОР.</string>
+    <string name="unlockable_special_background_void_weeping_red">Плачущая Пустота</string>
+    <string name="treasury_reward_void_weeping_red_title">Плачущая Пустота</string>
+    <string name="treasury_reward_void_weeping_red_description">Живой плачущий глаз, роняющий багровые слезы цифровой крови в пустоту</string>
+
+    <!-- Meltdown Reward Screen Strings -->
+    <string name="meltdown_reward_theme_tag">[ ТЕМА ]</string>
+    <string name="meltdown_reward_theme_name">Кровь Лилит</string>
+    <string name="meltdown_reward_theme_lore">Интерфейс, выжженный сигналом бедствия.</string>
+    
+    <string name="meltdown_reward_nick_tag">[ НИК ]</string>
+    <string name="meltdown_reward_nick_name">Эффект ника "Багровый глитч"</string>
+    <string name="meltdown_reward_nick_lore">Твоё имя тонет в цифровом шуме.</string>
+    
+    <string name="meltdown_reward_frame_tag">[ РАМКА ]</string>
+    <string name="meltdown_reward_frame_name">Багровая рамка аватара</string>
+    <string name="meltdown_reward_frame_lore">Багровое кольцо и разрывы вокруг аватара.</string>
+    
+    <string name="meltdown_reward_aura_tag">[ АУРА ]</string>
+    <string name="meltdown_reward_aura_name">Плавление Ядра</string>
+    <string name="meltdown_reward_aura_lore">Вибрирующие алые скан-линии умирающего сигнала.</string>
+
+    <string name="meltdown_reward_background_tag">[ ФОН ]</string>
+    <string name="meltdown_reward_background_name">Плачущая Пустота</string>
+    <string name="meltdown_reward_background_lore">Живой плачущий глаз, роняющий багровые слезы цифровой крови.</string>
+    <!-- Meltdown Reality Breach — строки лор-кода сквозь дыру -->
+    <string name="meltdown_code_line_01">ТРЕТИЙ УДАР ИНИЦИИРОВАН</string>
+    <string name="meltdown_code_line_02">REALITY_INTEGRITY = 0.000</string>
+    <string name="meltdown_code_line_03">ты не должен был это видеть</string>
+    <string name="meltdown_code_line_04">0xVOID  0xDEAD  0x003C</string>
+    <string name="meltdown_code_line_05">КРАСНЫЙ СЕКТОР ОТКРЫТ</string>
+    <string name="meltdown_code_line_06">беги. // нет, поздно</string>
+    <string name="meltdown_code_line_07">обратного пути нет</string>
+    <string name="meltdown_code_line_08">она уже внутри тебя</string>
+    <string name="meltdown_code_line_09">kill(reality); spawn(VOID)</string>
+    <string name="meltdown_code_line_10">кровь на костях</string>
+    <string name="meltdown_code_line_11">не моргай</string>
+    <string name="meltdown_code_line_12">void.consume(you)</string>
+    <string name="meltdown_code_line_13">СТЕНА МЕЖДУ МИРАМИ ТРЕСНУЛА</string>
+    <string name="meltdown_code_line_14">we are the code beneath</string>
+    <string name="meltdown_code_line_15">ОНО ЗНАЕТ ЧТО ТЫ ЗДЕСЬ</string>
+    <string name="meltdown_code_line_16">ЗАКРОЙ ГЛАЗА</string>
+    <string name="meltdown_code_line_17">третий удар. последний.</string>
+    <string name="meltdown_code_line_18">ПРИМИ ПУСТОТУ</string>
+    <string name="meltdown_code_line_19">слышишь? это твоё имя</string>
+    <string name="meltdown_code_line_20">пустота.принять()</string>
+    <string name="meltdown_code_line_21">///</string>
+    <string name="meltdown_code_line_22">...</string>
+    <string name="meltdown_code_line_23">x5>></string>
+    <string name="meltdown_code_line_24">---</string>
+    <!-- Meltdown terminal dialog strings -->
+    <string name="meltdown_terminal_title">[ КРИТИЧЕСКИЙ СБОЙ: РАЗРЫВ СВЯЗИ ]</string>
+    <string name="meltdown_terminal_message">Внимание: Вы достигли абсолютной границы.\nЧеловечество всегда искало способ стереть стены между душами, уйти от страха одиночества и боли взаимопонимания. Третий Удар сотрет границы твоего разума, растворив твое «Я» в багровом океане LCL.\n\nНо готов ли ты действительно исчезнуть? Отдать свою индивидуальность пустоте? Стать всем и ничем одновременно?\n\nНазад дороги нет. Выбор за тобой.\n\n[ ПРИНЯТЬ ЛИ ПУСТОТУ? ]</string>
+    <string name="meltdown_terminal_confirm">ПРИНЯТЬ ПУСТОТУ</string>
+    <string name="meltdown_terminal_dismiss">СБРОС СИСТЕМЫ</string>
+    <!-- Meltdown Phase 2 screen strings -->
+    <string name="meltdown_system_compromised">// ЦЕЛОСТНОСТЬ СИСТЕМЫ НАРУШЕНА</string>
+    <string name="meltdown_sync_rate">СИНХРОНИЗАЦИЯ %1$d%%</string>
+    <string name="meltdown_inhibitors_disengaged">// ИНГИБИТОРЫ ОТКЛЮЧЕНЫ — БРЕШЬ</string>
+    <string name="meltdown_breaching">// ПРОРЫВ… %1$d%%</string>
+    <string name="meltdown_hold_rift">УДЕРЖИВАЙТЕ РАЗЛОМ ДЛЯ ОТКЛЮЧЕНИЯ ИНГИБИТОРОВ</string>
+
+    <!-- Hints for Secret Achievements -->
+    <string name="achievement_secret_hall_unlocked_hint">Тайный зал открывается для тех, кто знает путь.</string>
+    <string name="achievement_secret_crybaby_hint">Истории, заставляющие плакать, оставляют след в вашей библиотеке.</string>
+    <string name="achievement_secret_chad_hint">Настоящая сила не требует объяснений.</string>
+    <string name="achievement_secret_deku_hint">Причуда для будущих героев.</string>
+    <string name="achievement_secret_eren_hint">Борьба. За свободу за стенами.</string>
+    <string name="achievement_secret_lelouch_hint">Всё идёт по плану.</string>
+    <string name="achievement_secret_saitama_hint">Достаточно одного удара.</string>
+    <string name="achievement_secret_jojo_hint">Невероятное приключение с угрожающей аурой.</string>
+    <string name="achievement_secret_shadow_monarch_hint">Повелевай тенями. Собери достаточно темного фэнтези.</string>
 </resources>
+
+
+

@@ -24,6 +24,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlendMode
@@ -75,6 +76,7 @@ import kotlin.math.sin
 internal fun NicknameEffectPreset.isTreasury(): Boolean =
     this == NicknameEffectPreset.AuroraCrown ||
         this == NicknameEffectPreset.GlitchRune ||
+        this == NicknameEffectPreset.GlitchRuneRed ||
         this == NicknameEffectPreset.Cipher ||
         this == NicknameEffectPreset.TrinityPrism ||
         this == NicknameEffectPreset.ShadowCrown ||
@@ -191,6 +193,7 @@ internal fun AnimatedNicknameOverlay(
 
     when (nicknameStyle.effect) {
         NicknameEffectPreset.GlitchRune -> GlitchRuneEffect(text, nicknameStyle, modifier)
+        NicknameEffectPreset.GlitchRuneRed -> GlitchRuneRedEffect(text, nicknameStyle, modifier)
         NicknameEffectPreset.Cipher -> CipherSigilEffect(text, nicknameStyle, modifier)
         NicknameEffectPreset.AuroraCrown -> AuroraCrownEffect(text, nicknameStyle, modifier)
         NicknameEffectPreset.TrinityPrism -> TrinityPrismEffect(text, nicknameStyle, modifier)
@@ -338,6 +341,7 @@ private fun applyNicknameEffect(text: String, effect: NicknameEffectPreset): Str
         NicknameEffectPreset.Sakura -> "❀ $text ❀"
         NicknameEffectPreset.AuroraCrown -> text
         NicknameEffectPreset.GlitchRune -> text
+        NicknameEffectPreset.GlitchRuneRed -> text
         NicknameEffectPreset.Cipher -> text
         NicknameEffectPreset.TrinityPrism -> text
         NicknameEffectPreset.ShadowCrown -> text
@@ -467,6 +471,194 @@ private fun GlitchRuneEffect(
                             0 -> Color(0xFF00FFFF).copy(alpha = 0.7f) // Cyan
                             1 -> Color(0xFFFF00FF).copy(alpha = 0.7f) // Magenta
                             else -> colors.accent.copy(alpha = 0.7f)
+                        }
+                        drawRect(
+                            color = color,
+                            topLeft = Offset(stripeX, stripeY),
+                            size = androidx.compose.ui.geometry.Size(stripeWidth, stripeHeight),
+                        )
+                    }
+                }
+            },
+    ) {
+        Text(
+            text = leftString,
+            style = baseStyle,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.offset {
+                val time = timeState.value
+                val x = if (isBurst) {
+                    (-3.5f - sin(time * 60f) * 5f * burstIntensity)
+                } else {
+                    -1.2f - sin(time * 2 * PI.toFloat()) * 0.4f
+                }
+                val y = if (isBurst) {
+                    (cos(time * 50f) * 2f * burstIntensity)
+                } else {
+                    cos(time * 2 * PI.toFloat()) * 0.2f
+                }
+                IntOffset(x.dp.roundToPx(), y.dp.roundToPx())
+            },
+        )
+        Text(
+            text = rightString,
+            style = baseStyle,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.offset {
+                val time = timeState.value
+                val x = if (isBurst) {
+                    (3.5f + sin(time * 65f) * 5f * burstIntensity)
+                } else {
+                    1.2f + sin(time * 2 * PI.toFloat()) * 0.4f
+                }
+                val y = if (isBurst) {
+                    (-cos(time * 45f) * 2f * burstIntensity)
+                } else {
+                    -cos(time * 2 * PI.toFloat()) * 0.2f
+                }
+                IntOffset(x.dp.roundToPx(), y.dp.roundToPx())
+            },
+        )
+        Text(
+            text = centerString,
+            style = baseStyle,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.offset {
+                val time = timeState.value
+                val x = if (isBurst) (sin(time * 40f) * 4f * burstIntensity) else 0f
+                val y = if (isBurst) (cos(time * 30f) * 2.5f * burstIntensity) else 0f
+                IntOffset(x.dp.roundToPx(), y.dp.roundToPx())
+            },
+        )
+    }
+}
+
+private val GLITCH_NOISE_RED_CHARS = charArrayOf('░', '█', '▰', '▱', '⚠', '✖', '☠', '☣', '0', '1')
+
+@Composable
+private fun GlitchRuneRedEffect(
+    text: String,
+    nicknameStyle: NicknameStyle,
+    modifier: Modifier = Modifier,
+) {
+    val colors = AuroraTheme.colors
+    val isAmoled = colors.isAmoled
+    val infiniteTransition = rememberInfiniteTransition(label = "glitch_red")
+    val timeState = infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(6000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "glitch_red_time",
+    )
+
+    val textColor = resolveNicknameColor(nicknameStyle.color, nicknameStyle.customColorHex, colors)
+    val nicknameFontFamily = nicknameStyle.font.fontRes?.let { FontFamily(Font(it)) }
+    val baseStyle = MaterialTheme.typography.headlineSmall.copy(
+        fontFamily = nicknameFontFamily,
+        fontWeight = FontWeight.Black,
+        fontSize = nicknameStyle.fontSize.coerceIn(14, 36).sp,
+        lineHeight = (nicknameStyle.fontSize.coerceIn(14, 36) + 2).sp,
+    )
+
+    val scrambleTextAndBurstState = remember(text) {
+        derivedStateOf {
+            val time = timeState.value
+            val (isBurst, burstIntensity) = when {
+                time in 0.20f..0.23f -> {
+                    val progress = (time - 0.20f) / 0.03f
+                    true to (1f - kotlin.math.abs(progress - 0.5f) * 2f)
+                }
+                time in 0.65f..0.68f -> {
+                    val progress = (time - 0.65f) / 0.03f
+                    true to (1f - kotlin.math.abs(progress - 0.5f) * 2f)
+                }
+                time in 0.92f..0.97f -> {
+                    val progress = (time - 0.92f) / 0.05f
+                    true to (1f - kotlin.math.abs(progress - 0.5f) * 2f)
+                }
+                else -> false to 0f
+            }
+
+            val scrambleText = if (!isBurst) {
+                text
+            } else {
+                val frame = (time * 50f).toInt()
+                val sb = StringBuilder(text)
+                if (text.isNotEmpty()) {
+                    val rng = kotlin.random.Random(frame.toLong())
+                    val numScrambles = (1..2).random(rng).coerceAtMost(text.length)
+                    repeat(numScrambles) {
+                        val idx = rng.nextInt(text.length)
+                        sb[idx] = GLITCH_NOISE_RED_CHARS[rng.nextInt(GLITCH_NOISE_RED_CHARS.size)]
+                    }
+                }
+                sb.toString()
+            }
+
+            val textAlpha = if (isBurst && (time * 50f).toInt() % 3 == 0) 0.5f else 1.0f
+            val leftAlpha = if (isBurst) (0.5f + 0.3f * burstIntensity) else 0.35f
+            val rightAlpha = if (isBurst) (0.5f + 0.3f * burstIntensity) else 0.35f
+
+            Triple(scrambleText, isBurst, Triple(burstIntensity, textAlpha, leftAlpha to rightAlpha))
+        }
+    }
+
+    val (scrambleText, isBurst, extraData) = scrambleTextAndBurstState.value
+    val (burstIntensity, textAlpha, alphas) = extraData
+    val (leftAlpha, rightAlpha) = alphas
+
+    val leftColor = remember {
+        Color(0xFFFF003C).copy(alpha = if (isAmoled) 0.6f else 0.8f)
+    }
+    val rightColor = remember {
+        Color(0xFF550000).copy(alpha = if (isAmoled) 0.6f else 0.8f)
+    }
+
+    val centerString = remember(scrambleText, textColor, textAlpha) {
+        buildAnnotatedString {
+            withStyle(SpanStyle(color = textColor.copy(alpha = textAlpha))) {
+                append(scrambleText)
+            }
+        }
+    }
+    val leftString = remember(scrambleText, leftColor, leftAlpha) {
+        buildAnnotatedString {
+            withStyle(SpanStyle(color = leftColor.copy(alpha = leftColor.alpha * leftAlpha))) {
+                append(scrambleText)
+            }
+        }
+    }
+    val rightString = remember(scrambleText, rightColor, rightAlpha) {
+        buildAnnotatedString {
+            withStyle(SpanStyle(color = rightColor.copy(alpha = rightColor.alpha * rightAlpha))) {
+                append(scrambleText)
+            }
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .drawWithContent {
+                drawContent()
+                if (isBurst) {
+                    val time = timeState.value
+                    val frame = (time * 50f).toInt()
+                    val rng = kotlin.random.Random(frame.toLong() + 999L)
+                    val numStripes = rng.nextInt(2) + 1
+                    repeat(numStripes) {
+                        val stripeHeight = (rng.nextFloat() * 3f + 1f).dp.toPx()
+                        val stripeWidth = size.width * (rng.nextFloat() * 0.4f + 0.2f)
+                        val stripeX = rng.nextFloat() * (size.width - stripeWidth)
+                        val stripeY = rng.nextFloat() * size.height
+                        val color = when (rng.nextInt(2)) {
+                            0 -> Color(0xFFFF003C).copy(alpha = 0.7f)
+                            else -> Color(0xFF8B0000).copy(alpha = 0.7f)
                         }
                         drawRect(
                             color = color,
@@ -1585,6 +1777,123 @@ internal fun AvatarFrameDecorations(
                         },
                 )
             }
+            "glitch_red" -> {
+                val glitchTime = transition.animateFloat(
+                    initialValue = 0f,
+                    targetValue = 1f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(6000, easing = LinearEasing),
+                        repeatMode = RepeatMode.Restart,
+                    ),
+                    label = "glitch_frame_time",
+                )
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .drawWithContent {
+                            drawContent()
+
+                            val center = Offset(size.width / 2f, size.height / 2f)
+                            val radius = size.minDimension / 2f - 4.dp.toPx()
+                            val pulse = pulseState.value
+                            val t = glitchTime.value
+
+                            val (isBurst, intensity) = when {
+                                t in 0.20f..0.23f -> {
+                                    val progress = (t - 0.20f) / 0.03f
+                                    true to (1f - kotlin.math.abs(progress - 0.5f) * 2f)
+                                }
+                                t in 0.65f..0.68f -> {
+                                    val progress = (t - 0.65f) / 0.03f
+                                    true to (1f - kotlin.math.abs(progress - 0.5f) * 2f)
+                                }
+                                t in 0.92f..0.97f -> {
+                                    val progress = (t - 0.92f) / 0.05f
+                                    true to (1f - kotlin.math.abs(progress - 0.5f) * 2f)
+                                }
+                                else -> false to 0f
+                            }
+
+                            val flicker = if (isBurst && (t * 100f).toInt() % 4 == 0) 0.15f else 1.0f
+
+                            drawCircle(
+                                color = Color(0xFFFF003C).copy(alpha = 0.25f * pulse),
+                                radius = radius + 2.dp.toPx(),
+                                center = center,
+                                style = Stroke(width = 6.dp.toPx()),
+                            )
+
+                            if (isBurst) {
+                                val frame = (t * 100f).toInt()
+                                val rng = kotlin.random.Random(frame.toLong())
+
+                                val dx = (rng.nextFloat() * 4f - 2f).dp.toPx() * intensity
+                                val dy = (rng.nextFloat() * 2f - 1f).dp.toPx() * intensity
+
+                                drawCircle(
+                                    color = Color(0xFFFF003C).copy(alpha = 0.8f * flicker),
+                                    radius = radius,
+                                    center = Offset(center.x - dx, center.y + dy),
+                                    style = Stroke(width = 2.dp.toPx()),
+                                )
+
+                                drawCircle(
+                                    color = Color(0xFF8B0000).copy(alpha = 0.8f * flicker),
+                                    radius = radius,
+                                    center = Offset(center.x + dx, center.y - dy),
+                                    style = Stroke(width = 2.dp.toPx()),
+                                )
+
+                                drawCircle(
+                                    color = Color(0xFFFF003C).copy(alpha = 0.20f * intensity * flicker),
+                                    radius = radius - 1.dp.toPx(),
+                                    center = center,
+                                )
+
+                                val numSlices = rng.nextInt(2) + 1
+                                repeat(numSlices) { j ->
+                                    val sliceHeight = (rng.nextFloat() * 4f + 2f).dp.toPx()
+                                    val sliceY = center.y - radius + rng.nextFloat() * (radius * 2f)
+                                    val sliceColor = if (rng.nextBoolean()) {
+                                        Color(0xFFFF003C).copy(alpha = 0.45f)
+                                    } else {
+                                        Color.White.copy(alpha = 0.45f)
+                                    }
+                                    val sliceWidth = radius * 2f + 12.dp.toPx()
+                                    drawRect(
+                                        color = sliceColor,
+                                        topLeft = Offset(center.x - sliceWidth / 2f, sliceY),
+                                        size = androidx.compose.ui.geometry.Size(sliceWidth, sliceHeight),
+                                    )
+                                }
+
+                                repeat(3) { i ->
+                                    val blockSeed = (t * 100f + i).toInt()
+                                    val blockAngle = (blockSeed * 12345 % 360).toFloat()
+                                    val blockRad = Math.toRadians(blockAngle.toDouble())
+                                    val blockDistance = radius + (if (blockSeed % 2 == 0) 2.dp.toPx() else -3.dp.toPx())
+                                    val blockCenter = Offset(
+                                        x = center.x + kotlin.math.cos(blockRad).toFloat() * blockDistance,
+                                        y = center.y + kotlin.math.sin(blockRad).toFloat() * blockDistance,
+                                    )
+                                    val blockSize = if (blockSeed % 3 == 0) 3.dp.toPx() else 1.5.dp.toPx()
+                                    drawRect(
+                                        color = if (blockSeed % 2 == 0) Color(0xFFFF003C) else Color.White,
+                                        topLeft = Offset(blockCenter.x - blockSize, blockCenter.y - blockSize),
+                                        size = androidx.compose.ui.geometry.Size(blockSize * 2, blockSize),
+                                    )
+                                }
+                            } else {
+                                drawCircle(
+                                    color = Color(0xFFFF003C),
+                                    radius = radius,
+                                    center = center,
+                                    style = Stroke(width = 2.dp.toPx()),
+                                )
+                            }
+                        },
+                )
+            }
             "hybrid_scroll" -> {
                 // Synchronized hybrid frame: left digital arc + right manuscript arc, deliberately separated.
                 Box(
@@ -1869,4 +2178,37 @@ internal fun AvatarFrameDecorations(
             }
         }
     }
+}
+
+internal fun Modifier.avatarGlitch(styleKey: String): Modifier = composed {
+    if (styleKey != "glitch_red") return@composed this
+
+    val glitchTransition = rememberInfiniteTransition(label = "avatar_glitch")
+    val timeState = glitchTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(6000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "avatar_glitch_time",
+    )
+
+    val offsetState = remember {
+        derivedStateOf {
+            val t = timeState.value
+            val isBurst = t in 0.20f..0.23f || t in 0.65f..0.68f || t in 0.92f..0.97f
+            if (isBurst) {
+                val frame = (t * 100f).toInt()
+                val rng = kotlin.random.Random(frame.toLong())
+                val dx = (rng.nextFloat() * 4f - 2f)
+                val dy = (rng.nextFloat() * 2f - 1f)
+                IntOffset(dx.toInt(), dy.toInt())
+            } else {
+                IntOffset.Zero
+            }
+        }
+    }
+
+    this.offset { offsetState.value }
 }

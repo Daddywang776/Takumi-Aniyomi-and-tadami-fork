@@ -43,6 +43,7 @@ import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.entries.anime.interactor.SetAnimeViewerFlags
 import eu.kanade.domain.items.episode.model.toDbEpisode
 import eu.kanade.domain.source.anime.interactor.GetAnimeIncognitoState
+import eu.kanade.domain.source.interactor.ForegroundIncognitoState
 import eu.kanade.domain.track.anime.interactor.TrackEpisode
 import eu.kanade.domain.track.service.TrackPreferences
 import eu.kanade.domain.ui.UiPreferences
@@ -113,6 +114,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.first
@@ -355,6 +357,7 @@ class PlayerViewModel @JvmOverloads constructor(
     @Volatile
     private var customButtonsCache: List<CustomButton>? = null
     private var customButtonsScriptLoaded = false
+    private var foregroundIncognitoJob: Job? = null
 
     init {
         observePlayerPreferenceChanges()
@@ -384,6 +387,15 @@ class PlayerViewModel @JvmOverloads constructor(
             } catch (e: Exception) {
                 logcat(LogPriority.ERROR, e)
                 _customButtons.update { _ -> CustomButtonFetchState.Error(e.message ?: "Unable to fetch buttons") }
+            }
+        }
+    }
+
+    private fun observeForegroundIncognito(sourceId: Long?) {
+        foregroundIncognitoJob?.cancel()
+        foregroundIncognitoJob = viewModelScope.launch {
+            getIncognitoState.subscribe(sourceId).collect { active ->
+                ForegroundIncognitoState.set(active)
             }
         }
     }
@@ -1395,6 +1407,8 @@ class PlayerViewModel @JvmOverloads constructor(
     }
 
     override fun onCleared() {
+        foregroundIncognitoJob?.cancel()
+        ForegroundIncognitoState.set(false)
         if (currentEpisode.value != null) {
             saveWatchingProgress(currentEpisode.value!!)
             episodeToDownload?.let {
@@ -1409,6 +1423,13 @@ class PlayerViewModel @JvmOverloads constructor(
     val eventFlow = eventChannel.receiveAsFlow()
 
     private val incognitoMode: Boolean by lazy { getIncognitoState.await(currentAnime.value?.source) }
+
+    private fun shouldPauseHistory(): Boolean {
+        return getIncognitoState.shouldPauseHistory(
+            currentAnime.value?.source,
+            currentAnime.value?.favorite == true,
+        )
+    }
     private val downloadAheadAmount = downloadPreferences.autoDownloadWhileWatching().get()
 
     internal val relativeTime = uiPreferences.relativeTime().get()
@@ -1562,11 +1583,15 @@ class PlayerViewModel @JvmOverloads constructor(
         vidIndex: Int,
     ): Pair<InitResult, Result<Boolean>> {
         val defaultResult = InitResult(currentHosterList, qualityIndex, null)
-        if (!needsInit(animeId, initialEpisodeId)) return Pair(defaultResult, Result.success(true))
+        if (!needsInit(animeId, initialEpisodeId)) {
+            currentAnime.value?.let { observeForegroundIncognito(it.source) }
+            return Pair(defaultResult, Result.success(true))
+        }
         return try {
             val anime = getAnime.await(animeId)
             if (anime != null) {
                 _currentAnime.update { _ -> anime }
+                observeForegroundIncognito(anime.source)
                 animeTitle.update { _ -> anime.title }
                 sourceManager.isInitialized.first { it }
                 episodeId = initialEpisodeId
@@ -2298,7 +2323,7 @@ class PlayerViewModel @JvmOverloads constructor(
      * If incognito mode isn't on or has at least 1 tracker
      */
     private suspend fun saveEpisodeProgress(episode: Episode) {
-        if (!incognitoMode || hasTrackers) {
+        if (!shouldPauseHistory() || hasTrackers) {
             updateEpisode.await(
                 EpisodeUpdate(
                     id = episode.id!!,
@@ -2316,7 +2341,7 @@ class PlayerViewModel @JvmOverloads constructor(
      * Saves this [episode] last seen history if incognito mode isn't on.
      */
     private suspend fun saveEpisodeHistory(episode: Episode) {
-        if (!incognitoMode) {
+        if (!shouldPauseHistory()) {
             val episodeId = episode.id!!
             val seenAt = Date()
             upsertHistory.await(
@@ -2471,7 +2496,7 @@ class PlayerViewModel @JvmOverloads constructor(
     }
 
     private fun updateTrackEpisodeSeen(episode: Episode) {
-        if (basePreferences.incognitoMode().get() || !hasTrackers) return
+        if (incognitoMode || !hasTrackers) return
         if (!trackPreferences.autoUpdateTrack().get()) return
 
         val anime = currentAnime.value ?: return

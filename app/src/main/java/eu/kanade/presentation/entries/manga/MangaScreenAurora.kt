@@ -176,8 +176,12 @@ fun MangaScreenAuroraImpl(
     onClickEditInfo: (() -> Unit)? = null,
     onRetrySuggestions: () -> Unit = {},
     onOpenSuggestions: () -> Unit = {},
+    onGenreClick: ((String) -> Unit)? = null,
+    onGenreLongClick: ((String) -> Unit)? = null,
+    onGenresSearch: ((List<String>) -> Unit)? = null,
 ) {
     val manga = state.manga
+    var selectedGenres by remember { mutableStateOf(emptySet<String>()) }
     val sourcePreferences = remember { Injekt.get<SourcePreferences>() }
     val uiPreferences = remember { Injekt.get<UiPreferences>() }
     val entrySuggestionsEnabled by sourcePreferences.entrySuggestionsEnabled().collectAsState()
@@ -482,6 +486,20 @@ fun MangaScreenAuroraImpl(
                                     onEditNotesClicked = onEditNotesClicked,
                                     hasProgress = detailsSnapshot.progress?.hasProgress == true,
                                     onContinueReading = onContinueReading,
+                                    onGenreClick = onGenreClick,
+                                    onGenreLongClick = { genre ->
+                                        selectedGenres = if (genre in selectedGenres) {
+                                            selectedGenres - genre
+                                        } else {
+                                            selectedGenres + genre
+                                        }
+                                    },
+                                    selectedGenres = selectedGenres,
+                                    onSearchSelected = {
+                                        onGenresSearch?.invoke(selectedGenres.toList())
+                                        selectedGenres = emptySet()
+                                    },
+                                    onClearSelected = { selectedGenres = emptySet() },
                                 )
                                 Spacer(modifier = Modifier.height(if (colors.isDark) 8.dp else 16.dp))
                                 MangaStatsCard(
@@ -499,6 +517,20 @@ fun MangaScreenAuroraImpl(
                                         descriptionExpanded = !descriptionExpanded
                                     },
                                     onToggleGenres = { genresExpanded = !genresExpanded },
+                                    selectedGenres = selectedGenres,
+                                    onGenreClick = onGenreClick,
+                                    onGenreLongClick = { genre ->
+                                        selectedGenres = if (genre in selectedGenres) {
+                                            selectedGenres - genre
+                                        } else {
+                                            selectedGenres + genre
+                                        }
+                                    },
+                                    onSearchSelected = {
+                                        onGenresSearch?.invoke(selectedGenres.toList())
+                                        selectedGenres = emptySet()
+                                    },
+                                    onClearSelected = { selectedGenres = emptySet() },
                                     modifier = Modifier.fillMaxWidth(),
                                 )
                                 Spacer(modifier = Modifier.height(if (colors.isDark) 12.dp else 16.dp))
@@ -795,6 +827,20 @@ fun MangaScreenAuroraImpl(
                                     genresExpanded = genresExpanded,
                                     onToggleDescription = { descriptionExpanded = !descriptionExpanded },
                                     onToggleGenres = { genresExpanded = !genresExpanded },
+                                    selectedGenres = selectedGenres,
+                                    onGenreClick = onGenreClick,
+                                    onGenreLongClick = { genre ->
+                                        selectedGenres = if (genre in selectedGenres) {
+                                            selectedGenres - genre
+                                        } else {
+                                            selectedGenres + genre
+                                        }
+                                    },
+                                    onSearchSelected = {
+                                        onGenresSearch?.invoke(selectedGenres.toList())
+                                        selectedGenres = emptySet()
+                                    },
+                                    onClearSelected = { selectedGenres = emptySet() },
                                     modifier = Modifier.fillMaxWidth(),
                                 )
 
@@ -1043,6 +1089,20 @@ fun MangaScreenAuroraImpl(
                             onEditNotesClicked = onEditNotesClicked,
                             hasProgress = detailsSnapshot.progress?.hasProgress == true,
                             onContinueReading = onContinueReading,
+                            onGenreClick = onGenreClick,
+                            onGenreLongClick = { genre ->
+                                selectedGenres = if (genre in selectedGenres) {
+                                    selectedGenres - genre
+                                } else {
+                                    selectedGenres + genre
+                                }
+                            },
+                            selectedGenres = selectedGenres,
+                            onSearchSelected = {
+                                onGenresSearch?.invoke(selectedGenres.toList())
+                                selectedGenres = emptySet()
+                            },
+                            onClearSelected = { selectedGenres = emptySet() },
                         )
                     }
                 }

@@ -12,9 +12,9 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import eu.kanade.domain.source.service.SourcePreferences
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.more.settings.Preference
-import eu.kanade.presentation.more.settings.screen.browse.AnimeExtensionReposScreen
-import eu.kanade.presentation.more.settings.screen.browse.MangaExtensionReposScreen
-import eu.kanade.presentation.more.settings.screen.browse.NovelExtensionReposScreen
+import eu.kanade.presentation.more.settings.screen.browse.AnimeExtensionStoreScreen
+import eu.kanade.presentation.more.settings.screen.browse.MangaExtensionStoreScreen
+import eu.kanade.presentation.more.settings.screen.browse.NovelExtensionStoreScreen
 import eu.kanade.tachiyomi.util.system.AuthenticatorUtil.authenticate
 import kotlinx.collections.immutable.persistentListOf
 import mihon.domain.extensionrepo.anime.interactor.GetAnimeExtensionRepoCount
@@ -86,7 +86,7 @@ object SettingsBrowseScreen : SearchableSettings {
                             animeReposCount,
                         ),
                         onClick = {
-                            navigator.push(AnimeExtensionReposScreen())
+                            navigator.push(AnimeExtensionStoreScreen())
                         },
                     ),
                     Preference.PreferenceItem.TextPreference(
@@ -97,7 +97,7 @@ object SettingsBrowseScreen : SearchableSettings {
                             mangaReposCount,
                         ),
                         onClick = {
-                            navigator.push(MangaExtensionReposScreen())
+                            navigator.push(MangaExtensionStoreScreen())
                         },
                     ),
                     Preference.PreferenceItem.TextPreference(
@@ -108,7 +108,7 @@ object SettingsBrowseScreen : SearchableSettings {
                             novelReposCount,
                         ),
                         onClick = {
-                            navigator.push(NovelExtensionReposScreen())
+                            navigator.push(NovelExtensionStoreScreen())
                         },
                     ),
                 ),

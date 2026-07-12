@@ -5,6 +5,7 @@ package eu.kanade.presentation.components
 import androidx.compose.ui.graphics.Color
 import dev.icerock.moko.resources.StringResource
 import tachiyomi.i18n.MR
+import tachiyomi.i18n.aniyomi.AYMR
 
 internal data class AuraPalette(
     val id: String,
@@ -15,6 +16,13 @@ internal data class AuraPalette(
 )
 
 private val auraPalettes = listOf(
+    AuraPalette(
+        id = "aura_void_broadcast_red",
+        titleRes = AYMR.strings.unlockable_aura_void_broadcast_red,
+        descriptionRes = AYMR.strings.unlockable_aura_void_broadcast_red_desc,
+        accentColor = Color(0xFFFF003C),
+        gradientColors = listOf(Color(0xFF550000), Color(0xFFFF003C), Color(0xFF110000)),
+    ),
     AuraPalette(
         id = "aura_harem",
         titleRes = MR.strings.unlockable_aura_harem,
@@ -67,6 +75,7 @@ private val auraPalettes = listOf(
 )
 
 private val auraPriority = listOf(
+    "aura_void_broadcast_red",
     "aura_shadow_monarch",
     "aura_ascendant_gold",
     "aura_trinity_orbit",

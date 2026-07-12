@@ -88,5 +88,28 @@ class NovelPluginIndexParserTest {
         plugins[0].apkUrl shouldBe
             "https://raw.githubusercontent.com/wasu-code/novel-compat-shosetsu/repo/apk/tsundoku-all.shosetsu-v1.4.8.apk"
         plugins[0].isKotlinExtension shouldBe true
+        plugins[0].isNsfw shouldBe false
+    }
+
+    @Test
+    fun `parses nsfw flag from js plugin index`() {
+        val payload = """
+            [
+              {
+                "id": "NSFW",
+                "name": "Adult Source",
+                "site": "https://example.org",
+                "lang": "en",
+                "version": 1,
+                "url": "https://example.org/plugin.js",
+                "nsfw": 1
+              }
+            ]
+        """.trimIndent()
+        val parser = NovelPluginIndexParser(json)
+
+        val plugins = parser.parse(payload, "https://repo.example/")
+
+        plugins.single().isNsfw shouldBe true
     }
 }

@@ -8,6 +8,7 @@ okhttp_version = "5.4.0"
 paging = "3.3.0"
 richtext = "0.20.0"
 shizuku_version = "13.1.0"
+dhizuku_version = "2.6.0"
 sqldelight = "2.3.2"
 sqlite = "2.4.0"
 voyager = "1.1.0-beta03"
@@ -87,6 +88,7 @@ aboutLibraries-compose = { module = "com.mikepenz:aboutlibraries-compose-m3", ve
 
 shizuku-api = { module = "dev.rikka.shizuku:api", version.ref = "shizuku_version" }
 shizuku-provider = { module = "dev.rikka.shizuku:provider", version.ref = "shizuku_version" }
+dhizuku-api = { module = "io.github.iamr0s:Dhizuku-API", version.ref = "dhizuku_version" }
 
 leakcanary-android = { module = "com.squareup.leakcanary:leakcanary-android", version.ref = "leakcanary" }
 leakcanary-plumber = { module = "com.squareup.leakcanary:plumber-android", version.ref = "leakcanary" }

@@ -46,10 +46,12 @@ import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -104,8 +106,10 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
+import logcat.LogPriority
 import soup.compose.material.motion.animation.materialFadeThroughIn
 import soup.compose.material.motion.animation.materialFadeThroughOut
+import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.library.service.LibraryPreferences
 import tachiyomi.i18n.MR
 import tachiyomi.presentation.core.components.material.NavigationBar
@@ -136,24 +140,39 @@ object HomeScreen : Screen() {
     @Composable
     override fun Content() {
         val context = LocalContext.current
+        logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH homescreen-content-start" }
+
         val navStyle by uiPreferences.navStyle().collectAsState()
         val bottomNavAppearance by uiPreferences.bottomNavAppearance().collectAsState()
         val isEInkMode = LocalIsEInkMode.current
+
         val selectedTransitionMode by uiPreferences.navigationTransitionMode().collectAsState()
-        val resolvedTransitionMode = resolveNavigationTransitionMode(
-            selectedMode = selectedTransitionMode,
-            animatorDurationScale = context.animatorDurationScale,
-            isPowerSaveMode = context.powerManager.isPowerSaveMode,
-            isEInkMode = isEInkMode,
-        )
+        val resolvedTransitionMode by remember(
+            selectedTransitionMode,
+            context.animatorDurationScale,
+            context.powerManager.isPowerSaveMode,
+            isEInkMode,
+        ) {
+            derivedStateOf {
+                resolveNavigationTransitionMode(
+                    selectedMode = selectedTransitionMode,
+                    animatorDurationScale = context.animatorDurationScale,
+                    isPowerSaveMode = context.powerManager.isPowerSaveMode,
+                    isEInkMode = isEInkMode,
+                )
+            }
+        }
+
         val currentMoreTab = navStyle.moreTab
         val theme by uiPreferences.appTheme().collectAsState()
         val isAuroraTheme = theme.isAuroraStyle
         val useNavigationRail = isTabletUi() && !isAuroraTheme
         val useAuroraBottomNav = bottomNavAppearance == BottomNavAppearance.Aurora
+
         val navigator = LocalNavigator.currentOrThrow
         val bottomNavVisibilityController = remember { BottomNavVisibilityController() }
         val hazeState = remember { HazeState() }
+        logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH homescreen-pre-tabnavigator" }
         eu.kanade.presentation.tutorial.TutorialHost {
             TabNavigator(
                 tab = defaultTab,
@@ -195,11 +214,16 @@ object HomeScreen : Screen() {
                         }
                     }
                 }
+                logcat(LogPriority.DEBUG) {
+                    "TADAMI_PERF_LAUNCH homescreen-tabnavigator-ready current=${tabNavigator.current}"
+                }
+                logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH homescreen-tabnavigator-inside" }
                 // Provide usable navigator to content screen
                 CompositionLocalProvider(
                     LocalNavigator provides navigator,
                     LocalBottomNavVisibilityController provides bottomNavVisibilityController,
                 ) {
+                    logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH homescreen-before-scaffold" }
                     Scaffold(
                         startBar = {
                             if (useNavigationRail) {
@@ -499,7 +523,7 @@ object HomeScreen : Screen() {
                         openTabEvent.receiveAsFlow().collectLatest {
                             tabNavigator.current = when (it) {
                                 is Tab.AnimeLib -> AnimeLibraryTab
-                                is Tab.Library -> MangaLibraryTab
+                                is Tab.Library -> resolveLibraryTabForOpenTab(isAuroraTheme)
                                 is Tab.NovelLib -> AnimeLibraryTab
                                 is Tab.Updates -> UpdatesTab
                                 is Tab.History -> HistoriesTab
@@ -518,6 +542,9 @@ object HomeScreen : Screen() {
                             }
                             if (it is Tab.NovelLib) {
                                 AnimeLibraryTab.showNovelSection()
+                            }
+                            if (it is Tab.Library && isAuroraTheme) {
+                                AnimeLibraryTab.showMangaSection()
                             }
 
                             if (it is Tab.AnimeLib && it.animeIdToOpen != null) {
@@ -862,6 +889,10 @@ internal fun resolveHomeStartTab(
     currentMoreTab: cafe.adriel.voyager.navigator.tab.Tab,
 ): cafe.adriel.voyager.navigator.tab.Tab {
     return if (defaultTab != currentMoreTab) defaultTab else AnimeLibraryTab
+}
+
+internal fun resolveLibraryTabForOpenTab(isAuroraTheme: Boolean): eu.kanade.presentation.util.Tab {
+    return if (isAuroraTheme) AnimeLibraryTab else MangaLibraryTab
 }
 
 internal fun shouldHandleBackInHome(

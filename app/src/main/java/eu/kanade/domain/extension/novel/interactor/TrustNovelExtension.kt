@@ -3,16 +3,16 @@ package eu.kanade.domain.extension.novel.interactor
 import android.content.pm.PackageInfo
 import androidx.core.content.pm.PackageInfoCompat
 import eu.kanade.domain.source.service.SourcePreferences
-import mihon.domain.extensionrepo.novel.repository.NovelExtensionRepoRepository
+import mihon.domain.extensionstore.novel.repository.NovelExtensionStoreRepository
 import tachiyomi.core.common.preference.getAndSet
 
 class TrustNovelExtension(
-    private val novelExtensionRepoRepository: NovelExtensionRepoRepository,
+    private val novelExtensionStoreRepository: NovelExtensionStoreRepository,
     private val preferences: SourcePreferences,
 ) {
     suspend fun getTrustedFingerprints(): Set<String> {
-        return novelExtensionRepoRepository.getAll()
-            .map { it.signingKeyFingerprint }
+        return novelExtensionStoreRepository.getAll()
+            .map { it.signingKey }
             .toHashSet()
     }
 

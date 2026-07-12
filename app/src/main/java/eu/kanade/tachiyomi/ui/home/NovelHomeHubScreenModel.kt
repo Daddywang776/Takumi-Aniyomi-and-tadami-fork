@@ -7,7 +7,9 @@ import eu.kanade.tachiyomi.ui.novel.resolveNovelResumeChapter
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
+import logcat.LogPriority
 import tachiyomi.core.common.util.lang.launchIO
+import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.category.novel.interactor.GetNovelCategories
 import tachiyomi.domain.entries.novel.interactor.GetLibraryNovel
 import tachiyomi.domain.entries.novel.interactor.GetNovelWithChapters
@@ -26,14 +28,58 @@ internal class NovelHomeHubScreenModel(
     userProfilePreferences: UserProfilePreferences = Injekt.get(),
 ) : BaseHomeHubScreenModel(
     context = context,
-    initialState = HomeHubUiState(
-        userName = userProfilePreferences.name().get(),
-        userAvatar = userProfilePreferences.avatarUrl().get(),
-        greeting = AYMR.strings.aurora_welcome_back,
-        greetingReady = false,
-        isLoading = true,
-        showWelcome = true,
-    ),
+    initialState = run {
+        val tempCache = HomeHubFastCache(context, HomeHubSection.Novel)
+        val cached = tempCache.loadCachedState()
+        val hadCache = !cached.isEmpty || cached.isInitialized
+        if (hadCache) {
+            HomeHubUiState(
+                hero = cached.hero?.let { h ->
+                    HomeHubHero(
+                        entryId = h.entryId,
+                        title = h.title,
+                        progressNumber = h.progressNumber,
+                        coverData = NovelCover(h.entryId, -1, true, h.coverUrl, h.coverLastModified),
+                    )
+                },
+                history = cached.history.map { h ->
+                    HomeHubHistory(
+                        entryId = h.entryId,
+                        title = h.title,
+                        progressNumber = h.progressNumber,
+                        coverData = NovelCover(h.entryId, -1, true, h.coverUrl, h.coverLastModified),
+                        section = HomeHubSection.Novel,
+                    )
+                },
+                recommendations = cached.recommendations.map { r ->
+                    HomeHubRecommendation(
+                        entryId = r.entryId,
+                        title = r.title,
+                        coverData = NovelCover(r.entryId, -1, true, r.coverUrl, r.coverLastModified),
+                        section = HomeHubSection.Novel,
+                        progressNumerator = r.progressNumerator,
+                        progressDenominator = r.totalCount,
+                    )
+                },
+                userName = cached.userName,
+                userAvatar = cached.userAvatar,
+                greeting = GreetingProvider.getInitialGreeting(userProfilePreferences),
+                greetingReady = true,
+                isLoading = false,
+                showWelcome = !cached.isInitialized && cached.isEmpty,
+                showFilteredEmpty = cached.isInitialized && cached.isEmpty,
+            )
+        } else {
+            HomeHubUiState(
+                userName = userProfilePreferences.name().get(),
+                userAvatar = userProfilePreferences.avatarUrl().get(),
+                greeting = AYMR.strings.aurora_welcome_back,
+                greetingReady = false,
+                isLoading = true,
+                showWelcome = true,
+            )
+        }
+    },
     userProfilePreferences = userProfilePreferences,
 ) {
 
@@ -64,7 +110,9 @@ internal class NovelHomeHubScreenModel(
 
     init {
         val cached = fastCache.load()
-        if (!cached.isEmpty || cached.isInitialized) {
+        val hadCache = !cached.isEmpty || cached.isInitialized
+
+        if (hadCache) {
             originalHeroChapterId = cached.hero?.subId
             mutableState.update {
                 it.copy(
@@ -102,9 +150,13 @@ internal class NovelHomeHubScreenModel(
                     showFilteredEmpty = cached.isInitialized && cached.isEmpty,
                 )
             }
+            logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH home-cache-applied novel hadCache=true" }
+        } else {
+            logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH home-cache-applied novel hadCache=false" }
         }
 
-        initializeGreeting()
+        // PERF: Defer expensive DB work until after first frame
+        initializeGreetingDeferred()
 
         cached.hero?.let { hero ->
             screenModelScope.launchIO {

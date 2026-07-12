@@ -8,6 +8,7 @@ import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
 import eu.kanade.domain.base.BasePreferences
+import eu.kanade.domain.source.interactor.ForegroundIncognitoState
 import eu.kanade.tachiyomi.core.security.SecurityPreferences
 import eu.kanade.tachiyomi.ui.security.UnlockActivity
 import eu.kanade.tachiyomi.util.system.AuthenticatorUtil
@@ -88,17 +89,26 @@ class SecureActivityDelegateImpl : SecureActivityDelegate, DefaultLifecycleObser
         setSecureScreen()
     }
 
+    override fun onStart(owner: LifecycleOwner) {
+        updateProtectedContentVisibility()
+    }
+
     override fun onResume(owner: LifecycleOwner) {
         setAppLock()
+        updateProtectedContentVisibility()
     }
 
     private fun setSecureScreen() {
         val secureScreenFlow = securityPreferences.secureScreen().changes()
         val incognitoModeFlow = preferences.incognitoMode().changes()
-        combine(secureScreenFlow, incognitoModeFlow) { secureScreen, incognitoMode ->
+        combine(secureScreenFlow, incognitoModeFlow, ForegroundIncognitoState.active) {
+                secureScreen,
+                globalIncognito,
+                foregroundIncognito,
+            ->
             secureScreen == SecurityPreferences.SecureScreenMode.ALWAYS ||
                 secureScreen == SecurityPreferences.SecureScreenMode.INCOGNITO &&
-                incognitoMode
+                (globalIncognito || foregroundIncognito)
         }
             .onEach(activity.window::setSecureScreen)
             .launchIn(activity.lifecycleScope)
@@ -118,5 +128,15 @@ class SecureActivityDelegateImpl : SecureActivityDelegate, DefaultLifecycleObser
         } else {
             securityPreferences.useAuthenticator().set(false)
         }
+    }
+
+    private fun updateProtectedContentVisibility() {
+        activity.window.decorView.alpha = if (shouldHideProtectedContent()) 0f else 1f
+    }
+
+    private fun shouldHideProtectedContent(): Boolean {
+        return securityPreferences.useAuthenticator().get() &&
+            activity.isAuthenticationSupported() &&
+            SecureActivityDelegate.requireUnlock
     }
 }

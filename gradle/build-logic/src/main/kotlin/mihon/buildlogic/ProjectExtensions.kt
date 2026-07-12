@@ -79,7 +79,7 @@ internal fun Project.configureAndroid(commonExtension: ApplicationExtension) {
                 "-opt-in=kotlin.RequiresOptIn",
             )
 
-            val warningsAsErrors: String? by project
+            val warningsAsErrors = project.findProperty("warningsAsErrors") as? String
             allWarningsAsErrors.set(warningsAsErrors.toBoolean())
 
         }
@@ -101,7 +101,7 @@ internal fun Project.configureAndroid(commonExtension: LibraryExtension) {
                 "-opt-in=kotlin.RequiresOptIn",
             )
 
-            val warningsAsErrors: String? by project
+            val warningsAsErrors = project.findProperty("warningsAsErrors") as? String
             allWarningsAsErrors.set(warningsAsErrors.toBoolean())
 
         }
@@ -123,7 +123,7 @@ internal fun Project.configureAndroid(commonExtension: TestExtension) {
                 "-opt-in=kotlin.RequiresOptIn",
             )
 
-            val warningsAsErrors: String? by project
+            val warningsAsErrors = project.findProperty("warningsAsErrors") as? String
             allWarningsAsErrors.set(warningsAsErrors.toBoolean())
 
         }

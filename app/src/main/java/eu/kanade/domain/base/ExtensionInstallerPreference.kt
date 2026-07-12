@@ -2,6 +2,7 @@ package eu.kanade.domain.base
 
 import android.content.Context
 import eu.kanade.domain.base.BasePreferences.ExtensionInstaller
+import eu.kanade.tachiyomi.util.system.isDhizukuInstalled
 import eu.kanade.tachiyomi.util.system.isShizukuInstalled
 import kotlinx.coroutines.CoroutineScope
 import tachiyomi.core.common.preference.Preference
@@ -25,6 +26,9 @@ class ExtensionInstallerPreference(
         return when (value) {
             ExtensionInstaller.SHIZUKU -> {
                 if (!context.isShizukuInstalled) defaultValue() else value
+            }
+            ExtensionInstaller.DHIZUKU -> {
+                if (!context.isDhizukuInstalled) defaultValue() else value
             }
             else -> value
         }

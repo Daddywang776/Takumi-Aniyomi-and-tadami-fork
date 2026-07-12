@@ -743,4 +743,38 @@ object GreetingProvider {
         seed = seed * 31 + salt.hashCode()
         return seed
     }
+
+    val allCandidatesMap: Map<String, StringResource> by lazy {
+        listOf(
+            generalGreetings, morningGreetings, afternoonGreetings, eveningGreetings, nightGreetings,
+            firstTimeGreetings, absenceLongGreetings, absenceMidGreetings, frequentUserGreetings,
+            saturdayGreetings, sundayGreetings, weekendFallbackGreetings, weekdayMondayGreetings,
+            weekdayTuesdayGreetings, weekdayWednesdayGreetings, weekdayThursdayGreetings, weekdayFridayGreetings,
+            weekdayFallbackGreetings, streakGreetings, achievementGreetings, statsGreetings, libraryGreetings,
+        ).flatten().associate { it.id to it.value }
+    }
+
+    fun getGreetingFromId(id: String): StringResource {
+        return allCandidatesMap[id] ?: AYMR.strings.aurora_welcome_back
+    }
+
+    fun getInitialGreeting(userProfilePreferences: eu.kanade.domain.ui.UserProfilePreferences): StringResource {
+        val cachedGreetingId = userProfilePreferences.lastGreetingId().get()
+        val cachedTimeOfDay = userProfilePreferences.lastGreetingTimeOfDay().get()
+
+        val calendar = Calendar.getInstance()
+        val hour = calendar.get(Calendar.HOUR_OF_DAY)
+        val currentTimeOfDay = when (hour) {
+            in 5..11 -> 0
+            in 12..16 -> 1
+            in 17..21 -> 2
+            else -> 3
+        }
+
+        return if (cachedGreetingId.isNotEmpty() && cachedTimeOfDay == currentTimeOfDay) {
+            getGreetingFromId(cachedGreetingId)
+        } else {
+            AYMR.strings.aurora_welcome_back
+        }
+    }
 }

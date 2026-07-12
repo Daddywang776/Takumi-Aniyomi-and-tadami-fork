@@ -9,6 +9,7 @@ fun BasePreferences.ExtensionInstaller.toApkInstallBackend(): ApkInstallBackend 
         BasePreferences.ExtensionInstaller.PACKAGEINSTALLER -> ApkInstallBackend.PACKAGE_INSTALLER
         BasePreferences.ExtensionInstaller.LEGACY -> ApkInstallBackend.LEGACY
         BasePreferences.ExtensionInstaller.SHIZUKU -> ApkInstallBackend.SHIZUKU
+        BasePreferences.ExtensionInstaller.DHIZUKU -> ApkInstallBackend.DHIZUKU
         BasePreferences.ExtensionInstaller.PRIVATE -> ApkInstallBackend.PRIVATE
     }
 }

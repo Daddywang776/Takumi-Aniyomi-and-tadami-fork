@@ -51,6 +51,7 @@ import okio.Throttler
 import okio.buffer
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.storage.extension
+import tachiyomi.core.common.storage.renameToOrCopy
 import tachiyomi.core.common.util.lang.launchIO
 import tachiyomi.core.common.util.lang.launchNow
 import tachiyomi.core.common.util.lang.withIOContext
@@ -202,6 +203,17 @@ class MangaDownloader(
             .filter { it.status == MangaDownload.State.DOWNLOADING }
             .forEach { it.status = MangaDownload.State.QUEUE }
         isPaused = true
+    }
+
+    /**
+     * Pauses active downloads while the worker waits for network recovery.
+     */
+    fun pauseForNetwork(reason: String) {
+        cancelDownloaderJob()
+        queueState.value
+            .filter { it.status == MangaDownload.State.DOWNLOADING }
+            .forEach { it.status = MangaDownload.State.QUEUE }
+        notifier.onWarning(reason)
     }
 
     /**
@@ -474,11 +486,10 @@ class MangaDownloader(
             if (downloadPreferences.saveChaptersAsCBZ().get()) {
                 archiveChapter(mangaDir, chapterDirname, tmpDir)
             } else {
-                tmpDir.renameTo(chapterDirname)
+                val chapterDir = tmpDir.renameToOrCopy(chapterDirname)
+                DiskUtil.createNoMediaFile(chapterDir, context)
             }
             cache.addChapter(chapterDirname, mangaDir, download.manga)
-
-            DiskUtil.createNoMediaFile(tmpDir, context)
 
             download.status = MangaDownload.State.DOWNLOADED
             download.currentSpeedBytesPerSecond = 0L
@@ -580,7 +591,7 @@ class MangaDownloader(
         return flow {
             val response = source.getImage(page, dataSaver)
             val file = tmpDir.createFile("$filename.tmp")!!
-            try {
+            val completedFile = try {
                 throttler.apply {
                     bytesPerSecond(downloadPreferences.downloadSpeedLimit().get().toLong() * 1024)
                 }
@@ -588,13 +599,13 @@ class MangaDownloader(
                 throttledSource.saveTo(file.openOutputStream())
                 throttledSource.close()
                 val extension = getImageExtension(response, file)
-                file.renameTo("$filename.$extension")
+                file.renameToOrCopy("$filename.$extension")
             } catch (e: Exception) {
                 response.close()
                 file.delete()
                 throw e
             }
-            emit(file)
+            emit(completedFile)
         }
             // Retry 3 times, waiting 2, 4 and 8 seconds between attempts.
             .retryWhen { _, attempt ->
@@ -624,9 +635,9 @@ class MangaDownloader(
             }
         }
         val extension = ImageUtil.findImageType(cacheFile.inputStream()) ?: return tmpFile
-        tmpFile.renameTo("$filename.${extension.extension}")
+        val imageFile = tmpFile.renameToOrCopy("$filename.${extension.extension}")
         cacheFile.delete()
-        return tmpFile
+        return imageFile
     }
 
     /**
@@ -702,7 +713,7 @@ class MangaDownloader(
                 writer.write(file)
             }
         }
-        zip.renameTo("$dirname.cbz")
+        zip.renameToOrCopy("$dirname.cbz")
         tmpDir.delete()
     }
 

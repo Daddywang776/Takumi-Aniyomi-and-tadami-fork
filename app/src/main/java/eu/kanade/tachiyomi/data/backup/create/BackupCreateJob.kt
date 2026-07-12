@@ -15,7 +15,7 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
-import com.hippo.unifile.UniFile
+import eu.kanade.tachiyomi.data.backup.BackupDiagnosticLog
 import eu.kanade.tachiyomi.data.backup.BackupNotifier
 import eu.kanade.tachiyomi.data.backup.restore.BackupRestoreJob
 import eu.kanade.tachiyomi.data.notification.Notifications
@@ -23,10 +23,13 @@ import eu.kanade.tachiyomi.util.system.cancelNotification
 import eu.kanade.tachiyomi.util.system.isRunning
 import eu.kanade.tachiyomi.util.system.setForegroundSafely
 import eu.kanade.tachiyomi.util.system.workManager
+import kotlinx.coroutines.CancellationException
 import logcat.LogPriority
+import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.backup.service.BackupPreferences
 import tachiyomi.domain.storage.service.StorageManager
+import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import java.util.concurrent.TimeUnit
@@ -38,28 +41,56 @@ class BackupCreateJob(private val context: Context, workerParams: WorkerParamete
     private val backupPreferences = Injekt.get<BackupPreferences>()
 
     override suspend fun doWork(): Result {
-        setForegroundSafely()
-
         val isAutoBackup = inputData.getBoolean(IS_AUTO_BACKUP_KEY, true)
 
-        if (isAutoBackup && BackupRestoreJob.isRunning(context)) return Result.retry()
-
-        val uri = inputData.getString(LOCATION_URI_KEY)?.toUri()
-            ?: getAutomaticBackupLocation()
-            ?: return Result.failure()
-
-        val options = inputData.getBooleanArray(OPTIONS_KEY)?.let { BackupOptions.fromBooleanArray(it) }
-            ?: BackupOptions()
-
         return try {
+            BackupDiagnosticLog.log(context, "foreground_start")
+            setForegroundSafely()
+            BackupDiagnosticLog.log(context, "foreground_ready")
+
+            if (isAutoBackup && BackupRestoreJob.isRunning(context)) {
+                BackupDiagnosticLog.log(context, "deferred", "restore_in_progress")
+                return Result.retry()
+            }
+
+            val uri = inputData.getString(LOCATION_URI_KEY)?.toUri()
+                ?: getAutomaticBackupLocation()
+
+            BackupDiagnosticLog.beginSession(context, isAutoBackup, uri)
+
+            if (uri == null) {
+                BackupDiagnosticLog.endSession(context, success = false, details = "no_backup_location")
+                if (!isAutoBackup) {
+                    notifier.showBackupError(context.stringResource(MR.strings.create_backup_file_error))
+                }
+                return Result.failure()
+            }
+
+            val options = inputData.getBooleanArray(OPTIONS_KEY)?.let { BackupOptions.fromBooleanArray(it) }
+                ?: BackupOptions()
+
+            BackupDiagnosticLog.log(
+                context,
+                "options",
+                "library=${options.libraryEntries} stats=${options.stats} achievements=${options.achievements}",
+            )
+
             val location = BackupCreator(context, isAutoBackup).backup(uri, options)
             if (!isAutoBackup) {
-                notifier.showBackupComplete(UniFile.fromUri(context, location.toUri())!!)
+                notifier.showBackupComplete(location)
             }
+            BackupDiagnosticLog.endSession(context, success = true, details = "bytes_written=ok")
             Result.success()
-        } catch (e: Exception) {
+        } catch (e: CancellationException) {
+            BackupDiagnosticLog.log(context, "job_cancelled")
+            throw e
+        } catch (e: Throwable) {
             logcat(LogPriority.ERROR, e)
-            if (!isAutoBackup) notifier.showBackupError(e.message)
+            BackupDiagnosticLog.logError(context, "job_failed", e)
+            BackupDiagnosticLog.endSession(context, success = false, details = formatBackupError(e))
+            if (!isAutoBackup) {
+                notifier.showBackupError(formatBackupError(e))
+            }
             Result.failure()
         } finally {
             context.cancelNotification(Notifications.ID_BACKUP_PROGRESS)
@@ -81,15 +112,31 @@ class BackupCreateJob(private val context: Context, workerParams: WorkerParamete
     private fun getAutomaticBackupLocation(): Uri? {
         val cloudUri = backupPreferences.cloudBackupUri().get()
         if (cloudUri.isNotBlank()) {
+            BackupDiagnosticLog.log(context, "auto_location", "source=cloud")
             return cloudUri.toUri()
         }
         val storageManager = Injekt.get<StorageManager>()
+        BackupDiagnosticLog.log(context, "auto_location", "source=local_autobackup")
         return storageManager.getAutomaticBackupsDirectory()?.uri
     }
 
     companion object {
         fun isManualJobRunning(context: Context): Boolean {
             return context.workManager.isRunning(TAG_MANUAL)
+        }
+
+        fun isAnyJobRunning(context: Context): Boolean {
+            val workManager = context.workManager
+            return workManager.isRunning(TAG_MANUAL) || workManager.isRunning(TAG_AUTO)
+        }
+
+        /**
+         * Clears a stale progress notification left after a process kill (e.g. OOM during backup).
+         */
+        fun clearStaleProgressNotification(context: Context) {
+            if (!isAnyJobRunning(context)) {
+                context.cancelNotification(Notifications.ID_BACKUP_PROGRESS)
+            }
         }
 
         fun setupTask(context: Context, prefInterval: Int? = null) {
@@ -119,6 +166,7 @@ class BackupCreateJob(private val context: Context, workerParams: WorkerParamete
         }
 
         fun startNow(context: Context, uri: Uri, options: BackupOptions) {
+            clearStaleProgressNotification(context)
             val inputData = workDataOf(
                 IS_AUTO_BACKUP_KEY to false,
                 LOCATION_URI_KEY to uri.toString(),
@@ -130,6 +178,15 @@ class BackupCreateJob(private val context: Context, workerParams: WorkerParamete
                 .build()
             context.workManager.enqueueUniqueWork(TAG_MANUAL, ExistingWorkPolicy.KEEP, request)
         }
+    }
+}
+
+private fun formatBackupError(e: Throwable): String {
+    return when (e) {
+        is OutOfMemoryError -> "Out of memory during backup"
+        else -> e.message?.takeIf { it.isNotBlank() }
+            ?: e::class.simpleName
+            ?: "Unknown error"
     }
 }
 

@@ -1,10 +1,12 @@
 package eu.kanade.tachiyomi.data.anixart
 
 import eu.kanade.tachiyomi.animesource.AnimeCatalogueSource
-import eu.kanade.tachiyomi.animesource.model.AnimeFilterList
+import eu.kanade.tachiyomi.data.shikimori.CatalogueExtensionSearch
+import kotlinx.coroutines.withTimeout
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.data.anixart.AnixartMatcher
+import tachiyomi.data.anixart.AnixartMatchingCoordinator
 import tachiyomi.data.anixart.AnixartTitleSearcher
 import tachiyomi.domain.source.anime.service.AnimeSourceManager
 
@@ -21,6 +23,9 @@ import tachiyomi.domain.source.anime.service.AnimeSourceManager
 class AnixartSourceSearcher(
     private val sourceManager: AnimeSourceManager,
     private val sourceIds: List<Long>,
+    private val rateLimiter: AnixartSourceRateLimiter = AnixartSourceRateLimiter(),
+    private val maxResultsPerSource: Int = MAX_RESULTS_PER_SOURCE,
+    private val sourceTimeoutMs: Long = CatalogueExtensionSearch.SOURCE_TIMEOUT_MS,
 ) : AnixartTitleSearcher {
 
     override suspend fun search(query: String): List<AnixartMatcher.SearchCandidate> {
@@ -29,19 +34,23 @@ class AnixartSourceSearcher(
         for (sourceId in sourceIds) {
             val source = sourceManager.get(sourceId) as? AnimeCatalogueSource ?: continue
             val page = try {
-                source.getSearchAnime(1, query, AnimeFilterList())
+                rateLimiter.withRateLimit(sourceId) {
+                    CatalogueExtensionSearch.onExtensionThread {
+                        withTimeout(sourceTimeoutMs) {
+                            val filters = CatalogueExtensionSearch.safeAnimeFilterList { source.getFilterList() }
+                            source.getSearchAnime(1, query, filters)
+                        }
+                    }
+                }
             } catch (e: Exception) {
                 logcat(LogPriority.WARN, e) { "Anixart search failed on source $sourceId for '$query'" }
                 continue
             }
-            for (sAnime in page.animes) {
+            for (sAnime in page.animes.take(maxResultsPerSource)) {
                 val titles = buildList {
                     add(sAnime.title)
-                    // Some sources pack alternative titles into the description; keep title only
-                    // to avoid noise, alternatives can be added later if sources expose them.
                 }.filter { it.isNotBlank() }
                 results += AnixartMatcher.SearchCandidate(
-                    // No stable local id pre-persist; use a hash of source+url.
                     id = (sourceId.toString() + sAnime.url).hashCode().toLong(),
                     sourceId = sourceId,
                     displayTitle = sAnime.title,
@@ -51,6 +60,10 @@ class AnixartSourceSearcher(
                 )
             }
         }
-        return results
+        return AnixartMatchingCoordinator.dedupCandidates(results)
+    }
+
+    companion object {
+        const val MAX_RESULTS_PER_SOURCE = 10
     }
 }

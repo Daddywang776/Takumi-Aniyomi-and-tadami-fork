@@ -92,7 +92,7 @@ class NovelTtsChapterRepository internal constructor(
         val novel = withContext(Dispatchers.IO) {
             getNovel.await(chapter.novelId)
         } ?: error("Novel not found")
-        val source = sourceManager.get(novel.source) ?: error("Source not found")
+        val source = sourceManager.getOrStub(novel.source)
         val chapterOrderList = getCachedOrLoadChapterList(novel.id)
         val html = withContext(Dispatchers.IO) {
             contentPrefetchService.resolveNovelChapterText(

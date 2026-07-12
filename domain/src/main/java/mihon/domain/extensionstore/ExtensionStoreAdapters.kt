@@ -1,0 +1,31 @@
+package mihon.domain.extensionstore
+
+import mihon.domain.extensionrepo.model.ExtensionRepo
+import mihon.domain.extensionstore.model.ExtensionStore
+import mihon.domain.extensionstore.model.legacyBaseUrl
+
+fun ExtensionStore.toExtensionRepo(): ExtensionRepo {
+    return ExtensionRepo(
+        baseUrl = legacyBaseUrl(),
+        name = name,
+        shortName = badgeLabel.takeIf { it != name },
+        website = contact.website,
+        signingKeyFingerprint = signingKey,
+        discord = contact.discord,
+    )
+}
+
+fun ExtensionRepo.toLegacyExtensionStore(): ExtensionStore {
+    return ExtensionStore(
+        indexUrl = "$baseUrl/repo.json",
+        name = name,
+        badgeLabel = shortName ?: name,
+        signingKey = signingKeyFingerprint,
+        contact = ExtensionStore.Contact(
+            website = website,
+            discord = discord,
+        ),
+        isLegacy = true,
+        extensionListUrl = null,
+    )
+}

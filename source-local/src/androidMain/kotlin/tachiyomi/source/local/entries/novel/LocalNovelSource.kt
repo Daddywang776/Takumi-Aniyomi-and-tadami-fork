@@ -43,7 +43,8 @@ actual class LocalNovelSource(
     @Suppress("PrivatePropertyName")
     private val LatestFilters = NovelFilterList(NovelOrderBy.Latest(context))
 
-    override val name: String = context.stringResource(AYMR.strings.local_novel_source)
+    override val name: String
+        get() = context.stringResource(AYMR.strings.local_novel_source)
 
     override val id: Long = ID
 

@@ -75,6 +75,7 @@ import eu.kanade.presentation.more.settings.screen.data.CloudSyncOptionsScreen
 import eu.kanade.presentation.more.settings.screen.data.CreateBackupScreen
 import eu.kanade.presentation.more.settings.screen.data.RestoreBackupScreen
 import eu.kanade.presentation.more.settings.screen.data.StorageInfo
+import eu.kanade.presentation.more.settings.screen.shikimori.ShikimoriImportScreen
 import eu.kanade.presentation.more.settings.widget.BasePreferenceWidget
 import eu.kanade.presentation.more.settings.widget.PrefsHorizontalPadding
 import eu.kanade.presentation.theme.AuroraSurfaceLevel
@@ -100,6 +101,7 @@ import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import logcat.LogPriority
 import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.storage.displayablePath
@@ -111,6 +113,7 @@ import tachiyomi.domain.entries.anime.interactor.GetAnimeFavorites
 import tachiyomi.domain.entries.manga.interactor.GetMangaFavorites
 import tachiyomi.domain.entries.novel.interactor.GetNovelFavorites
 import tachiyomi.domain.library.service.LibraryPreferences
+import tachiyomi.domain.storage.service.StorageManager
 import tachiyomi.domain.storage.service.StoragePreferences
 import tachiyomi.i18n.MR
 import tachiyomi.i18n.aniyomi.AYMR
@@ -172,30 +175,59 @@ object SettingsDataScreen : SearchableSettings {
         storageDirPref: tachiyomi.core.common.preference.Preference<String>,
     ): ManagedActivityResultLauncher<Uri?, Uri?> {
         val context = LocalContext.current
+        val scope = rememberCoroutineScope()
+        val storageManager = remember { Injekt.get<StorageManager>() }
+        var showStorageUnavailableDialog by remember { mutableStateOf(false) }
+
+        if (showStorageUnavailableDialog) {
+            AlertDialog(
+                onDismissRequest = { showStorageUnavailableDialog = false },
+                title = { Text(text = stringResource(MR.strings.storage_location_unavailable)) },
+                text = { Text(text = stringResource(MR.strings.storage_location_unavailable_message)) },
+                confirmButton = {
+                    TextButton(onClick = { showStorageUnavailableDialog = false }) {
+                        Text(text = stringResource(MR.strings.action_ok))
+                    }
+                },
+            )
+        }
 
         return rememberLauncherForActivityResult(
             contract = ActivityResultContracts.OpenDocumentTree(),
         ) { uri ->
-            if (uri != null) {
-                val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
-                    Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            uri?.let { selectedUri ->
+                scope.launch {
+                    val canWrite = withContext(Dispatchers.IO) {
+                        storageManager.canWriteTo(selectedUri)
+                    }
 
-                // For some reason InkBook devices do not implement the SAF properly. Persistable URI grants do not
-                // work. However, simply retrieving the URI and using it works fine for these devices. Access is not
-                // revoked after the app is closed or the device is restarted.
-                // This also holds for some Samsung devices. Thus, we simply execute inside of a try-catch block and
-                // ignore the exception if it is thrown.
-                try {
-                    context.contentResolver.takePersistableUriPermission(uri, flags)
-                } catch (e: SecurityException) {
-                    logcat(priority = LogPriority.ERROR, throwable = e)
-                    context.toast(MR.strings.file_picker_uri_permission_unsupported)
-                }
-
-                UniFile.fromUri(context, uri)?.let {
-                    storageDirPref.set(it.uri.toString())
+                    if (canWrite) {
+                        persistStorageLocation(context, storageDirPref, selectedUri)
+                    } else {
+                        showStorageUnavailableDialog = true
+                    }
                 }
             }
+        }
+    }
+
+    private fun persistStorageLocation(
+        context: Context,
+        storageDirPref: tachiyomi.core.common.preference.Preference<String>,
+        uri: Uri,
+    ) {
+        val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or
+            Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+
+        try {
+            context.contentResolver.takePersistableUriPermission(uri, flags)
+        } catch (e: SecurityException) {
+            logcat(priority = LogPriority.ERROR, throwable = e)
+            context.toast(MR.strings.file_picker_uri_permission_unsupported)
+        }
+
+        UniFile.fromUri(context, uri)?.let {
+            storageDirPref.set(it.uri.toString())
         }
     }
 
@@ -741,6 +773,12 @@ object SettingsDataScreen : SearchableSettings {
                     subtitle = stringResource(AYMR.strings.anixart_import_summary),
                     icon = Icons.Outlined.CloudDownload,
                     onClick = { anixartImportLauncher.launch("*/*") },
+                ),
+                Preference.PreferenceItem.TextPreference(
+                    title = stringResource(AYMR.strings.shikimori_import_title),
+                    subtitle = stringResource(AYMR.strings.shikimori_import_summary),
+                    icon = Icons.Outlined.CloudDownload,
+                    onClick = { navigator.push(ShikimoriImportScreen()) },
                 ),
             ),
         )

@@ -5,37 +5,57 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
-import mihon.domain.extensionrepo.anime.repository.AnimeExtensionRepoRepository
-import mihon.domain.extensionrepo.model.ExtensionRepo
-import mihon.domain.extensionrepo.service.ExtensionRepoService
+import mihon.domain.extensionstore.anime.repository.AnimeExtensionStoreRepository
+import mihon.domain.extensionstore.model.ExtensionStore
 import org.junit.jupiter.api.Test
 
 class CreateAnimeExtensionRepoTest {
 
     @Test
-    fun `valid url inserts repo using provided display name`() = runTest {
-        val repository = mockk<AnimeExtensionRepoRepository>(relaxed = true)
-        val service = mockk<ExtensionRepoService>()
-        val interactor = CreateAnimeExtensionRepo(repository, service)
-        val repo = ExtensionRepo(
-            baseUrl = "https://example.org",
-            name = "Remote repo",
-            shortName = "remote",
-            website = "https://example.org",
-            signingKeyFingerprint = "fingerprint",
+    fun `valid url inserts store using provided display name`() = runTest {
+        val repository = mockk<AnimeExtensionStoreRepository>(relaxed = true)
+        val insertedStore = ExtensionStore(
+            indexUrl = "https://example.org/index.min.json",
+            name = "Remote store",
+            badgeLabel = "remote",
+            signingKey = "fingerprint",
+            contact = ExtensionStore.Contact(website = "https://example.org", discord = null),
+            isLegacy = true,
+            extensionListUrl = null,
         )
-        coEvery { service.fetchRepoDetails("https://example.org") } returns repo
+        coEvery { repository.insert("https://example.org/index.min.json") } returns Result.success(Unit)
+        coEvery { repository.getAll() } returns listOf(insertedStore)
+        val interactor = CreateAnimeExtensionRepo(repository)
 
-        val result = interactor.await("https://example.org/index.min.json", "Custom repo")
+        val result = interactor.await("https://example.org/index.min.json", "Custom store")
 
         result shouldBe CreateAnimeExtensionRepo.Result.Success
         coVerify {
-            repository.insertRepo(
-                repo.baseUrl,
-                "Custom repo",
-                repo.shortName,
-                repo.website,
-                repo.signingKeyFingerprint,
+            repository.upsertStore(
+                insertedStore.copy(name = "Custom store", badgeLabel = "Custom store"),
+            )
+        }
+    }
+
+    @Test
+    fun `forceLocalInsert normalizes legacy index url and inserts preference store`() = runTest {
+        val repository = mockk<AnimeExtensionStoreRepository>(relaxed = true)
+        coEvery { repository.insert("https://example.org/repo/index.min.json") } returns Result.failure(
+            IllegalStateException("offline"),
+        )
+        val interactor = CreateAnimeExtensionRepo(repository)
+
+        val result = interactor.await(
+            indexUrl = "https://example.org/repo/index.min.json",
+            displayName = "Offline Repo",
+            forceLocalInsert = true,
+        )
+
+        result shouldBe CreateAnimeExtensionRepo.Result.Success
+        coVerify {
+            repository.insertFromPreference(
+                "https://example.org/repo/repo.json",
+                "Offline Repo",
             )
         }
     }

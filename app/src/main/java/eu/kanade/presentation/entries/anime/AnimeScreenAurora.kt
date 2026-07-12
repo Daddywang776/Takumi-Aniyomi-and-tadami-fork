@@ -197,8 +197,12 @@ fun AnimeScreenAuroraImpl(
     onClickEditInfo: (() -> Unit)? = null,
     onRetrySuggestions: () -> Unit = {},
     onOpenSuggestions: () -> Unit = {},
+    onGenreClick: ((String) -> Unit)? = null,
+    onGenreLongClick: ((String) -> Unit)? = null,
+    onGenresSearch: ((List<String>) -> Unit)? = null,
 ) {
     val anime = state.anime
+    var selectedGenres by remember { mutableStateOf(emptySet<String>()) }
     val sourcePreferences = remember { Injekt.get<SourcePreferences>() }
     val uiPreferences = remember { Injekt.get<UiPreferences>() }
     val entrySuggestionsEnabled by sourcePreferences.entrySuggestionsEnabled().collectAsState()
@@ -667,6 +671,20 @@ fun AnimeScreenAuroraImpl(
                                     onContinueWatching = onContinueWatching,
                                     onDubbingClicked = onDubbingClicked,
                                     selectedDubbing = selectedDubbing,
+                                    onGenreClick = onGenreClick,
+                                    onGenreLongClick = { genre ->
+                                        selectedGenres = if (genre in selectedGenres) {
+                                            selectedGenres - genre
+                                        } else {
+                                            selectedGenres + genre
+                                        }
+                                    },
+                                    selectedGenres = selectedGenres,
+                                    onSearchSelected = {
+                                        onGenresSearch?.invoke(selectedGenres.toList())
+                                        selectedGenres = emptySet()
+                                    },
+                                    onClearSelected = { selectedGenres = emptySet() },
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 AnimeStatsCard(
@@ -684,6 +702,20 @@ fun AnimeScreenAuroraImpl(
                                         descriptionExpanded = !descriptionExpanded
                                     },
                                     onToggleGenres = { genresExpanded = !genresExpanded },
+                                    selectedGenres = selectedGenres,
+                                    onGenreClick = onGenreClick,
+                                    onGenreLongClick = { genre ->
+                                        selectedGenres = if (genre in selectedGenres) {
+                                            selectedGenres - genre
+                                        } else {
+                                            selectedGenres + genre
+                                        }
+                                    },
+                                    onSearchSelected = {
+                                        onGenresSearch?.invoke(selectedGenres.toList())
+                                        selectedGenres = emptySet()
+                                    },
+                                    onClearSelected = { selectedGenres = emptySet() },
                                     modifier = Modifier.fillMaxWidth(),
                                 )
                                 Spacer(modifier = Modifier.height(12.dp))
@@ -1037,6 +1069,20 @@ fun AnimeScreenAuroraImpl(
                                     onToggleGenres = {
                                         genresExpanded = !genresExpanded
                                     },
+                                    selectedGenres = selectedGenres,
+                                    onGenreClick = onGenreClick,
+                                    onGenreLongClick = { genre ->
+                                        selectedGenres = if (genre in selectedGenres) {
+                                            selectedGenres - genre
+                                        } else {
+                                            selectedGenres + genre
+                                        }
+                                    },
+                                    onSearchSelected = {
+                                        onGenresSearch?.invoke(selectedGenres.toList())
+                                        selectedGenres = emptySet()
+                                    },
+                                    onClearSelected = { selectedGenres = emptySet() },
                                     modifier = Modifier.fillMaxWidth(),
                                 )
 
@@ -1353,6 +1399,20 @@ fun AnimeScreenAuroraImpl(
                             onContinueWatching = onContinueWatching,
                             onDubbingClicked = onDubbingClicked,
                             selectedDubbing = selectedDubbing,
+                            onGenreClick = onGenreClick,
+                            onGenreLongClick = { genre ->
+                                selectedGenres = if (genre in selectedGenres) {
+                                    selectedGenres - genre
+                                } else {
+                                    selectedGenres + genre
+                                }
+                            },
+                            selectedGenres = selectedGenres,
+                            onSearchSelected = {
+                                onGenresSearch?.invoke(selectedGenres.toList())
+                                selectedGenres = emptySet()
+                            },
+                            onClearSelected = { selectedGenres = emptySet() },
                         )
                     }
                 }

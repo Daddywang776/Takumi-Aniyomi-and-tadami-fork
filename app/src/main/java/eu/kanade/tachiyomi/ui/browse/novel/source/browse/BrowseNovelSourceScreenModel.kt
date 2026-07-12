@@ -13,6 +13,7 @@ import cafe.adriel.voyager.core.model.screenModelScope
 import eu.kanade.core.preference.asState
 import eu.kanade.domain.entries.novel.interactor.UpdateNovel
 import eu.kanade.domain.entries.novel.model.toDomainNovel
+import eu.kanade.domain.source.novel.interactor.GetNovelIncognitoState
 import eu.kanade.presentation.util.ioCoroutineScope
 import eu.kanade.tachiyomi.extension.novel.runtime.hasVisiblePluginSettings
 import eu.kanade.tachiyomi.novelsource.ConfigurableNovelSource
@@ -131,6 +132,7 @@ class BrowseNovelSourceScreenModel(
     sourceManager: NovelSourceManager = Injekt.get(),
     getRemoteNovel: GetRemoteNovel = Injekt.get(),
     sourcePreferences: eu.kanade.domain.source.service.SourcePreferences = Injekt.get(),
+    private val getIncognitoState: GetNovelIncognitoState = Injekt.get(),
     private val getNovelByUrlAndSourceId: GetNovelByUrlAndSourceId = Injekt.get(),
     private val getNovelInteractor: GetNovel? = null,
     private val networkToLocalNovel: NetworkToLocalNovel = Injekt.get(),
@@ -163,7 +165,9 @@ class BrowseNovelSourceScreenModel(
             }
         }
 
-        sourcePreferences.lastUsedNovelSource().set(source.id)
+        if (!getIncognitoState.await(source.id)) {
+            sourcePreferences.lastUsedNovelSource().set(source.id)
+        }
 
         loadSavedSearches()
 
@@ -175,13 +179,49 @@ class BrowseNovelSourceScreenModel(
             screenModelScope.launch {
                 val initialFilters = loadSourceFilters()
                 mutableState.update { current ->
-                    val updatedListing = when (val listing = current.listing) {
-                        is Listing.Search -> if (listing.filters.isEmpty()) {
-                            listing.copy(
-                                filters = initialFilters,
-                            )
-                        } else {
-                            listing
+                    val currentListing = current.listing
+                    val updatedListing = when {
+                        currentListing is Listing.Search && currentListing.filters.isEmpty() -> {
+                            val q = currentListing.query
+                            if (!q.isNullOrBlank()) {
+                                // Try to match genre name in source filters
+                                var genreFound = false
+                                filter@ for (sourceFilter in initialFilters) {
+                                    if (sourceFilter is NovelFilter.Group<*>) {
+                                        for (filter in sourceFilter.state) {
+                                            if (filter is NovelFilter<*> && filter.name.equals(q, true)) {
+                                                when (filter) {
+                                                    is NovelFilter.TriState ->
+                                                        filter.state =
+                                                            NovelFilter.TriState.STATE_INCLUDE
+                                                    is NovelFilter.CheckBox -> filter.state = true
+                                                    is NovelFilter.XCheckBox ->
+                                                        filter.state =
+                                                            NovelFilter.XCheckBox.STATE_INCLUDE
+                                                    else -> {}
+                                                }
+                                                genreFound = true
+                                                break@filter
+                                            }
+                                        }
+                                    } else if (sourceFilter is NovelFilter.Select<*>) {
+                                        val idx = sourceFilter.values.filterIsInstance<String>()
+                                            .indexOfFirst { it.equals(q, true) }
+                                        if (idx != -1) {
+                                            sourceFilter.state = idx
+                                            genreFound = true
+                                            break
+                                        }
+                                    }
+                                }
+                                if (genreFound) {
+                                    currentListing.copy(query = null, filters = initialFilters)
+                                } else {
+                                    currentListing.copy(filters = initialFilters)
+                                }
+                            } else {
+                                currentListing.copy(filters = initialFilters)
+                            }
                         }
                         else -> current.listing
                     }
@@ -189,6 +229,7 @@ class BrowseNovelSourceScreenModel(
                         listing = updatedListing,
                         filters = if (current.filters.isEmpty()) initialFilters else current.filters,
                         filtersLoaded = true,
+                        toolbarQuery = (updatedListing as? Listing.Search)?.query,
                     )
                 }
             }
@@ -421,6 +462,103 @@ class BrowseNovelSourceScreenModel(
                 filters = updatedFilters,
                 toolbarQuery = query ?: input.query,
             )
+        }
+    }
+
+    fun searchGenre(genreName: String) {
+        if (source !is NovelCatalogueSource) return
+
+        screenModelScope.launch {
+            val defaultFilters = loadSourceFilters()
+            var genreExists = false
+
+            filter@ for (sourceFilter in defaultFilters) {
+                if (sourceFilter is NovelFilter.Group<*>) {
+                    for (filter in sourceFilter.state) {
+                        if (filter is NovelFilter<*> && filter.name.equals(genreName, true)) {
+                            when (filter) {
+                                is NovelFilter.TriState -> filter.state = NovelFilter.TriState.STATE_INCLUDE
+                                is NovelFilter.CheckBox -> filter.state = true
+                                is NovelFilter.XCheckBox -> filter.state = NovelFilter.XCheckBox.STATE_INCLUDE
+                                else -> {}
+                            }
+                            genreExists = true
+                            break@filter
+                        }
+                    }
+                } else if (sourceFilter is NovelFilter.Select<*>) {
+                    val index = sourceFilter.values.filterIsInstance<String>()
+                        .indexOfFirst { it.equals(genreName, true) }
+
+                    if (index != -1) {
+                        sourceFilter.state = index
+                        genreExists = true
+                        break
+                    }
+                }
+            }
+
+            mutableState.update {
+                val listing = if (genreExists) {
+                    Listing.Search(query = null, filters = defaultFilters)
+                } else {
+                    Listing.Search(query = genreName, filters = defaultFilters)
+                }
+                it.copy(
+                    filters = defaultFilters,
+                    listing = listing,
+                    toolbarQuery = listing.query,
+                )
+            }
+        }
+    }
+
+    fun searchGenres(genres: List<String>) {
+        if (source !is NovelCatalogueSource || genres.isEmpty()) return
+
+        screenModelScope.launch {
+            val defaultFilters = loadSourceFilters()
+            var anyExists = false
+
+            for (genreName in genres) {
+                filter@ for (sourceFilter in defaultFilters) {
+                    if (sourceFilter is NovelFilter.Group<*>) {
+                        for (filter in sourceFilter.state) {
+                            if (filter is NovelFilter<*> && filter.name.equals(genreName, true)) {
+                                when (filter) {
+                                    is NovelFilter.TriState -> filter.state = NovelFilter.TriState.STATE_INCLUDE
+                                    is NovelFilter.CheckBox -> filter.state = true
+                                    is NovelFilter.XCheckBox -> filter.state = NovelFilter.XCheckBox.STATE_INCLUDE
+                                    else -> {}
+                                }
+                                anyExists = true
+                                break@filter
+                            }
+                        }
+                    } else if (sourceFilter is NovelFilter.Select<*>) {
+                        val index = sourceFilter.values.filterIsInstance<String>()
+                            .indexOfFirst { it.equals(genreName, true) }
+                        if (index != -1) {
+                            sourceFilter.state = index
+                            anyExists = true
+                            break@filter
+                        }
+                    }
+                }
+            }
+
+            mutableState.update {
+                val listing = if (anyExists) {
+                    Listing.Search(query = null, filters = defaultFilters)
+                } else {
+                    Listing.Search(query = genres.firstOrNull(), filters = defaultFilters)
+                }
+                it.copy(
+                    filters = defaultFilters,
+                    listing = listing,
+                    toolbarQuery = listing.query,
+                )
+            }
         }
     }
 

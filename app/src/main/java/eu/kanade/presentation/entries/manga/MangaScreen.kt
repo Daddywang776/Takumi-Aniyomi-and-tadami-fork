@@ -124,6 +124,9 @@ fun MangaScreen(
 
     // For tags menu
     onTagSearch: (String) -> Unit,
+    onGenreClick: ((String) -> Unit)? = null,
+    onGenreLongClick: ((String) -> Unit)? = null,
+    onGenresSearch: ((List<String>) -> Unit)? = null,
 
     onFilterButtonClicked: () -> Unit,
     showScanlatorSelector: Boolean,
@@ -198,6 +201,9 @@ fun MangaScreen(
             onWebViewLongClicked = onWebViewLongClicked,
             onTrackingClicked = onTrackingClicked,
             onTagSearch = onTagSearch,
+            onGenreClick = onGenreClick,
+            onGenreLongClick = onGenreLongClick,
+            onGenresSearch = onGenresSearch,
             onFilterButtonClicked = onFilterButtonClicked,
             showScanlatorSelector = showScanlatorSelector,
             scanlatorChapterCounts = scanlatorChapterCounts,

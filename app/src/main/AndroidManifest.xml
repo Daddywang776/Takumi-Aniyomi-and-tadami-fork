@@ -61,7 +61,29 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
-            <!-- Deep link to add manga repos -->
+            <!-- Deep link to add anime extension store (for aniyomi compat) -->
+            <intent-filter android:label="@string/action_add_store">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="aniyomi" />
+                <data android:host="extension-store" />
+            </intent-filter>
+
+            <!-- Deep link to add manga/anime repos (legacy aniyomi) -->
+            <intent-filter android:label="@string/action_add_repo">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="aniyomi" />
+                <data android:host="add-repo" />
+            </intent-filter>
+
+            <!-- Deep link to add manga repos (legacy) -->
             <intent-filter android:label="@string/action_add_repo">
                 <action android:name="android.intent.action.VIEW" />
 
@@ -72,7 +94,7 @@
                 <data android:host="add-repo" />
             </intent-filter>
 
-            <!-- Deep link to add manga repos -->
+            <!-- Deep link to add manga repos (legacy) -->
             <intent-filter android:label="@string/action_add_repo">
                 <action android:name="android.intent.action.VIEW" />
 
@@ -81,6 +103,50 @@
 
                 <data android:scheme="tadami" />
                 <data android:host="add-repo" />
+            </intent-filter>
+
+            <!-- Deep link to add extension store (manga) -->
+            <intent-filter android:label="@string/action_add_store">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="tachiyomi" />
+                <data android:host="extension-store" />
+            </intent-filter>
+
+            <!-- Deep link to add extension store (manga) -->
+            <intent-filter android:label="@string/action_add_store">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="tadami" />
+                <data android:host="extension-store" />
+            </intent-filter>
+
+            <!-- Deep link to add novel extension store -->
+            <intent-filter android:label="@string/action_add_store">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="tachiyomi" />
+                <data android:host="novel-extension-store" />
+            </intent-filter>
+
+            <!-- Deep link to add novel extension store (tadami) -->
+            <intent-filter android:label="@string/action_add_store">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="tadami" />
+                <data android:host="novel-extension-store" />
             </intent-filter>
 
             <!-- Open backup files -->

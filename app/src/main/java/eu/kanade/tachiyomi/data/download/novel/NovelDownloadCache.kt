@@ -24,6 +24,7 @@ import kotlinx.serialization.protobuf.ProtoBuf
 import logcat.LogPriority
 import tachiyomi.core.common.util.system.logcat
 import tachiyomi.domain.entries.novel.model.Novel
+import tachiyomi.domain.entries.novel.repository.NovelRepository
 import tachiyomi.domain.source.novel.service.NovelSourceManager
 import tachiyomi.domain.storage.service.StorageManager
 import uy.kohesive.injekt.Injekt
@@ -57,6 +58,7 @@ sealed interface NovelDownloadCacheEvent {
 class NovelDownloadCache(
     private val storageManager: StorageManager = Injekt.get(),
     private val sourceManager: NovelSourceManager = Injekt.get(),
+    private val novelRepository: NovelRepository = Injekt.get(),
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO),
     private val cacheFileProvider: () -> File = {
         File(Injekt.get<Application>().cacheDir, "dl_novel_cache_v1")
@@ -82,12 +84,17 @@ class NovelDownloadCache(
     private val _downloadedIds = MutableStateFlow<Set<Long>>(emptySet())
     val downloadedIds: StateFlow<Set<Long>> = _downloadedIds.asStateFlow()
 
+    private var updateDiskCacheJob: Job? = null
+    private val writeDiskCacheMutex = Mutex()
+    private val isInitializing = MutableStateFlow(false)
+
     init {
         _changes.tryEmit(NovelDownloadCacheEvent.InvalidateAll)
 
         val restoreVersion = cacheStateVersion.get()
         scope.launch {
             try {
+                var restored = false
                 if (diskCacheFile.exists()) {
                     val cache = ProtoBuf.decodeFromByteArray<NovelDiskCache>(diskCacheFile.readBytes())
                     val restoredEntries = synchronized(cacheStateLock) {
@@ -111,11 +118,11 @@ class NovelDownloadCache(
                             "NovelDownloadCache: restored $restoredEntries entries from disk cache"
                         }
                         rebuildDownloadedIds()
-                    } else {
-                        logcat(LogPriority.DEBUG) {
-                            "NovelDownloadCache: skipped disk cache restore because fresher state was already loaded"
-                        }
+                        restored = true
                     }
+                }
+                if (!restored) {
+                    renewCache()
                 }
             } catch (e: Throwable) {
                 val fileSize = diskCacheFile.length()
@@ -123,11 +130,15 @@ class NovelDownloadCache(
                     "NovelDownloadCache: failed to restore disk cache (fileSize=${fileSize}B, error=${e::class.simpleName})"
                 }
                 diskCacheFile.delete()
+                renewCache()
             }
         }
 
         storageManager.changes
-            .onEach { invalidateAll() }
+            .onEach {
+                invalidateAll()
+                renewCache()
+            }
             .launchIn(scope)
 
         sourceManager.isInitialized
@@ -136,6 +147,7 @@ class NovelDownloadCache(
                 if (initialized) {
                     logcat(LogPriority.DEBUG) { "NovelDownloadCache: sources initialized, invalidating cache" }
                     invalidateAll()
+                    renewCache()
                 }
             }
             .launchIn(scope)
@@ -249,9 +261,6 @@ class NovelDownloadCache(
         rebuildDownloadedIds()
     }
 
-    private var updateDiskCacheJob: Job? = null
-    private val writeDiskCacheMutex = Mutex()
-
     private fun writeDiskCache() {
         writeDiskCache(immediate = false)
     }
@@ -300,6 +309,39 @@ class NovelDownloadCache(
         } catch (e: Throwable) {
             logcat(LogPriority.ERROR, e) {
                 "NovelDownloadCache: failed to write disk cache (${data.size} entries)"
+            }
+        }
+    }
+
+    fun renewCache() {
+        if (isInitializing.value) return
+        scope.launch {
+            isInitializing.value = true
+            try {
+                val libraryNovels = novelRepository.getLibraryNovel().map { it.novel }
+                val readNovels = novelRepository.getReadNovelNotInLibrary()
+                val allNovels = (libraryNovels + readNovels).distinctBy { it.id }
+
+                val downloadManager = NovelDownloadManager(downloadCache = null)
+
+                synchronized(cacheStateLock) {
+                    allNovels.forEach { novel ->
+                        val downloadedIds = downloadManager.getDownloadedChapterIds(novel)
+                        if (downloadedIds.isNotEmpty()) {
+                            cachedChapterIds[novel.id] = downloadedIds
+                            cachedCounts[novel.id] = downloadedIds.size
+                        } else {
+                            cachedChapterIds.remove(novel.id)
+                            cachedCounts.remove(novel.id)
+                        }
+                    }
+                }
+                rebuildDownloadedIds()
+                writeDiskCache()
+            } catch (e: Throwable) {
+                logcat(LogPriority.ERROR, e) { "Failed to renew novel download cache" }
+            } finally {
+                isInitializing.value = false
             }
         }
     }

@@ -80,6 +80,7 @@ data class BrowseMangaSourceScreen(
     val sourceId: Long,
     private val listingQuery: String?,
     private val savedSearchId: Long? = null,
+    private val parentScreen: cafe.adriel.voyager.core.screen.Screen? = null,
 ) : Screen(), AssistContentScreen {
 
     private var assistUrl: String? = null
@@ -93,7 +94,15 @@ data class BrowseMangaSourceScreen(
             return
         }
 
-        val screenModel = rememberScreenModel { BrowseMangaSourceScreenModel(sourceId, listingQuery, savedSearchId) }
+        val screenModel = if (parentScreen != null) {
+            parentScreen.rememberScreenModel(tag = sourceId.toString()) {
+                BrowseMangaSourceScreenModel(sourceId, listingQuery, savedSearchId)
+            }
+        } else {
+            rememberScreenModel {
+                BrowseMangaSourceScreenModel(sourceId, listingQuery, savedSearchId)
+            }
+        }
         val state by screenModel.state.collectAsStateWithLifecycle()
         val favoriteMangaUrls by screenModel.favoriteMangaUrls.collectAsStateWithLifecycle()
 
@@ -358,6 +367,7 @@ data class BrowseMangaSourceScreen(
                     when (it) {
                         is SearchType.Genre -> screenModel.searchGenre(it.txt)
                         is SearchType.Text -> screenModel.search(it.txt)
+                        is SearchType.Genres -> screenModel.searchGenres(it.txts)
                     }
                 }
         }
@@ -365,14 +375,20 @@ data class BrowseMangaSourceScreen(
 
     suspend fun search(query: String) = queryEvent.send(SearchType.Text(query))
     suspend fun searchGenre(name: String) = queryEvent.send(SearchType.Genre(name))
+    suspend fun searchGenres(names: List<String>) {
+        if (names.isNotEmpty()) {
+            queryEvent.send(SearchType.Genres(names))
+        }
+    }
 
     companion object {
         private val queryEvent = Channel<SearchType>()
     }
 
-    sealed class SearchType(val txt: String) {
-        class Text(txt: String) : SearchType(txt)
-        class Genre(txt: String) : SearchType(txt)
+    sealed interface SearchType {
+        data class Text(val txt: String) : SearchType
+        data class Genre(val txt: String) : SearchType
+        data class Genres(val txts: List<String>) : SearchType
     }
 }
 

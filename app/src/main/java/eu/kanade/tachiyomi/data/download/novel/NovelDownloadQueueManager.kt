@@ -1,9 +1,15 @@
 package eu.kanade.tachiyomi.data.download.novel
 
 import android.app.Application
+import eu.kanade.tachiyomi.data.download.DownloadNetworkStatus
 import eu.kanade.tachiyomi.data.download.engine.DownloadCompletionTracker
 import eu.kanade.tachiyomi.data.download.engine.DownloadSection
 import eu.kanade.tachiyomi.data.download.engine.DownloadTelemetryEmitter
+import eu.kanade.tachiyomi.data.download.shouldRequeueNovelTaskAfterFailure
+import eu.kanade.tachiyomi.data.download.toDownloadNetworkStatus
+import eu.kanade.tachiyomi.util.system.activeNetworkState
+import eu.kanade.tachiyomi.util.system.networkStateFlow
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -12,15 +18,22 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withTimeout
 import logcat.LogPriority
+import tachiyomi.core.common.i18n.stringResource
 import tachiyomi.core.common.util.system.logcat
+import tachiyomi.data.achievement.handler.AchievementHandler
+import tachiyomi.domain.achievement.model.AchievementEvent
 import tachiyomi.domain.download.service.DownloadPreferences
 import tachiyomi.domain.entries.novel.model.Novel
 import tachiyomi.domain.items.novelchapter.model.NovelChapter
+import tachiyomi.i18n.MR
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
 import kotlin.random.Random
@@ -55,6 +68,7 @@ data class NovelQueuedDownload(
 
 data class NovelDownloadQueueState(
     val isRunning: Boolean = true,
+    val waitingForNetwork: Boolean = false,
     val tasks: List<NovelQueuedDownload> = emptyList(),
 ) {
     val pendingCount: Int
@@ -223,26 +237,33 @@ object NovelDownloadQueueManager {
     private val downloadManager = NovelDownloadManager()
     private val translatedDownloadManager = NovelTranslatedDownloadManager()
     private val downloadPreferences: DownloadPreferences by lazy { Injekt.get() }
+    private val achievementHandler: AchievementHandler by lazy { Injekt.get() }
     private val _state = MutableStateFlow(NovelDownloadQueueState())
     val state = _state.asStateFlow()
     private val notifier = runCatching {
         NovelDownloadNotifier(Injekt.get<Application>())
     }.getOrNull()
 
+    private val application: Application by lazy { Injekt.get() }
     private val runtimeState = NovelDownloadQueueRuntimeState()
     private var previousNotifiedSummary = QueueNotifySummary()
     private var notifyJob: kotlinx.coroutines.Job? = null
+    private var networkMonitorJob: Job? = null
     private var lastNovelRequestStartedAtMs = 0L
+
+    init {
+        ensureNetworkMonitor()
+    }
 
     fun getDownloadSize(): Long = downloadManager.getDownloadSize() + translatedDownloadManager.getDownloadSize()
 
     fun startDownloads() {
-        updateState { it.copy(isRunning = true) }
+        updateState { it.copy(isRunning = true, waitingForNetwork = false) }
         startWorkerIfNeeded()
     }
 
     fun pauseDownloads() {
-        updateState { it.copy(isRunning = false) }
+        updateState { it.copy(isRunning = false, waitingForNetwork = false) }
     }
 
     fun clearQueue() {
@@ -388,6 +409,13 @@ object NovelDownloadQueueManager {
                 continue
             }
 
+            val networkStatus = currentNetworkStatus()
+            if (networkStatus != DownloadNetworkStatus.Available) {
+                pauseForNetwork(networkUnavailableReason(networkStatus))
+                delay(150)
+                continue
+            }
+
             val nextTask = snapshot.tasks.firstOrNull { it.status == NovelQueuedDownloadStatus.QUEUED } ?: break
             try {
                 val throttleConfig = NovelDownloadThrottleConfig.from(downloadPreferences)
@@ -452,11 +480,29 @@ object NovelDownloadQueueManager {
                 if (success) {
                     removeTask(nextTask.taskId)
                     completionTracker.recordCompletion(DownloadSection.NOVEL)
+                    achievementHandler.trackFeatureUsed(AchievementEvent.Feature.DOWNLOAD)
                     logcat(LogPriority.DEBUG) {
                         "Novel queue task completed: taskId=${nextTask.taskId}, novel=${nextTask.novel.id}, chapter=${nextTask.chapter.id}"
                     }
                 } else {
-                    val message = result.exceptionOrNull()?.message
+                    val exception = result.exceptionOrNull()
+                    val queueSnapshot = state.value
+                    val networkAvailable = currentNetworkStatus() == DownloadNetworkStatus.Available
+                    if (
+                        shouldRequeueNovelTaskAfterFailure(
+                            waitingForNetwork = queueSnapshot.waitingForNetwork,
+                            networkAvailable = networkAvailable,
+                            exception = exception,
+                        )
+                    ) {
+                        markTaskStatus(nextTask.taskId, NovelQueuedDownloadStatus.QUEUED)
+                        pauseForNetwork(networkUnavailableReason(currentNetworkStatus()))
+                        logcat(LogPriority.DEBUG) {
+                            "Novel queue task requeued after network issue: taskId=${nextTask.taskId}"
+                        }
+                        continue
+                    }
+                    val message = exception?.message
                     markTaskFailed(nextTask.taskId, message ?: "Download failed")
                     logcat(LogPriority.WARN) {
                         "Novel queue task failed: taskId=${nextTask.taskId}, novel=${nextTask.novel.id}, chapter=${nextTask.chapter.id}, error=${message ?: "Download failed"}"
@@ -464,7 +510,11 @@ object NovelDownloadQueueManager {
                     applyFailureCooldown(throttleConfig, nextTask.taskId)
                 }
             } catch (e: Exception) {
-                if (e is kotlinx.coroutines.CancellationException) {
+                if (e is CancellationException) {
+                    if (state.value.waitingForNetwork) {
+                        markTaskStatus(nextTask.taskId, NovelQueuedDownloadStatus.QUEUED)
+                        continue
+                    }
                     throw e
                 }
                 logcat(LogPriority.ERROR, e) {
@@ -565,6 +615,79 @@ object NovelDownloadQueueManager {
             transformed.copy(tasks = pruneFailedTasks(transformed.tasks))
         }
         scheduleNotifyQueueState()
+    }
+
+    private fun ensureNetworkMonitor() {
+        if (networkMonitorJob?.isActive == true) return
+        networkMonitorJob = queueScope.launch {
+            combine(
+                application.networkStateFlow()
+                    .onStart { emit(application.activeNetworkState()) },
+                downloadPreferences.downloadOnlyOverWifi().changes()
+                    .onStart { emit(downloadPreferences.downloadOnlyOverWifi().get()) },
+            ) { networkState, requireWifi ->
+                networkState.toDownloadNetworkStatus(requireWifi)
+            }
+                .distinctUntilChanged()
+                .collect { status -> handleNetworkStatusChange(status) }
+        }
+    }
+
+    private fun handleNetworkStatusChange(status: DownloadNetworkStatus) {
+        when (status) {
+            DownloadNetworkStatus.Available -> {
+                val snapshot = state.value
+                if (snapshot.waitingForNetwork && snapshot.queueCount > 0) {
+                    startDownloads()
+                }
+            }
+            DownloadNetworkStatus.NoNetwork,
+            DownloadNetworkStatus.NoWifi,
+            -> pauseForNetwork(networkUnavailableReason(status))
+        }
+    }
+
+    private fun pauseForNetwork(reason: String) {
+        val snapshot = state.value
+        if (snapshot.queueCount == 0) return
+        if (snapshot.waitingForNetwork && !snapshot.isRunning && snapshot.activeCount == 0) {
+            return
+        }
+
+        snapshot.tasks
+            .filter { it.status == NovelQueuedDownloadStatus.DOWNLOADING }
+            .forEach { runtimeState.cancelActiveDownload(it.taskId) }
+
+        updateState { queueState ->
+            queueState.copy(
+                isRunning = false,
+                waitingForNetwork = true,
+                tasks = queueState.tasks.map { task ->
+                    if (task.status == NovelQueuedDownloadStatus.DOWNLOADING) {
+                        task.copy(
+                            status = NovelQueuedDownloadStatus.QUEUED,
+                            errorMessage = null,
+                        )
+                    } else {
+                        task
+                    }
+                },
+            )
+        }
+        notifier?.onWarning(reason)
+    }
+
+    private fun currentNetworkStatus(): DownloadNetworkStatus {
+        return application.activeNetworkState()
+            .toDownloadNetworkStatus(downloadPreferences.downloadOnlyOverWifi().get())
+    }
+
+    private fun networkUnavailableReason(status: DownloadNetworkStatus): String {
+        return when (status) {
+            DownloadNetworkStatus.NoNetwork -> application.stringResource(MR.strings.download_notifier_no_network)
+            DownloadNetworkStatus.NoWifi -> application.stringResource(MR.strings.download_notifier_text_only_wifi)
+            DownloadNetworkStatus.Available -> ""
+        }
     }
 
     private fun scheduleNotifyQueueState() {

@@ -484,6 +484,7 @@ abstract class HttpSource : CatalogueSource {
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun prefetchPageList(chapter: SChapter) {
         val nextChKey = "${id}_${chapter.url}"
         if (inFlightPrefetches.putIfAbsent(nextChKey, true) == null) {
@@ -506,6 +507,7 @@ abstract class HttpSource : CatalogueSource {
         }
     }
 
+    @Suppress("DEPRECATION")
     private fun triggerNextPagePrefetch(page: Page) {
         val pageKey = "${id}_${page.url}"
         val nextPage = pageToNextPage[pageKey] ?: return

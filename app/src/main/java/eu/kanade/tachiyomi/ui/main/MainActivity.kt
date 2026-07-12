@@ -39,6 +39,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -64,7 +65,10 @@ import cafe.adriel.voyager.navigator.currentOrThrow
 import com.tadami.aurora.BuildConfig
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.source.anime.interactor.GetAnimeIncognitoState
+import eu.kanade.domain.source.interactor.ForegroundIncognitoState
+import eu.kanade.domain.source.interactor.NovelReaderIncognitoState
 import eu.kanade.domain.source.manga.interactor.GetMangaIncognitoState
+import eu.kanade.domain.source.novel.interactor.GetNovelIncognitoState
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.achievement.components.AchievementGroupNotification
 import eu.kanade.presentation.achievement.components.AchievementListDialog
@@ -75,8 +79,10 @@ import eu.kanade.presentation.components.DownloadedOnlyBannerBackgroundColor
 import eu.kanade.presentation.components.IncognitoModeBannerBackgroundColor
 import eu.kanade.presentation.components.IndexingBannerBackgroundColor
 import eu.kanade.presentation.more.UpdatedChangelogScreen
-import eu.kanade.presentation.more.settings.screen.browse.AnimeExtensionReposScreen
-import eu.kanade.presentation.more.settings.screen.browse.MangaExtensionReposScreen
+import eu.kanade.presentation.more.settings.screen.SettingsTreasuryScreen
+import eu.kanade.presentation.more.settings.screen.browse.AnimeExtensionStoreScreen
+import eu.kanade.presentation.more.settings.screen.browse.MangaExtensionStoreScreen
+import eu.kanade.presentation.more.settings.screen.browse.NovelExtensionStoreScreen
 import eu.kanade.presentation.more.settings.screen.data.RestoreBackupScreen
 import eu.kanade.presentation.reader.novel.NovelReaderBackdropSession
 import eu.kanade.presentation.util.AssistContentScreen
@@ -100,6 +106,7 @@ import eu.kanade.tachiyomi.ui.browse.anime.source.browse.BrowseAnimeSourceScreen
 import eu.kanade.tachiyomi.ui.browse.anime.source.globalsearch.GlobalAnimeSearchScreen
 import eu.kanade.tachiyomi.ui.browse.manga.source.browse.BrowseMangaSourceScreen
 import eu.kanade.tachiyomi.ui.browse.manga.source.globalsearch.GlobalMangaSearchScreen
+import eu.kanade.tachiyomi.ui.browse.novel.source.browse.BrowseNovelSourceScreen
 import eu.kanade.tachiyomi.ui.browse.novel.source.globalsearch.GlobalNovelSearchScreen
 import eu.kanade.tachiyomi.ui.deeplink.DeepLinkScreenType
 import eu.kanade.tachiyomi.ui.deeplink.anime.DeepLinkAnimeScreen
@@ -161,6 +168,7 @@ class MainActivity : BaseActivity() {
 
     private val getAnimeIncognitoState: GetAnimeIncognitoState by injectLazy()
     private val getMangaIncognitoState: GetMangaIncognitoState by injectLazy()
+    private val getNovelIncognitoState: GetNovelIncognitoState by injectLazy()
     private val activityDataRepository: ActivityDataRepository by injectLazy()
 
     // To be checked by splash screen. If true then splash screen will be removed.
@@ -177,6 +185,10 @@ class MainActivity : BaseActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         val isLaunch = savedInstanceState == null
+        val activityStart = System.currentTimeMillis()
+        if (isLaunch) {
+            logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH mainactivity-oncreate-start" }
+        }
 
         // Prevent splash screen showing up on configuration changes
         val splashScreen = if (isLaunch) installSplashScreen() else null
@@ -219,38 +231,32 @@ class MainActivity : BaseActivity() {
             return
         }
 
+        logcat(LogPriority.DEBUG) {
+            "TADAMI_PERF_LAUNCH mainactivity-before-setcompose took=${System.currentTimeMillis() - activityStart}ms"
+        }
+
         setComposeContent {
+            logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH setcompose-content-lambda-start" }
             val context = LocalContext.current
 
-            var incognito by remember { mutableStateOf(false) }
-            var incognitoAnime by remember { mutableStateOf(false) }
-            LaunchedEffect(Unit) {
-                incognito = withContext(Dispatchers.IO) { getMangaIncognitoState.await(null) }
-                incognitoAnime = withContext(Dispatchers.IO) { getAnimeIncognitoState.await(null) }
-            }
-            val downloadOnly by preferences.downloadedOnly().collectAsStateWithLifecycle()
-            val indexing by downloadCache.isInitializing.collectAsStateWithLifecycle()
-            val indexingAnime by animeDownloadCache.isInitializing.collectAsStateWithLifecycle()
+            // Get haptic/eInk for provider (light), theme moved inside for launch perf
+            val uiPreferencesHaptic = remember { Injekt.get<UiPreferences>() }
+            val hapticFeedbackMode by uiPreferencesHaptic.hapticFeedbackMode().collectAsStateWithLifecycle()
+            val eInkProfile by uiPreferencesHaptic.eInkProfile().collectAsStateWithLifecycle()
 
-            val isSystemInDarkTheme = isSystemInDarkTheme()
-            val statusBarBackgroundColor = when {
-                indexing || indexingAnime -> IndexingBannerBackgroundColor
-                downloadOnly -> DownloadedOnlyBannerBackgroundColor
-                incognito || incognitoAnime -> IncognitoModeBannerBackgroundColor
-                else -> MaterialTheme.colorScheme.surface
-            }
-
-            // Get current theme for Aurora detection
-            val uiPreferences = remember { Injekt.get<UiPreferences>() }
-            val theme by uiPreferences.appTheme().collectAsStateWithLifecycle()
-            val hapticFeedbackMode by uiPreferences.hapticFeedbackMode().collectAsStateWithLifecycle()
-            val eInkProfile by uiPreferences.eInkProfile().collectAsStateWithLifecycle()
-            val isAurora = theme.isAuroraStyle
+            logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH before-haptics-provider" }
 
             AppHapticsProvider(
                 hapticFeedbackMode = hapticFeedbackMode,
                 isEInkMode = eInkProfile.isEnabled,
             ) {
+                // PERF: move theme collect inside to lighten root composition on launch
+                val uiPreferences = remember { Injekt.get<UiPreferences>() }
+                val theme by uiPreferences.appTheme().collectAsStateWithLifecycle()
+                val isAurora = theme.isAuroraStyle
+
+                logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH before-navigator" }
+                logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH navigator-start" }
                 Navigator(
                     screen = HomeScreen,
                     disposeBehavior = NavigatorDisposeBehavior(
@@ -258,6 +264,44 @@ class MainActivity : BaseActivity() {
                         disposeSteps = true,
                     ),
                 ) { navigator ->
+                    logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH navigator-lambda-start" }
+
+                    // Make splash dismiss as soon as the main home content starts rendering its first (light) frame.
+                    // Previously ready was set only at the end of handleIntentAction, which delayed splash removal.
+                    if (isLaunch) {
+                        ready = true
+                        logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH ready-set-early" }
+                    }
+
+                    // PERF: move incognito and download/indexing inside to reduce root composition cost on app launch
+                    var incognito by remember { mutableStateOf(false) }
+                    var incognitoAnime by remember { mutableStateOf(false) }
+                    var incognitoNovel by remember { mutableStateOf(false) }
+
+                    val globalIncognito by preferences.incognitoMode().collectAsStateWithLifecycle()
+                    val novelReaderIncognito by NovelReaderIncognitoState.active.collectAsStateWithLifecycle()
+                    val effectiveIncognito =
+                        globalIncognito || incognito || incognitoAnime || incognitoNovel || novelReaderIncognito
+                    LaunchedEffect(effectiveIncognito) {
+                        ForegroundIncognitoState.set(effectiveIncognito)
+                    }
+
+                    val downloadOnly by preferences.downloadedOnly().collectAsStateWithLifecycle()
+                    val indexing by produceState(initialValue = false) {
+                        val cache = withContext(Dispatchers.IO) { downloadCache }
+                        cache.isInitializing.collect { value = it }
+                    }
+                    val indexingAnime by produceState(initialValue = false) {
+                        val cache = withContext(Dispatchers.IO) { animeDownloadCache }
+                        cache.isInitializing.collect { value = it }
+                    }
+                    val isSystemInDarkTheme = isSystemInDarkTheme()
+                    val statusBarBackgroundColor = when {
+                        indexing || indexingAnime -> IndexingBannerBackgroundColor
+                        downloadOnly -> DownloadedOnlyBannerBackgroundColor
+                        effectiveIncognito -> IncognitoModeBannerBackgroundColor
+                        else -> MaterialTheme.colorScheme.surface
+                    }
                     LaunchedEffect(isSystemInDarkTheme, statusBarBackgroundColor, navigator.lastItem, isAurora) {
                         if (!shouldMainActivityApplyEdgeToEdge(navigator.lastItem)) return@LaunchedEffect
                         // Draw edge-to-edge and set system bars color to transparent
@@ -297,16 +341,39 @@ class MainActivity : BaseActivity() {
                             preferences.incognitoMode().set(false)
                         }
                     }
+                    // PERF: defer per-screen incognito tracking off the initial composition pass.
+                    // These only matter when the user actually navigates to a source screen.
                     LaunchedEffect(navigator.lastItem) {
-                        (navigator.lastItem as? BrowseMangaSourceScreen)?.sourceId
-                            .let(getMangaIncognitoState::subscribe)
-                            .collectLatest { incognito = it }
+                        val item = navigator.lastItem
+                        val sourceId = (item as? BrowseMangaSourceScreen)?.sourceId
+                        if (sourceId != null) {
+                            getMangaIncognitoState.subscribe(sourceId)
+                                .collectLatest { incognito = it }
+                        } else {
+                            incognito = false
+                        }
                     }
 
                     LaunchedEffect(navigator.lastItem) {
-                        (navigator.lastItem as? BrowseAnimeSourceScreen)?.sourceId
-                            .let(getAnimeIncognitoState::subscribe)
-                            .collectLatest { incognitoAnime = it }
+                        val item = navigator.lastItem
+                        val sourceId = (item as? BrowseAnimeSourceScreen)?.sourceId
+                        if (sourceId != null) {
+                            getAnimeIncognitoState.subscribe(sourceId)
+                                .collectLatest { incognitoAnime = it }
+                        } else {
+                            incognitoAnime = false
+                        }
+                    }
+
+                    LaunchedEffect(navigator.lastItem) {
+                        val item = navigator.lastItem
+                        val sourceId = (item as? BrowseNovelSourceScreen)?.sourceId
+                        if (sourceId != null) {
+                            getNovelIncognitoState.subscribe(sourceId)
+                                .collectLatest { incognitoNovel = it }
+                        } else {
+                            incognitoNovel = false
+                        }
                     }
 
                     val readerBackdropColor = when (val currentScreen = navigator.lastItem) {
@@ -326,12 +393,13 @@ class MainActivity : BaseActivity() {
                         }
                     }
                     val scaffoldInsets = WindowInsets.navigationBars.only(WindowInsetsSides.Horizontal)
+                    logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH before-scaffold-in-navigator" }
                     Scaffold(
                         containerColor = readerBackdropColor ?: MaterialTheme.colorScheme.background,
                         topBar = {
                             AppStateBanners(
                                 downloadedOnlyMode = downloadOnly,
-                                incognitoMode = incognito || incognitoAnime,
+                                incognitoMode = effectiveIncognito,
                                 indexing = indexing || indexingAnime,
                                 modifier = Modifier.windowInsetsPadding(scaffoldInsets),
                             )
@@ -394,88 +462,104 @@ class MainActivity : BaseActivity() {
                         }
                     }
 
-                    // Pop source-related screens when incognito mode is turned off
+                    // PERF: defer non-UI side effects off the *initial* composition pass.
+                    // Main Home UI (Scaffold + HomeHubTab + cache) gets its first frame faster.
+                    var deferSideEffects by remember { mutableStateOf(false) }
                     LaunchedEffect(Unit) {
-                        preferences.incognitoMode().changes()
-                            .drop(1)
-                            .filter { !it }
-                            .onEach {
-                                val currentScreen = navigator.lastItem
-                                if ((
-                                        currentScreen is BrowseMangaSourceScreen ||
-                                            (currentScreen is MangaScreen && currentScreen.fromSource)
-                                        ) ||
-                                    (
-                                        currentScreen is BrowseAnimeSourceScreen ||
-                                            (currentScreen is AnimeScreen && currentScreen.fromSource)
+                        deferSideEffects = true
+                    }
+
+                    if (deferSideEffects) {
+                        // Pop source-related screens when incognito mode is turned off
+                        LaunchedEffect(Unit) {
+                            preferences.incognitoMode().changes()
+                                .drop(1)
+                                .filter { !it }
+                                .onEach {
+                                    val currentScreen = navigator.lastItem
+                                    if ((
+                                            currentScreen is BrowseMangaSourceScreen ||
+                                                (currentScreen is MangaScreen && currentScreen.fromSource)
+                                            ) ||
+                                        (
+                                            currentScreen is BrowseAnimeSourceScreen ||
+                                                (currentScreen is AnimeScreen && currentScreen.fromSource)
+                                            )
+                                    ) {
+                                        navigator.popUntilRoot()
+                                    }
+                                }
+                                .launchIn(this)
+                        }
+
+                        HandleOnNewIntent(context = context, navigator = navigator)
+
+                        CheckForUpdates()
+                        ShowOnboarding()
+
+                        // PERF: moved the migration/changelog inside the Navigator to lighten
+                        // the outer setComposeContent composition (faster to HomeScreen.Content)
+                        var showChangelog by remember { mutableStateOf(false) }
+                        var installedRelease by remember { mutableStateOf<Release?>(null) }
+                        LaunchedEffect(migrationReady.value) {
+                            if (migrationReady.value) {
+                                val shouldShowChangelog = withContext(Dispatchers.IO) {
+                                    val appUpdatePreferences = Injekt.get<AppUpdatePreferences>()
+                                    val seenVersionPreference =
+                                        appUpdatePreferences.lastSeenUpdatedChangelogVersionCode()
+                                    val pendingPreviousVersionPreference =
+                                        appUpdatePreferences.pendingUpdatedChangelogPreviousVersionCode()
+                                    val decision = resolveUpdatedChangelogPrompt(
+                                        currentVersionCode = BuildConfig.VERSION_CODE,
+                                        lastSeenVersionCode = seenVersionPreference.get(),
+                                        pendingPreviousVersionCode = pendingPreviousVersionPreference.get(),
+                                        isDebug = BuildConfig.DEBUG,
+                                    )
+
+                                    if (decision.nextSeenVersionCode != seenVersionPreference.get()) {
+                                        seenVersionPreference.set(decision.nextSeenVersionCode)
+                                    }
+                                    if (decision.nextPendingPreviousVersionCode !=
+                                        pendingPreviousVersionPreference.get()
+                                    ) {
+                                        pendingPreviousVersionPreference.set(
+                                            decision.nextPendingPreviousVersionCode,
                                         )
-                                ) {
-                                    navigator.popUntilRoot()
+                                    }
+
+                                    decision.shouldPrompt
+                                }
+
+                                if (shouldShowChangelog) {
+                                    installedRelease = withContext(Dispatchers.IO) {
+                                        runCatching {
+                                            Injekt.get<GetApplicationRelease>().awaitCurrent(
+                                                GetApplicationRelease.Arguments(
+                                                    isPreview = isPreviewBuildType,
+                                                    commitCount = BuildConfig.COMMIT_COUNT.toInt(),
+                                                    versionName = BuildConfig.VERSION_NAME,
+                                                    repository = GITHUB_REPO,
+                                                    forceCheck = true,
+                                                ),
+                                            )
+                                        }.getOrNull()
+                                    }
+                                    showChangelog = true
                                 }
                             }
-                            .launchIn(this)
-                    }
-
-                    HandleOnNewIntent(context = context, navigator = navigator)
-
-                    CheckForUpdates()
-                    ShowOnboarding()
+                        }
+                        if (showChangelog) {
+                            val release = installedRelease
+                            UpdatedChangelogScreen(
+                                versionName = release?.version ?: "v${BuildConfig.VERSION_NAME}",
+                                releaseDate = release?.releaseDate.orEmpty(),
+                                changelogInfo = release?.info.orEmpty(),
+                                onOpenInBrowser = { openInBrowser(release?.releaseLink ?: RELEASE_URL) },
+                                onDismiss = { showChangelog = false },
+                            )
+                        }
+                    } // end deferSideEffects
                 }
-            }
-
-            var showChangelog by remember { mutableStateOf(false) }
-            var installedRelease by remember { mutableStateOf<Release?>(null) }
-            LaunchedEffect(migrationReady.value) {
-                if (migrationReady.value) {
-                    val shouldShowChangelog = withContext(Dispatchers.IO) {
-                        val appUpdatePreferences = Injekt.get<AppUpdatePreferences>()
-                        val seenVersionPreference = appUpdatePreferences.lastSeenUpdatedChangelogVersionCode()
-                        val pendingPreviousVersionPreference =
-                            appUpdatePreferences.pendingUpdatedChangelogPreviousVersionCode()
-                        val decision = resolveUpdatedChangelogPrompt(
-                            currentVersionCode = BuildConfig.VERSION_CODE,
-                            lastSeenVersionCode = seenVersionPreference.get(),
-                            pendingPreviousVersionCode = pendingPreviousVersionPreference.get(),
-                            isDebug = BuildConfig.DEBUG,
-                        )
-
-                        if (decision.nextSeenVersionCode != seenVersionPreference.get()) {
-                            seenVersionPreference.set(decision.nextSeenVersionCode)
-                        }
-                        if (decision.nextPendingPreviousVersionCode != pendingPreviousVersionPreference.get()) {
-                            pendingPreviousVersionPreference.set(decision.nextPendingPreviousVersionCode)
-                        }
-
-                        decision.shouldPrompt
-                    }
-
-                    if (shouldShowChangelog) {
-                        installedRelease = withContext(Dispatchers.IO) {
-                            runCatching {
-                                Injekt.get<GetApplicationRelease>().awaitCurrent(
-                                    GetApplicationRelease.Arguments(
-                                        isPreview = isPreviewBuildType,
-                                        commitCount = BuildConfig.COMMIT_COUNT.toInt(),
-                                        versionName = BuildConfig.VERSION_NAME,
-                                        repository = GITHUB_REPO,
-                                        forceCheck = true,
-                                    ),
-                                )
-                            }.getOrNull()
-                        }
-                        showChangelog = true
-                    }
-                }
-            }
-            if (showChangelog) {
-                val release = installedRelease
-                UpdatedChangelogScreen(
-                    versionName = release?.version ?: "v${BuildConfig.VERSION_NAME}",
-                    releaseDate = release?.releaseDate.orEmpty(),
-                    changelogInfo = release?.info.orEmpty(),
-                    onOpenInBrowser = { openInBrowser(release?.releaseLink ?: RELEASE_URL) },
-                    onDismiss = { showChangelog = false },
-                )
             }
         }
 
@@ -797,19 +881,47 @@ class MainActivity : BaseActivity() {
                     navigator.popUntilRoot()
                     navigator.push(RestoreBackupScreen(intent.data.toString()))
                 }
-                // Deep link to add anime extension repo
+                // Deep link to add anime extension repo (legacy)
                 else if (intent.scheme == "aniyomi" && intent.data?.host == "add-repo") {
                     intent.data?.getQueryParameter("url")?.let { repoUrl ->
                         navigator.popUntilRoot()
-                        navigator.push(AnimeExtensionReposScreen(repoUrl))
+                        navigator.push(AnimeExtensionStoreScreen(repoUrl))
                     }
-                } // Deep link to add extension repo
+                } // Deep link to add extension store (anime)
+                else if (intent.scheme == "aniyomi" && intent.data?.host == "extension-store") {
+                    intent.data?.getQueryParameter("url")?.let { storeUrl ->
+                        navigator.popUntilRoot()
+                        navigator.push(AnimeExtensionStoreScreen(storeUrl))
+                    }
+                } // Deep link to add extension repo (legacy)
                 else if (intent.scheme in setOf("tachiyomi", "tadami") && intent.data?.host == "add-repo") {
                     intent.data?.getQueryParameter("url")?.let { repoUrl ->
                         navigator.popUntilRoot()
-                        navigator.push(MangaExtensionReposScreen(repoUrl))
+                        navigator.push(MangaExtensionStoreScreen(repoUrl))
+                    }
+                } // Deep link to add extension store (manga)
+                else if (intent.scheme in setOf("tachiyomi", "tadami") && intent.data?.host == "extension-store") {
+                    intent.data?.getQueryParameter("url")?.let { storeUrl ->
+                        navigator.popUntilRoot()
+                        navigator.push(MangaExtensionStoreScreen(storeUrl))
+                    }
+                } // Deep link to add novel extension store
+                else if (intent.scheme in setOf("tachiyomi", "tadami") &&
+                    intent.data?.host == "novel-extension-store"
+                ) {
+                    intent.data?.getQueryParameter("url")?.let { storeUrl ->
+                        navigator.popUntilRoot()
+                        navigator.push(NovelExtensionStoreScreen(storeUrl))
                     }
                 }
+                null
+            }
+            INTENT_OPEN_TREASURY -> {
+                val justUnlocked = intent.getBooleanExtra("just_unlocked", false)
+                eu.kanade.presentation.more.settings.screen.SettingsTreasuryScreen.shouldShowVoidBroadcastBanner =
+                    justUnlocked
+                navigator.popUntilRoot()
+                navigator.push(SettingsTreasuryScreen)
                 null
             }
             else -> {
@@ -842,6 +954,7 @@ class MainActivity : BaseActivity() {
         const val INTENT_ANIMESEARCH = "eu.kanade.tachiyomi.ANIMESEARCH"
         const val INTENT_NOVELSEARCH = "eu.kanade.tachiyomi.NOVELSEARCH"
         const val INTENT_OPEN_NOVEL_CHAPTER = "eu.kanade.tachiyomi.OPEN_NOVEL_CHAPTER"
+        const val INTENT_OPEN_TREASURY = "eu.kanade.tachiyomi.OPEN_TREASURY"
         const val INTENT_NOVEL_CHAPTER_ID = "novel_chapter_id"
         const val INTENT_SEARCH_QUERY = "query"
         const val INTENT_SEARCH_FILTER = "filter"

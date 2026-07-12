@@ -57,6 +57,27 @@ class NovelDownloadManager(
             .toSet()
     }
 
+    fun getDownloadedChapterIds(novel: Novel): Set<Long> {
+        val chapterIds = mutableSetOf<Long>()
+        scopedNovelDirectories(novel).forEach { dir ->
+            dir.listFiles()?.forEach { file ->
+                if (file.isFile && file.name?.endsWith(".html") == true) {
+                    file.name?.substringBeforeLast(".html")?.toLongOrNull()?.let {
+                        chapterIds.add(it)
+                    }
+                }
+            }
+        }
+        legacyNovelDirectory(novel)?.listFiles()?.forEach { file ->
+            if (file.isFile && file.name.endsWith(".html")) {
+                file.name.substringBeforeLast(".html").toLongOrNull()?.let {
+                    chapterIds.add(it)
+                }
+            }
+        }
+        return chapterIds
+    }
+
     fun isChapterDownloaded(novel: Novel, chapterId: Long): Boolean {
         return resolveChapterFile(novel, chapterId)?.exists() == true ||
             legacyChapterFile(novel, chapterId)?.exists() == true

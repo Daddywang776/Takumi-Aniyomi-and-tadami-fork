@@ -5,6 +5,10 @@ import dev.icerock.moko.resources.StringResource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import logcat.LogPriority
@@ -56,6 +60,30 @@ class UnlockableManager(
             .map { it.removePrefix(PREFIX) }
             .toSet()
     }
+
+    /**
+     * Observe all unlocked unlockables as a reactive Flow.
+     * Emits a new set whenever any unlockable pref changes.
+     */
+    fun observeUnlockedUnlockables(): Flow<Set<String>> = callbackFlow {
+        fun snapshot(): Set<String> {
+            val allKeys = preferences.all.keys
+            return allKeys
+                .filter { it.startsWith(PREFIX) }
+                .filter { preferences.getBoolean(it, false) }
+                .map { it.removePrefix(PREFIX) }
+                .toSet()
+        }
+        // Emit current state immediately.
+        trySend(snapshot())
+        val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
+            if (key == null || key.startsWith(PREFIX)) {
+                trySend(snapshot())
+            }
+        }
+        preferences.registerOnSharedPreferenceChangeListener(listener)
+        awaitClose { preferences.unregisterOnSharedPreferenceChangeListener(listener) }
+    }.distinctUntilChanged()
 
     /**
      * Unlock rewards for an achievement
@@ -208,6 +236,7 @@ class UnlockableManager(
             "theme_SAKURA_NOIR" -> MR.strings.unlockable_theme_SAKURA_NOIR
             "theme_NEBULA_TIDE" -> MR.strings.unlockable_theme_NEBULA_TIDE
             "theme_EVENT_HORIZON" -> MR.strings.unlockable_theme_EVENT_HORIZON
+            "theme_void_red" -> MR.strings.unlockable_theme_void_red
 
             // Badges
             "badge_achievement_master" -> MR.strings.unlockable_badge_achievement_master
@@ -226,16 +255,19 @@ class UnlockableManager(
             "aura_deep_focus" -> MR.strings.unlockable_aura_deep_focus
             "aura_shadow_monarch" -> MR.strings.unlockable_aura_shadow_monarch
             "aura_ascendant_gold" -> MR.strings.unlockable_aura_ascendant_gold
+            "aura_void_broadcast_red" -> MR.strings.unlockable_aura_void_broadcast_red
 
             // Profile presets
             "profile_nickname_effect_aurora_crown" -> MR.strings.unlockable_profile_nickname_effect_aurora_crown
             "profile_nickname_effect_glitch_rune" -> MR.strings.unlockable_profile_nickname_effect_glitch_rune
             "profile_nickname_effect_cipher" -> MR.strings.unlockable_profile_nickname_effect_cipher
+            "profile_nickname_effect_glitch_rune_red" -> MR.strings.unlockable_profile_nickname_effect_glitch_rune_red
 
             // Avatar presets
             "avatar_frame_neon" -> MR.strings.unlockable_avatar_frame_neon
             "avatar_frame_hologram" -> MR.strings.unlockable_avatar_frame_hologram
             "avatar_frame_prismatic" -> MR.strings.unlockable_avatar_frame_prismatic
+            "avatar_frame_glitch_red" -> MR.strings.unlockable_avatar_frame_glitch_red
 
             // Home presets
             "home_badge_orbit" -> MR.strings.unlockable_home_badge_orbit
@@ -246,8 +278,8 @@ class UnlockableManager(
             "special_background_petal_storm" -> MR.strings.unlockable_special_background_petal_storm
             "special_background_neon_orbit" -> MR.strings.unlockable_special_background_neon_orbit
             "special_background_event_horizon_library" -> MR.strings.unlockable_special_background_event_horizon_library
+            "special_background_void_weeping_red" -> MR.strings.unlockable_special_background_void_weeping_red
             "special_tab_glow" -> MR.strings.unlockable_special_tab_glow
-
             else -> null
         }
     }

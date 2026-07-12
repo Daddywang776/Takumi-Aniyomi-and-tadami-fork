@@ -85,4 +85,27 @@ class WebtoonBorderDetectorTest {
         val bounds = WebtoonBorderDetector.detectContentBounds(bitmap)
         bounds shouldBe Rect(0, 0, 100, 100)
     }
+
+    @Test
+    fun `should support HARDWARE bitmaps`() {
+        val bitmap = createTestBitmap(
+            width = 100,
+            height = 100,
+            backgroundColor = Color.WHITE,
+            contentLeft = 25,
+            contentRight = 75,
+        )
+        val hardwareBitmap = try {
+            bitmap.copy(Bitmap.Config.HARDWARE, false)
+        } catch (e: Throwable) {
+            null
+        }
+
+        val targetBitmap = hardwareBitmap ?: bitmap
+        val bounds = WebtoonBorderDetector.detectContentBounds(targetBitmap)
+        bounds.left shouldBe 25
+        bounds.right shouldBe 75
+        bounds.top shouldBe 0
+        bounds.bottom shouldBe 100
+    }
 }

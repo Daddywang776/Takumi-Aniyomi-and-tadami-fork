@@ -1,6 +1,7 @@
 package eu.kanade.tachiyomi.data.download.novel
 
 import io.kotest.matchers.shouldBe
+import io.mockk.coEvery
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
@@ -14,6 +15,7 @@ import kotlinx.serialization.protobuf.ProtoBuf
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import tachiyomi.domain.entries.novel.model.Novel
+import tachiyomi.domain.entries.novel.repository.NovelRepository
 import tachiyomi.domain.source.novel.service.NovelSourceManager
 import tachiyomi.domain.storage.service.StorageManager
 import java.nio.file.Path
@@ -76,9 +78,14 @@ class NovelDownloadCacheTest {
         val sourceManager = mockk<NovelSourceManager>()
         every { sourceManager.isInitialized } returns MutableStateFlow(false)
 
+        val novelRepository = mockk<NovelRepository>()
+        coEvery { novelRepository.getLibraryNovel() } returns emptyList()
+        coEvery { novelRepository.getReadNovelNotInLibrary() } returns emptyList()
+
         return NovelDownloadCache(
             storageManager = storageManager,
             sourceManager = sourceManager,
+            novelRepository = novelRepository,
             scope = scope,
             cacheFileProvider = { tempDir.resolve(CACHE_FILE_NAME).toFile() },
             downloadCountLookup = { 0 },

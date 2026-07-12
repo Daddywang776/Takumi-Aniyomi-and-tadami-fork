@@ -132,6 +132,9 @@ fun NovelScreen(
     onRefresh: () -> Unit,
     onSearch: (query: String, global: Boolean) -> Unit,
     onSuggestionClick: (eu.kanade.tachiyomi.data.suggestions.SuggestionItem) -> Unit,
+    onGenreClick: ((String) -> Unit)? = null,
+    onGenreLongClick: ((String) -> Unit)? = null,
+    onGenresSearch: ((List<String>) -> Unit)? = null,
     onPosterLongClicked: (() -> Unit)? = null,
     onToggleAllChaptersRead: () -> Unit,
     onShare: (() -> Unit)?,
@@ -213,6 +216,9 @@ fun NovelScreen(
             onRefresh = onRefresh,
             onSearch = onSearch,
             onSuggestionClick = onSuggestionClick,
+            onGenreClick = onGenreClick,
+            onGenreLongClick = onGenreLongClick,
+            onGenresSearch = onGenresSearch,
             onPosterLongClicked = onPosterLongClicked,
             onShare = onShare,
             onWebView = onWebView,
@@ -268,8 +274,9 @@ fun NovelScreen(
     // Standard implementation (non-Aurora)
     val chapters = state.processedChapters
     val groupedByChapter = false
-    val groupedByVolume = remember(chapters) { shouldGroupNovelChaptersByVolume(chapters) }
-    val chapterGroups = remember(chapters, groupedByChapter) {
+    // PERF: cheaper remember keys (size + filter is stable enough for grouping)
+    val groupedByVolume = remember(chapters.size, selectedScanlator) { shouldGroupNovelChaptersByVolume(chapters) }
+    val chapterGroups = remember(chapters.size, groupedByChapter, selectedScanlator) {
         if (groupedByChapter) {
             resolveNovelChapterDisplayData(
                 chapters = chapters,
@@ -280,7 +287,7 @@ fun NovelScreen(
             emptyList()
         }
     }
-    val volumeGroups = remember(chapters, groupedByVolume) {
+    val volumeGroups = remember(chapters.size, groupedByVolume, selectedScanlator) {
         if (groupedByVolume) {
             resolveNovelVolumeChapterDisplayData(
                 chapters = chapters,
@@ -298,7 +305,7 @@ fun NovelScreen(
         }
     }
     val initialExpandedGroupKeys =
-        remember(chapters, selectedScanlator, state.targetChapterIndex, volumeGroups, groupedByVolume) {
+        remember(chapters.size, selectedScanlator, state.targetChapterIndex, groupedByVolume) {
             when {
                 groupedByVolume -> {
                     val targetChapterId = chapters.getOrNull(state.targetChapterIndex)?.id

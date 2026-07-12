@@ -1,6 +1,7 @@
 package eu.kanade.domain.source.service
 
 import eu.kanade.domain.source.interactor.SetMigrateSorting
+import eu.kanade.domain.source.model.IncognitoPolicy
 import eu.kanade.tachiyomi.util.system.LocaleHelper
 import tachiyomi.core.common.preference.Preference
 import tachiyomi.core.common.preference.PreferenceStore
@@ -110,6 +111,8 @@ class SourcePreferences(
     fun disabledAnimeSources() = preferenceStore.getStringSet("hidden_anime_catalogues", emptySet())
     fun disabledMangaSources() = preferenceStore.getStringSet("hidden_catalogues", emptySet())
     fun disabledNovelSources() = preferenceStore.getStringSet("hidden_novel_catalogues", emptySet())
+
+    fun incognitoPolicy() = preferenceStore.getEnum("incognito_policy", IncognitoPolicy.MANUAL_ONLY)
 
     fun incognitoAnimeExtensions() = preferenceStore.getStringSet("incognito_anime_extensions", emptySet())
     fun incognitoMangaExtensions() = preferenceStore.getStringSet("incognito_manga_extensions", emptySet())

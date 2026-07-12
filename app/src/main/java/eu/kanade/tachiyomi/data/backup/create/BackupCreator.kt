@@ -4,11 +4,13 @@ import android.content.Context
 import android.net.Uri
 import com.hippo.unifile.UniFile
 import com.tadami.aurora.BuildConfig
+import eu.kanade.tachiyomi.data.backup.BackupDiagnosticLog
 import eu.kanade.tachiyomi.data.backup.BackupFileValidator
 import eu.kanade.tachiyomi.data.backup.create.creators.AchievementBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.AnimeBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.AnimeCategoriesBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.AnimeExtensionRepoBackupCreator
+import eu.kanade.tachiyomi.data.backup.create.creators.AnimeExtensionStoreBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.AnimeSourcesBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.CustomButtonBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.ExtensionsBackupCreator
@@ -16,11 +18,13 @@ import eu.kanade.tachiyomi.data.backup.create.creators.FeedBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.MangaBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.MangaCategoriesBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.MangaExtensionRepoBackupCreator
+import eu.kanade.tachiyomi.data.backup.create.creators.MangaExtensionStoreBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.MangaSeriesBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.MangaSourcesBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.NovelBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.NovelCategoriesBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.NovelExtensionRepoBackupCreator
+import eu.kanade.tachiyomi.data.backup.create.creators.NovelExtensionStoreBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.NovelSeriesBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.NovelSourcesBackupCreator
 import eu.kanade.tachiyomi.data.backup.create.creators.PreferenceBackupCreator
@@ -87,6 +91,9 @@ class BackupCreator(
     private val animeExtensionRepoBackupCreator: AnimeExtensionRepoBackupCreator = AnimeExtensionRepoBackupCreator(),
     private val mangaExtensionRepoBackupCreator: MangaExtensionRepoBackupCreator = MangaExtensionRepoBackupCreator(),
     private val novelExtensionRepoBackupCreator: NovelExtensionRepoBackupCreator = NovelExtensionRepoBackupCreator(),
+    private val animeExtensionStoreBackupCreator: AnimeExtensionStoreBackupCreator = AnimeExtensionStoreBackupCreator(),
+    private val mangaExtensionStoreBackupCreator: MangaExtensionStoreBackupCreator = MangaExtensionStoreBackupCreator(),
+    private val novelExtensionStoreBackupCreator: NovelExtensionStoreBackupCreator = NovelExtensionStoreBackupCreator(),
     private val customButtonBackupCreator: CustomButtonBackupCreator = CustomButtonBackupCreator(),
     private val animeSourcesBackupCreator: AnimeSourcesBackupCreator = AnimeSourcesBackupCreator(),
     private val mangaSourcesBackupCreator: MangaSourcesBackupCreator = MangaSourcesBackupCreator(),
@@ -102,22 +109,24 @@ class BackupCreator(
     suspend fun backup(uri: Uri, options: BackupOptions): String {
         var file: UniFile? = null
         try {
-            file = if (isAutoBackup) {
-                // Get dir of file and create
-                val dir = UniFile.fromUri(context, uri)
-                // Delete older backups
-                val limit = backupPreferences.numberOfBackupsToKeep().get()
-                if (limit > 0) {
-                    dir?.listFiles { _, filename -> FILENAME_REGEX.matches(filename) }
-                        .orEmpty()
-                        .sortedByDescending { it.name }
-                        .drop(limit - 1)
-                        .forEach { it.delete() }
+            file = BackupDiagnosticLog.measure(context, "prepare_file") {
+                if (isAutoBackup) {
+                    // Get dir of file and create
+                    val dir = UniFile.fromUri(context, uri)
+                    // Delete older backups
+                    val limit = backupPreferences.numberOfBackupsToKeep().get()
+                    if (limit > 0) {
+                        dir?.listFiles { _, filename -> FILENAME_REGEX.matches(filename) }
+                            .orEmpty()
+                            .sortedByDescending { it.name }
+                            .drop(limit - 1)
+                            .forEach { it.delete() }
+                    }
+                    // Create new file to place backup
+                    dir?.createFile(getFilename())
+                } else {
+                    UniFile.fromUri(context, uri)
                 }
-                // Create new file to place backup
-                dir?.createFile(getFilename())
-            } else {
-                UniFile.fromUri(context, uri)
             }
 
             if (file == null || !file.isFile) {
@@ -139,33 +148,51 @@ class BackupCreator(
             } else {
                 emptyList()
             }
-            val backupAnime = backupAnimes(
-                animes = if (shouldBackupAnime) getAnimeFavorites.await() + nonFavoriteAnime else emptyList(),
-                options = options,
-            )
+            val backupAnime = BackupDiagnosticLog.measure(context, "collect_anime") {
+                backupAnimes(
+                    animes = if (shouldBackupAnime) getAnimeFavorites.await() + nonFavoriteAnime else emptyList(),
+                    options = options,
+                )
+            }
             val nonFavoriteManga = if (options.readEntries && shouldBackupManga) {
                 mangaRepository.getReadMangaNotInLibrary()
             } else {
                 emptyList()
             }
-            val backupManga = backupMangas(
-                mangas = if (shouldBackupManga) getMangaFavorites.await() + nonFavoriteManga else emptyList(),
-                options = options,
-            )
+            val backupManga = BackupDiagnosticLog.measure(context, "collect_manga") {
+                backupMangas(
+                    mangas = if (shouldBackupManga) getMangaFavorites.await() + nonFavoriteManga else emptyList(),
+                    options = options,
+                )
+            }
             val nonFavoriteNovel = if (options.readEntries && shouldBackupNovel) {
                 novelRepository.getReadNovelNotInLibrary()
             } else {
                 emptyList()
             }
-            val backupNovel = backupNovels(
-                novels = if (shouldBackupNovel) novelRepository.getNovelFavorites() + nonFavoriteNovel else emptyList(),
-                options = options,
-            )
+            val backupNovel = BackupDiagnosticLog.measure(context, "collect_novel") {
+                backupNovels(
+                    novels = if (shouldBackupNovel) {
+                        novelRepository.getNovelFavorites() + nonFavoriteNovel
+                    } else {
+                        emptyList()
+                    },
+                    options = options,
+                )
+            }
 
-            val achievementData = achievementBackupCreator(options)
-            val backupMangaSeries = if (shouldBackupManga) mangaSeriesBackupCreator() else emptyList()
-            val backupNovelSeries = if (shouldBackupNovel) novelSeriesBackupCreator() else emptyList()
-            val backupFeeds = feedBackupCreator()
+            val achievementData = BackupDiagnosticLog.measure(context, "collect_achievements") {
+                achievementBackupCreator(options)
+            }
+            val backupMangaSeries = BackupDiagnosticLog.measure(context, "collect_manga_series") {
+                if (shouldBackupManga) mangaSeriesBackupCreator() else emptyList()
+            }
+            val backupNovelSeries = BackupDiagnosticLog.measure(context, "collect_novel_series") {
+                if (shouldBackupNovel) novelSeriesBackupCreator() else emptyList()
+            }
+            val backupFeeds = BackupDiagnosticLog.measure(context, "collect_feeds") {
+                feedBackupCreator()
+            }
 
             val finalBackupManga = if (options.sisterAppCompatible) {
                 backupManga + backupNovel.map { it.toBackupManga() }
@@ -186,14 +213,10 @@ class BackupCreator(
                 backupSources = backupMangaSources(finalBackupManga),
                 backupPreferences = backupAppPreferences(options),
                 backupSourcePreferences = backupSourcePreferences(options),
-                backupMangaExtensionRepo = if (options.sisterAppCompatible) {
-                    emptyList()
-                } else {
-                    backupMangaExtensionRepos(
-                        options,
-                        includeMangaType,
-                    )
-                },
+                backupMangaExtensionRepo = backupMangaExtensionRepos(
+                    options,
+                    includeMangaType,
+                ),
 
                 isLegacy = false,
                 backupAnime = if (options.sisterAppCompatible) emptyList() else backupAnime,
@@ -217,23 +240,18 @@ class BackupCreator(
                 },
                 backupNovelSources = if (options.sisterAppCompatible) emptyList() else backupNovelSources(backupNovel),
                 backupExtensions = if (options.sisterAppCompatible) emptyList() else backupExtensions(options),
-                backupAnimeExtensionRepo = if (options.sisterAppCompatible) {
-                    emptyList()
-                } else {
-                    backupAnimeExtensionRepos(
-                        options,
-                        includeAnimeType,
-                    )
-                },
+                backupAnimeExtensionRepo = backupAnimeExtensionRepos(
+                    options,
+                    includeAnimeType,
+                ),
                 backupCustomButton = if (options.sisterAppCompatible) emptyList() else backupCustomButtons(options),
-                backupNovelExtensionRepo = if (options.sisterAppCompatible) {
-                    emptyList()
-                } else {
-                    backupNovelExtensionRepos(
-                        options,
-                        includeNovelType,
-                    )
-                },
+                backupNovelExtensionRepo = backupNovelExtensionRepos(
+                    options,
+                    includeNovelType,
+                ),
+                backupAnimeExtensionStore = animeExtensionStoreBackupCreator(),
+                backupMangaExtensionStore = mangaExtensionStoreBackupCreator(),
+                backupNovelExtensionStore = novelExtensionStoreBackupCreator(),
                 backupAchievements = if (options.sisterAppCompatible) emptyList() else achievementData.achievements,
                 backupUserProfile = if (options.sisterAppCompatible) null else achievementData.userProfile,
                 backupActivityLog = if (options.sisterAppCompatible) emptyList() else achievementData.activityLog,
@@ -243,27 +261,34 @@ class BackupCreator(
                 backupFeeds = if (options.sisterAppCompatible) emptyList() else backupFeeds,
             )
 
-            val byteArray = if (options.sisterAppCompatible) {
-                parser.encodeToByteArray(MihonBackup.serializer(), backup.toMihonBackup())
-            } else {
-                parser.encodeToByteArray(Backup.serializer(), backup)
+            val byteArray = BackupDiagnosticLog.measure(context, "serialize") {
+                if (options.sisterAppCompatible) {
+                    parser.encodeToByteArray(MihonBackup.serializer(), backup.toMihonBackup())
+                } else {
+                    parser.encodeToByteArray(Backup.serializer(), backup)
+                }
             }
             if (byteArray.isEmpty()) {
                 throw IllegalStateException(context.stringResource(MR.strings.empty_backup_error))
             }
+            BackupDiagnosticLog.log(context, "serialize_size", "bytes=${byteArray.size}")
 
-            file.openOutputStream()
-                .also {
-                    // Force overwrite old file
-                    (it as? FileOutputStream)?.channel?.truncate(0)
-                }
-                .sink().gzip().buffer().use {
-                    it.write(byteArray)
-                }
+            BackupDiagnosticLog.measure(context, "write_gzip") {
+                file.openOutputStream()
+                    .also {
+                        // Force overwrite old file
+                        (it as? FileOutputStream)?.channel?.truncate(0)
+                    }
+                    .sink().gzip().buffer().use {
+                        it.write(byteArray)
+                    }
+            }
             val fileUri = file.uri
 
             // Make sure it's a valid backup file
-            BackupFileValidator(context).validate(fileUri)
+            BackupDiagnosticLog.measure(context, "validate") {
+                BackupFileValidator(context).validate(fileUri)
+            }
 
             if (isAutoBackup) {
                 backupPreferences.lastAutoBackupTimestamp().set(Instant.now().toEpochMilli())
@@ -277,6 +302,7 @@ class BackupCreator(
             return fileUri.toString()
         } catch (e: Exception) {
             logcat(LogPriority.ERROR, e)
+            BackupDiagnosticLog.logError(context, "creator_failed", e)
             file?.delete()
             throw e
         }

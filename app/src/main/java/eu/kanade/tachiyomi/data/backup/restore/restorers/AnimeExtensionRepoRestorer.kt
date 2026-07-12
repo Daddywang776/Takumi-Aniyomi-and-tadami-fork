@@ -2,6 +2,8 @@ package eu.kanade.tachiyomi.data.backup.restore.restorers
 
 import eu.kanade.tachiyomi.data.backup.models.BackupExtensionRepos
 import mihon.domain.extensionrepo.anime.interactor.GetAnimeExtensionRepo
+import mihon.domain.extensionrepo.model.ExtensionRepo
+import mihon.domain.extensionstore.toLegacyExtensionStore
 import tachiyomi.data.handlers.anime.AnimeDatabaseHandler
 import uy.kohesive.injekt.Injekt
 import uy.kohesive.injekt.api.get
@@ -24,13 +26,23 @@ class AnimeExtensionRepoRestorer(
         } else if (shaExists != null) {
             error("${shaExists.name} has the same signing key fingerprint")
         } else {
+            val store = ExtensionRepo(
+                baseUrl = backupRepo.baseUrl,
+                name = backupRepo.name,
+                shortName = backupRepo.shortName,
+                website = backupRepo.website,
+                signingKeyFingerprint = backupRepo.signingKeyFingerprint,
+            ).toLegacyExtensionStore()
             animeHandler.await { db ->
-                db.extension_reposQueries.insert(
-                    backupRepo.baseUrl,
-                    backupRepo.name,
-                    backupRepo.shortName,
-                    backupRepo.website,
-                    backupRepo.signingKeyFingerprint,
+                db.extension_storeQueries.upsert(
+                    indexUrl = store.indexUrl,
+                    name = store.name,
+                    badgeLabel = store.badgeLabel,
+                    signingKey = store.signingKey,
+                    contactWebsite = store.contact.website,
+                    contactDiscord = store.contact.discord,
+                    isLegacy = store.isLegacy,
+                    extensionListUrl = store.extensionListUrl,
                 )
             }
         }

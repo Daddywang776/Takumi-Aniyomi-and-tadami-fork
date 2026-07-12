@@ -116,6 +116,21 @@ class AnimeExtensionManager(
         }
     }
 
+    fun isNsfwForSource(sourceId: Long): Boolean {
+        val pkgName = getExtensionPackage(sourceId) ?: return false
+        return installedExtensionsMapFlow.value[pkgName]?.isNsfw ?: false
+    }
+
+    fun isNsfwForSourceAsFlow(sourceId: Long): Flow<Boolean> {
+        return installedExtensionsFlow.map { extensions ->
+            extensions.find { extension ->
+                extension.sources.any { it.id == sourceId }
+            }
+                ?.isNsfw
+                ?: false
+        }
+    }
+
     fun getAppIconForSource(sourceId: Long): Drawable? {
         val pkgName = sourceIdToPackageName[sourceId] ?: return null
 
@@ -360,7 +375,12 @@ class AnimeExtensionManager(
         rebuildSourcePackageIndex()
 
         // ponytail: Auto-enable languages of the newly installed extension
-        val langs = extension.sources.map { it.lang }.toSet()
+        val langs = if (extension.lang != "all" && extension.lang.isNotBlank()) {
+            setOf(extension.lang)
+        } else {
+            val deviceLang = java.util.Locale.getDefault().language
+            extension.sources.map { it.lang }.filter { it == deviceLang }.toSet()
+        }
         if (langs.isNotEmpty()) {
             val currentLangs = preferences.enabledLanguages().get()
             if (!currentLangs.containsAll(langs)) {
