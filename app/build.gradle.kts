@@ -14,10 +14,10 @@ plugins {
 val hasPrivateGeminiBridge = findProject(":private-gemini-bridge") != null
 
 android {
-    namespace = "com.takumi.aurora"
+    namespace = "com.tadami.aurora"
 
     defaultConfig {
-        applicationId = "com.takumi.aurora"
+        applicationId = "com.tadami.aurora"
         versionCode = 189
 
         versionName = "0.56.1"
