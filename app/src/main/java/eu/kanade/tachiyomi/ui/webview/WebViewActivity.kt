@@ -8,7 +8,7 @@ import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.core.net.toUri
-import com.Takumi.aurora.R
+import eu.kanade.tachiyomi.R
 import eu.kanade.presentation.webview.WebViewScreenContent
 import eu.kanade.tachiyomi.animesource.online.AnimeHttpSource
 import eu.kanade.tachiyomi.network.NetworkHelper
