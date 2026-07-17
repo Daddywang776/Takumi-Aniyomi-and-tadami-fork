@@ -1,11 +1,11 @@
 blank_issues_enabled: false
 contact_links:
   - name: ❌ Help with anything
-    url: https://t.me/TadamiSupport
+    url: https://t.me/TakumiSupport
     about: For extension-related questions/issues
-  - name: 🧑‍💻 Tadami telegram group
-    url: https://t.me/TadamiSupport
+  - name: 🧑‍💻 Takumi telegram group
+    url: https://t.me/TakumiSupport
     about: Every questions could be answered here
-  - name: 🖥️ Tadami release
-    url: https://t.me/TadamiApp
+  - name: 🖥️ Takumi release
+    url: https://t.me/TakumiApp
     about: Release, news

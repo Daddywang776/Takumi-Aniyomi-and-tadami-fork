@@ -373,7 +373,7 @@ private fun NarutoProgressBar(
             animatedImageLoader?.let { loader ->
                 AsyncImage(
                     model = ImageRequest.Builder(context)
-                        .data(com.tadami.aurora.R.drawable.pixel_cat)
+                        .data(com.Takumi.aurora.R.drawable.pixel_cat)
                         .build(),
                     imageLoader = loader,
                     contentDescription = null,

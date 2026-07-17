@@ -62,7 +62,7 @@ import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.NavigatorDisposeBehavior
 import cafe.adriel.voyager.navigator.currentOrThrow
-import com.tadami.aurora.BuildConfig
+import com.Takumi.aurora.BuildConfig
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.source.anime.interactor.GetAnimeIncognitoState
 import eu.kanade.domain.source.interactor.ForegroundIncognitoState
@@ -187,7 +187,7 @@ class MainActivity : BaseActivity() {
         val isLaunch = savedInstanceState == null
         val activityStart = System.currentTimeMillis()
         if (isLaunch) {
-            logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH mainactivity-oncreate-start" }
+            logcat(LogPriority.DEBUG) { "Takumi_PERF_LAUNCH mainactivity-oncreate-start" }
         }
 
         // Prevent splash screen showing up on configuration changes
@@ -232,11 +232,11 @@ class MainActivity : BaseActivity() {
         }
 
         logcat(LogPriority.DEBUG) {
-            "TADAMI_PERF_LAUNCH mainactivity-before-setcompose took=${System.currentTimeMillis() - activityStart}ms"
+            "Takumi_PERF_LAUNCH mainactivity-before-setcompose took=${System.currentTimeMillis() - activityStart}ms"
         }
 
         setComposeContent {
-            logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH setcompose-content-lambda-start" }
+            logcat(LogPriority.DEBUG) { "Takumi_PERF_LAUNCH setcompose-content-lambda-start" }
             val context = LocalContext.current
 
             // Get haptic/eInk for provider (light), theme moved inside for launch perf
@@ -244,7 +244,7 @@ class MainActivity : BaseActivity() {
             val hapticFeedbackMode by uiPreferencesHaptic.hapticFeedbackMode().collectAsStateWithLifecycle()
             val eInkProfile by uiPreferencesHaptic.eInkProfile().collectAsStateWithLifecycle()
 
-            logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH before-haptics-provider" }
+            logcat(LogPriority.DEBUG) { "Takumi_PERF_LAUNCH before-haptics-provider" }
 
             AppHapticsProvider(
                 hapticFeedbackMode = hapticFeedbackMode,
@@ -255,8 +255,8 @@ class MainActivity : BaseActivity() {
                 val theme by uiPreferences.appTheme().collectAsStateWithLifecycle()
                 val isAurora = theme.isAuroraStyle
 
-                logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH before-navigator" }
-                logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH navigator-start" }
+                logcat(LogPriority.DEBUG) { "Takumi_PERF_LAUNCH before-navigator" }
+                logcat(LogPriority.DEBUG) { "Takumi_PERF_LAUNCH navigator-start" }
                 Navigator(
                     screen = HomeScreen,
                     disposeBehavior = NavigatorDisposeBehavior(
@@ -264,13 +264,13 @@ class MainActivity : BaseActivity() {
                         disposeSteps = true,
                     ),
                 ) { navigator ->
-                    logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH navigator-lambda-start" }
+                    logcat(LogPriority.DEBUG) { "Takumi_PERF_LAUNCH navigator-lambda-start" }
 
                     // Make splash dismiss as soon as the main home content starts rendering its first (light) frame.
                     // Previously ready was set only at the end of handleIntentAction, which delayed splash removal.
                     if (isLaunch) {
                         ready = true
-                        logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH ready-set-early" }
+                        logcat(LogPriority.DEBUG) { "Takumi_PERF_LAUNCH ready-set-early" }
                     }
 
                     // PERF: move incognito and download/indexing inside to reduce root composition cost on app launch
@@ -393,7 +393,7 @@ class MainActivity : BaseActivity() {
                         }
                     }
                     val scaffoldInsets = WindowInsets.navigationBars.only(WindowInsetsSides.Horizontal)
-                    logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH before-scaffold-in-navigator" }
+                    logcat(LogPriority.DEBUG) { "Takumi_PERF_LAUNCH before-scaffold-in-navigator" }
                     Scaffold(
                         containerColor = readerBackdropColor ?: MaterialTheme.colorScheme.background,
                         topBar = {
@@ -894,19 +894,19 @@ class MainActivity : BaseActivity() {
                         navigator.push(AnimeExtensionStoreScreen(storeUrl))
                     }
                 } // Deep link to add extension repo (legacy)
-                else if (intent.scheme in setOf("tachiyomi", "tadami") && intent.data?.host == "add-repo") {
+                else if (intent.scheme in setOf("tachiyomi", "Takumi") && intent.data?.host == "add-repo") {
                     intent.data?.getQueryParameter("url")?.let { repoUrl ->
                         navigator.popUntilRoot()
                         navigator.push(MangaExtensionStoreScreen(repoUrl))
                     }
                 } // Deep link to add extension store (manga)
-                else if (intent.scheme in setOf("tachiyomi", "tadami") && intent.data?.host == "extension-store") {
+                else if (intent.scheme in setOf("tachiyomi", "Takumi") && intent.data?.host == "extension-store") {
                     intent.data?.getQueryParameter("url")?.let { storeUrl ->
                         navigator.popUntilRoot()
                         navigator.push(MangaExtensionStoreScreen(storeUrl))
                     }
                 } // Deep link to add novel extension store
-                else if (intent.scheme in setOf("tachiyomi", "tadami") &&
+                else if (intent.scheme in setOf("tachiyomi", "Takumi") &&
                     intent.data?.host == "novel-extension-store"
                 ) {
                     intent.data?.getQueryParameter("url")?.let { storeUrl ->

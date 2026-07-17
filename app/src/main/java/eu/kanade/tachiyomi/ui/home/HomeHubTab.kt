@@ -65,7 +65,7 @@ import cafe.adriel.voyager.core.model.rememberScreenModel
 import cafe.adriel.voyager.navigator.Navigator
 import cafe.adriel.voyager.navigator.tab.LocalTabNavigator
 import cafe.adriel.voyager.navigator.tab.TabOptions
-import com.tadami.aurora.R
+import com.Takumi.aurora.R
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.domain.ui.UserProfilePreferences
 import eu.kanade.domain.ui.model.HomeHeaderLayoutElement
@@ -707,7 +707,7 @@ object HomeHubTab : Tab {
 
     @Composable
     override fun Content() {
-        logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH homehubtab-content-start" }
+        logcat(LogPriority.DEBUG) { "Takumi_PERF_LAUNCH homehubtab-content-start" }
 
         var hasReportedDrawn by remember { mutableStateOf(false) }
 
@@ -1053,7 +1053,7 @@ object HomeHubTab : Tab {
         }
         val appHaptics = LocalAppHaptics.current
 
-        logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH homehubtab-before-tabbed-aurora" }
+        logcat(LogPriority.DEBUG) { "Takumi_PERF_LAUNCH homehubtab-before-tabbed-aurora" }
 
         TabbedScreenAurora(
             titleRes = null,

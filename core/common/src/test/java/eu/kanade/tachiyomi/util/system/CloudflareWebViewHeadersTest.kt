@@ -10,13 +10,13 @@ class CloudflareWebViewHeadersTest {
         val sanitized = sanitizeCloudflareRequestHeaders(
             requestHeaders = linkedMapOf(
                 "User-Agent" to "test-agent",
-                "X-Requested-With" to "com.tadami.aurora",
+                "X-Requested-With" to "com.Takumi.aurora",
                 "sec-ch-ua" to "\"Chromium\";v=\"125\"",
                 "sec-ch-ua-full-version-list" to "\"Chromium\";v=\"125.0.0.0\"",
                 "Accept" to "text/html",
             ),
-            contextPackageName = "com.tadami.aurora",
-            spoofedPackageName = "com.tadami.aurora.spoof",
+            contextPackageName = "com.Takumi.aurora",
+            spoofedPackageName = "com.Takumi.aurora.spoof",
         )
 
         assertEquals(
@@ -35,8 +35,8 @@ class CloudflareWebViewHeadersTest {
                 "X-Requested-With" to "com.example.other",
                 "Accept" to "text/html",
             ),
-            contextPackageName = "com.tadami.aurora",
-            spoofedPackageName = "com.tadami.aurora.spoof",
+            contextPackageName = "com.Takumi.aurora",
+            spoofedPackageName = "com.Takumi.aurora.spoof",
         )
 
         assertEquals(

@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace = "com.tadami.aurora.data"
+    namespace = "com.Takumi.aurora.data"
 
     defaultConfig {
         consumerProguardFiles("consumer-rules.pro")

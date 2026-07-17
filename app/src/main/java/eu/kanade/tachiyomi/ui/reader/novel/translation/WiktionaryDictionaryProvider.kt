@@ -732,7 +732,7 @@ class WiktionaryDictionaryProvider(
         // The REST `page/definition` endpoint only exists on the English Wiktionary.
         const val REST_API_HOST = "en.wiktionary.org"
         const val USER_AGENT =
-            "Tadami-Aniyomi-fork/dictionary (https://github.com/andarcanum/Tadami-Aniyomi-fork)"
+            "Takumi-Aniyomi-fork/dictionary (https://github.com/andarcanum/Takumi-Aniyomi-fork)"
 
         val KNOWN_SUBSECTION_HEADINGS = setOf(
             // Russian

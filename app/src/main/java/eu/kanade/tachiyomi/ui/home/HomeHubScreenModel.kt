@@ -169,9 +169,9 @@ internal class HomeHubScreenModel(
                     showFilteredEmpty = cached.isInitialized && cached.isEmpty,
                 )
             }
-            logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH home-cache-applied anime hadCache=true" }
+            logcat(LogPriority.DEBUG) { "Takumi_PERF_LAUNCH home-cache-applied anime hadCache=true" }
         } else {
-            logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH home-cache-applied anime hadCache=false" }
+            logcat(LogPriority.DEBUG) { "Takumi_PERF_LAUNCH home-cache-applied anime hadCache=false" }
         }
 
         // PERF: Defer expensive DB work (library + history + streaks + greeting) until after first frame.

@@ -29,7 +29,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import com.tadami.aurora.R
+import com.Takumi.aurora.R
 import eu.kanade.domain.extension.novel.interactor.NovelExtensionSourceItem
 import eu.kanade.presentation.components.AppBar
 import eu.kanade.presentation.components.AppBarActions

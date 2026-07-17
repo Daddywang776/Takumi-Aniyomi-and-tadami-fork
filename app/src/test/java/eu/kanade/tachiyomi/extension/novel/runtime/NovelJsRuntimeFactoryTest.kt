@@ -168,7 +168,7 @@ class NovelJsRuntimeFactoryTest {
     @Test
     fun `buildRequest adds browser headers when absent`() {
         val networkHelper = mockk<NetworkHelper>(relaxed = true)
-        every { networkHelper.defaultUserAgentProvider() } returns "Tadami-Test-Agent/1.0"
+        every { networkHelper.defaultUserAgentProvider() } returns "Takumi-Test-Agent/1.0"
 
         val nativeApiClass = Class.forName(
             "eu.kanade.tachiyomi.extension.novel.runtime.NovelJsRuntimeFactory\$NativeApiImpl",
@@ -204,7 +204,7 @@ class NovelJsRuntimeFactoryTest {
             """{"method":"POST"}""",
         ) as okhttp3.Request
 
-        assertEquals("Tadami-Test-Agent/1.0", request.header("User-Agent"))
+        assertEquals("Takumi-Test-Agent/1.0", request.header("User-Agent"))
         assertEquals("https://www.scribblehub.com/", request.header("Referer"))
         assertEquals("https://www.scribblehub.com", request.header("Origin"))
         assertEquals("max-age=0", request.header("Cache-Control"))

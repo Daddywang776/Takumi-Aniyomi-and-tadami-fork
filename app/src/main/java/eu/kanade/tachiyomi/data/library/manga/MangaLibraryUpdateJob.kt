@@ -528,7 +528,7 @@ class MangaLibraryUpdateJob(private val context: Context, workerParams: WorkerPa
     private fun writeErrorFile(errors: List<LibraryUpdateFailure>): File {
         try {
             if (errors.isNotEmpty()) {
-                val file = context.createFileInCacheDir("tadami_manga_update_errors.txt")
+                val file = context.createFileInCacheDir("Takumi_manga_update_errors.txt")
                 file.bufferedWriter().use { out ->
                     out.write(
                         context.stringResource(MR.strings.library_errors_help, ERROR_LOG_HELP_URL) + "\n\n",
@@ -562,7 +562,7 @@ class MangaLibraryUpdateJob(private val context: Context, workerParams: WorkerPa
         private const val WORK_NAME_AUTO = "LibraryUpdate-auto"
         private const val WORK_NAME_MANUAL = "LibraryUpdate-manual"
 
-        private const val ERROR_LOG_HELP_URL = "https://t.me/TadamiSupport"
+        private const val ERROR_LOG_HELP_URL = "https://t.me/TakumiSupport"
 
         /**
          * Key for category to update.

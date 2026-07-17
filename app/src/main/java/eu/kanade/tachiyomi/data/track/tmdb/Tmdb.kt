@@ -9,7 +9,7 @@
 package eu.kanade.tachiyomi.data.track.tmdb
 
 import android.graphics.Color
-import com.tadami.aurora.R
+import com.Takumi.aurora.R
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.tachiyomi.data.database.models.anime.AnimeTrack
 import eu.kanade.tachiyomi.data.track.AnimeTracker
@@ -38,7 +38,7 @@ class Tmdb(id: Long) : BaseTracker(id, "TMDB"), AnimeTracker {
         // App-level v3 API key for TMDB; bundled like our other tracker app credentials.
         const val API_KEY = "2636d1247a3d193fdb5334f9d5780429"
 
-        const val REDIRECT_URI = "tadami://tmdb-auth"
+        const val REDIRECT_URI = "Takumi://tmdb-auth"
 
         private val SCORE_LIST = IntRange(0, 10)
             .map(Int::toString)

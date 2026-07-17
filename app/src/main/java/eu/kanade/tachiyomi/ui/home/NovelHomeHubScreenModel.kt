@@ -150,9 +150,9 @@ internal class NovelHomeHubScreenModel(
                     showFilteredEmpty = cached.isInitialized && cached.isEmpty,
                 )
             }
-            logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH home-cache-applied novel hadCache=true" }
+            logcat(LogPriority.DEBUG) { "Takumi_PERF_LAUNCH home-cache-applied novel hadCache=true" }
         } else {
-            logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH home-cache-applied novel hadCache=false" }
+            logcat(LogPriority.DEBUG) { "Takumi_PERF_LAUNCH home-cache-applied novel hadCache=false" }
         }
 
         // PERF: Defer expensive DB work until after first frame

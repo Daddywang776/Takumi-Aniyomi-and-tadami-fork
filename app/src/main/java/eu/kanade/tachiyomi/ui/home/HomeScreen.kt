@@ -140,7 +140,7 @@ object HomeScreen : Screen() {
     @Composable
     override fun Content() {
         val context = LocalContext.current
-        logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH homescreen-content-start" }
+        logcat(LogPriority.DEBUG) { "Takumi_PERF_LAUNCH homescreen-content-start" }
 
         val navStyle by uiPreferences.navStyle().collectAsState()
         val bottomNavAppearance by uiPreferences.bottomNavAppearance().collectAsState()
@@ -172,7 +172,7 @@ object HomeScreen : Screen() {
         val navigator = LocalNavigator.currentOrThrow
         val bottomNavVisibilityController = remember { BottomNavVisibilityController() }
         val hazeState = remember { HazeState() }
-        logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH homescreen-pre-tabnavigator" }
+        logcat(LogPriority.DEBUG) { "Takumi_PERF_LAUNCH homescreen-pre-tabnavigator" }
         eu.kanade.presentation.tutorial.TutorialHost {
             TabNavigator(
                 tab = defaultTab,
@@ -215,15 +215,15 @@ object HomeScreen : Screen() {
                     }
                 }
                 logcat(LogPriority.DEBUG) {
-                    "TADAMI_PERF_LAUNCH homescreen-tabnavigator-ready current=${tabNavigator.current}"
+                    "Takumi_PERF_LAUNCH homescreen-tabnavigator-ready current=${tabNavigator.current}"
                 }
-                logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH homescreen-tabnavigator-inside" }
+                logcat(LogPriority.DEBUG) { "Takumi_PERF_LAUNCH homescreen-tabnavigator-inside" }
                 // Provide usable navigator to content screen
                 CompositionLocalProvider(
                     LocalNavigator provides navigator,
                     LocalBottomNavVisibilityController provides bottomNavVisibilityController,
                 ) {
-                    logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH homescreen-before-scaffold" }
+                    logcat(LogPriority.DEBUG) { "Takumi_PERF_LAUNCH homescreen-before-scaffold" }
                     Scaffold(
                         startBar = {
                             if (useNavigationRail) {

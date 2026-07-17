@@ -6,9 +6,9 @@ import tachiyomi.core.common.preference.PreferenceStore
 
 /**
  * Force-runs a batch of migrations that were ported from Mihon with low version numbers
- * (131f–139f) but were silently skipped in Tadami.
+ * (131f–139f) but were silently skipped in Takumi.
  *
- * Tadami's BuildConfig.VERSION_CODE is significantly higher than Mihon's (currently 187+).
+ * Takumi's BuildConfig.VERSION_CODE is significantly higher than Mihon's (currently 187+).
  * When a user upgrades (e.g. last_version_code=182 → 187), the VersionRangeMigrationStrategy
  * only considers migrations whose version.toInt() falls into (old+1)..new.
  *

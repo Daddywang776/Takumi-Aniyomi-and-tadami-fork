@@ -10,7 +10,7 @@ import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import aniyomi.core.common.torrent.TorrentServerApi
 import aniyomi.core.common.torrent.TorrentServerUtils
 import app.cash.sqldelight.driver.android.AndroidSqliteDriver
-import com.tadami.aurora.BuildConfig
+import com.Takumi.aurora.BuildConfig
 import data.History
 import data.Mangas
 import dataanime.Animehistory

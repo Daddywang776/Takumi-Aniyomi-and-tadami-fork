@@ -55,9 +55,9 @@ object HelpScreen : Screen() {
                         TextPreferenceWidget(
                             modifier = itemModifier,
                             title = "Telegram Channel",
-                            subtitle = "https://t.me/TadamiApp",
+                            subtitle = "https://t.me/TakumiApp",
                             icon = Icons.AutoMirrored.Outlined.Send,
-                            onPreferenceClick = { uriHandler.openUri("https://t.me/TadamiApp") },
+                            onPreferenceClick = { uriHandler.openUri("https://t.me/TakumiApp") },
                         )
                     }
 
@@ -65,9 +65,9 @@ object HelpScreen : Screen() {
                         TextPreferenceWidget(
                             modifier = itemModifier,
                             title = "Telegram Group",
-                            subtitle = "https://t.me/TadamiSupport",
+                            subtitle = "https://t.me/TakumiSupport",
                             icon = Icons.AutoMirrored.Outlined.Chat,
-                            onPreferenceClick = { uriHandler.openUri("https://t.me/TadamiSupport") },
+                            onPreferenceClick = { uriHandler.openUri("https://t.me/TakumiSupport") },
                         )
                     }
 
@@ -75,10 +75,10 @@ object HelpScreen : Screen() {
                         TextPreferenceWidget(
                             modifier = itemModifier,
                             title = "GitHub Issues",
-                            subtitle = "https://github.com/andarcanum/Tadami-Aniyomi-fork/issues",
+                            subtitle = "https://github.com/andarcanum/Takumi-Aniyomi-fork/issues",
                             icon = CustomIcons.Github,
                             onPreferenceClick = {
-                                uriHandler.openUri("https://github.com/andarcanum/Tadami-Aniyomi-fork/issues")
+                                uriHandler.openUri("https://github.com/andarcanum/Takumi-Aniyomi-fork/issues")
                             },
                         )
                     }

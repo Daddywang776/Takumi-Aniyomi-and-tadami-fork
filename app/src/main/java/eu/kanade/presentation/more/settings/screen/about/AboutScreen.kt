@@ -41,7 +41,7 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.unit.dp
 import cafe.adriel.voyager.navigator.LocalNavigator
 import cafe.adriel.voyager.navigator.currentOrThrow
-import com.tadami.aurora.BuildConfig
+import com.Takumi.aurora.BuildConfig
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.more.LogoHeader
 import eu.kanade.presentation.more.settings.AURORA_SETTINGS_CARD_HORIZONTAL_INSET
@@ -321,7 +321,7 @@ object AboutScreen : Screen() {
                             title = stringResource(MR.strings.help_translate),
                             onPreferenceClick = {
                                 uriHandler.openUri(
-                                    "https://github.com/andarcanum/Tadami-Aniyomi-fork/blob/ranobe-novel/TRANSLATION.md",
+                                    "https://github.com/andarcanum/Takumi-Aniyomi-fork/blob/ranobe-novel/TRANSLATION.md",
                                 )
                             },
                         )
@@ -636,7 +636,7 @@ private fun aboutFooterLinkLabel(label: AboutFooterLinkLabel): String = when (la
     AboutFooterLinkLabel.Website -> stringResource(MR.strings.website)
     AboutFooterLinkLabel.Discord -> "Discord"
     AboutFooterLinkLabel.GitHub -> "GitHub"
-    AboutFooterLinkLabel.Tadami -> "Tadami"
+    AboutFooterLinkLabel.Takumi -> "Takumi"
     AboutFooterLinkLabel.TelegramChannel -> "Telegram Channel"
     AboutFooterLinkLabel.TelegramGroup -> "Telegram Group"
 }
@@ -672,22 +672,22 @@ internal fun buildAboutFooterSections(): List<AboutFooterLinkSection> {
             ),
         ),
         AboutFooterLinkSection(
-            title = "Tadami",
+            title = "Takumi",
             links = listOf(
                 AboutFooterLink(
-                    label = AboutFooterLinkLabel.Tadami,
+                    label = AboutFooterLinkLabel.Takumi,
                     icon = AboutFooterLinkIcon.Github,
-                    url = "https://github.com/andarcanum/Tadami-Aniyomi-fork",
+                    url = "https://github.com/andarcanum/Takumi-Aniyomi-fork",
                 ),
                 AboutFooterLink(
                     label = AboutFooterLinkLabel.TelegramChannel,
                     icon = AboutFooterLinkIcon.TelegramChannel,
-                    url = "https://t.me/TadamiApp",
+                    url = "https://t.me/TakumiApp",
                 ),
                 AboutFooterLink(
                     label = AboutFooterLinkLabel.TelegramGroup,
                     icon = AboutFooterLinkIcon.TelegramGroup,
-                    url = "https://t.me/TadamiSupport",
+                    url = "https://t.me/TakumiSupport",
                 ),
             ),
         ),
@@ -709,7 +709,7 @@ internal enum class AboutFooterLinkLabel {
     Website,
     Discord,
     GitHub,
-    Tadami,
+    Takumi,
     TelegramChannel,
     TelegramGroup,
 }

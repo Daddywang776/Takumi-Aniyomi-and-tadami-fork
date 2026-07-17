@@ -1,6 +1,6 @@
 (function() {
-    if (window.TadamiPickerInitialized) return;
-    window.TadamiPickerInitialized = true;
+    if (window.TakumiPickerInitialized) return;
+    window.TakumiPickerInitialized = true;
 
     const overlay = document.createElement('div');
     overlay.style.position = 'absolute';
@@ -67,13 +67,13 @@
             overlay.style.backgroundColor = 'rgba(255, 0, 0, 0.5)';
             setTimeout(() => { overlay.style.backgroundColor = 'rgba(0, 255, 0, 0.2)'; }, 300);
             
-            if (window.TadamiBridge) {
-                window.TadamiBridge.onElementSelected(selector, text);
+            if (window.TakumiBridge) {
+                window.TakumiBridge.onElementSelected(selector, text);
             }
         }
     }, true);
 
-    window.TadamiPicker = {
+    window.TakumiPicker = {
         enable: function() {
             pickerEnabled = true;
             overlay.style.display = 'block';

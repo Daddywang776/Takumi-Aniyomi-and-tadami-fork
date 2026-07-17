@@ -67,8 +67,8 @@ import androidx.lifecycle.lifecycleScope
 import com.davemorrissey.labs.subscaleview.SubsamplingScaleImageView
 import com.google.android.material.transition.platform.MaterialContainerTransform
 import com.hippo.unifile.UniFile
-import com.tadami.aurora.R
-import com.tadami.aurora.databinding.ReaderActivityBinding
+import com.Takumi.aurora.R
+import com.Takumi.aurora.databinding.ReaderActivityBinding
 import eu.kanade.core.util.ifMangaSourcesLoaded
 import eu.kanade.domain.base.BasePreferences
 import eu.kanade.domain.ui.UiPreferences

@@ -595,8 +595,8 @@ class NovelScreenModel(
                 manualFetch = false,
             )
 
-            // PERF instrumentation (TADAMI_PERF_NOVEL_TITLE) - removable after validation
-            logcat(LogPriority.DEBUG) { "TADAMI_PERF_NOVEL_TITLE db-loaded id=$novelId chapters=${chapters.size}" }
+            // PERF instrumentation (Takumi_PERF_NOVEL_TITLE) - removable after validation
+            logcat(LogPriority.DEBUG) { "Takumi_PERF_NOVEL_TITLE db-loaded id=$novelId chapters=${chapters.size}" }
             if (isLikelyWebViewLoginRequired(source, novel, chapters.size)) {
                 logcat(LogPriority.DEBUG) {
                     "Novel ${novel.id} (${source.name}) may need WebView login (pre-refresh): " +
@@ -623,7 +623,7 @@ class NovelScreenModel(
 
             if ((shouldAutoRefreshNovel || shouldAutoRefreshChapters) && screenModelScope.isActive) {
                 logcat(LogPriority.DEBUG) {
-                    "TADAMI_PERF_NOVEL_TITLE triggering-refresh id=$novelId staleChapters=${shouldAutoRefreshChapters && !chapters.isEmpty()}"
+                    "Takumi_PERF_NOVEL_TITLE triggering-refresh id=$novelId staleChapters=${shouldAutoRefreshChapters && !chapters.isEmpty()}"
                 }
                 refreshChapters(
                     manualFetch = false,
@@ -632,7 +632,7 @@ class NovelScreenModel(
                 )
             } else {
                 logcat(LogPriority.DEBUG) {
-                    "TADAMI_PERF_NOVEL_TITLE skip-source-refresh id=$novelId (using cached chapters)"
+                    "Takumi_PERF_NOVEL_TITLE skip-source-refresh id=$novelId (using cached chapters)"
                 }
             }
         }
@@ -1551,13 +1551,13 @@ class NovelScreenModel(
 
         // PERF instrumentation
         val getStart = System.currentTimeMillis()
-        logcat(LogPriority.DEBUG) { "TADAMI_PERF_NOVEL_TITLE getChapterList-start id=${state.novel.id}" }
+        logcat(LogPriority.DEBUG) { "Takumi_PERF_NOVEL_TITLE getChapterList-start id=${state.novel.id}" }
 
         // Use short-lived cache unless this is an explicit user refresh
         val cacheKey = state.novel.id
         val cached = if (!manualFetch) recentChapterListCache[cacheKey] else null
         val sourceChapters = if (cached != null && (System.currentTimeMillis() - cached.first) < 90_000L) {
-            logcat(LogPriority.DEBUG) { "TADAMI_PERF_NOVEL_TITLE using-chapter-cache id=$cacheKey" }
+            logcat(LogPriority.DEBUG) { "Takumi_PERF_NOVEL_TITLE using-chapter-cache id=$cacheKey" }
             cached.second
         } else {
             val fresh = state.source.getChapterList(state.novel.toSNovel())
@@ -1568,7 +1568,7 @@ class NovelScreenModel(
         }
         val getMs = System.currentTimeMillis() - getStart
         logcat(LogPriority.DEBUG) {
-            "TADAMI_PERF_NOVEL_TITLE getChapterList-done id=${state.novel.id} count=${sourceChapters.size} took=${getMs}ms manual=$manualFetch"
+            "Takumi_PERF_NOVEL_TITLE getChapterList-done id=${state.novel.id} count=${sourceChapters.size} took=${getMs}ms manual=$manualFetch"
         }
 
         // Preview for display only
@@ -1598,7 +1598,7 @@ class NovelScreenModel(
             }
         }
         logcat(LogPriority.DEBUG) {
-            "TADAMI_PERF_NOVEL_TITLE preview-pushed id=${state.novel.id} count=${preview.size}"
+            "Takumi_PERF_NOVEL_TITLE preview-pushed id=${state.novel.id} count=${preview.size}"
         }
 
         logcat {
@@ -1620,7 +1620,7 @@ class NovelScreenModel(
         )
         val syncMs = System.currentTimeMillis() - syncStart
         logcat(LogPriority.DEBUG) {
-            "TADAMI_PERF_NOVEL_TITLE syncNovelChapters-done id=${state.novel.id} new=${newChapters.size} took=${syncMs}ms"
+            "Takumi_PERF_NOVEL_TITLE syncNovelChapters-done id=${state.novel.id} new=${newChapters.size} took=${syncMs}ms"
         }
         logcat(LogPriority.DEBUG) {
             "Synced chapters for id=${state.novel.id} source=${state.source.name}, " +

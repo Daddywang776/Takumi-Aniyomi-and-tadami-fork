@@ -36,7 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cafe.adriel.voyager.navigator.Navigator
-import com.tadami.aurora.BuildConfig
+import com.Takumi.aurora.BuildConfig
 import eu.kanade.domain.ui.UiPreferences
 import eu.kanade.presentation.components.AuroraBackground
 import eu.kanade.presentation.more.settings.AURORA_SETTINGS_CARD_HORIZONTAL_INSET

@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test
 class AboutFooterLinksTest {
 
     @Test
-    fun `footer sections stay split between Aniyomi and Tadami`() {
+    fun `footer sections stay split between Aniyomi and Takumi`() {
         val sections = buildAboutFooterSections()
 
         sections shouldHaveSize 2
@@ -34,22 +34,22 @@ class AboutFooterLinksTest {
             )
         sections[1] shouldBe
             AboutFooterLinkSection(
-                title = "Tadami",
+                title = "Takumi",
                 links = listOf(
                     AboutFooterLink(
-                        label = AboutFooterLinkLabel.Tadami,
+                        label = AboutFooterLinkLabel.Takumi,
                         icon = AboutFooterLinkIcon.Github,
-                        url = "https://github.com/andarcanum/Tadami-Aniyomi-fork",
+                        url = "https://github.com/andarcanum/Takumi-Aniyomi-fork",
                     ),
                     AboutFooterLink(
                         label = AboutFooterLinkLabel.TelegramChannel,
                         icon = AboutFooterLinkIcon.TelegramChannel,
-                        url = "https://t.me/TadamiApp",
+                        url = "https://t.me/TakumiApp",
                     ),
                     AboutFooterLink(
                         label = AboutFooterLinkLabel.TelegramGroup,
                         icon = AboutFooterLinkIcon.TelegramGroup,
-                        url = "https://t.me/TadamiSupport",
+                        url = "https://t.me/TakumiSupport",
                     ),
                 ),
             )

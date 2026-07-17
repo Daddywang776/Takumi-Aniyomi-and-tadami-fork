@@ -597,7 +597,7 @@ class AnimeScreenModel(
             }
             val loadMs = System.currentTimeMillis() - start
             logcat(LogPriority.DEBUG) {
-                "TADAMI_PERF_ANIME_TITLE db-loaded+items id=$animeId episodes=${episodes.size} took=${loadMs}ms"
+                "Takumi_PERF_ANIME_TITLE db-loaded+items id=$animeId episodes=${episodes.size} took=${loadMs}ms"
             }
 
             val seasons = if (anime.fetchType == FetchType.Episodes) {

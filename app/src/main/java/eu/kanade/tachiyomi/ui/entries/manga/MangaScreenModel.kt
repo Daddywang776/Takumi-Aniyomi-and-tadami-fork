@@ -478,7 +478,7 @@ class MangaScreenModel(
             val chapters = rawChapters.toChapterListItemsCheap(manga)
             val loadMs = System.currentTimeMillis() - start
             logcat(LogPriority.DEBUG) {
-                "TADAMI_PERF_MANGA_TITLE db-loaded+items id=$mangaId chapters=${chapters.size} took=${loadMs}ms (cheap-initial)"
+                "Takumi_PERF_MANGA_TITLE db-loaded+items id=$mangaId chapters=${chapters.size} took=${loadMs}ms (cheap-initial)"
             }
 
             val needRefreshInfo = !manga.initialized || isFromSource
@@ -1088,7 +1088,7 @@ class MangaScreenModel(
                 val sourceChapters = state.source.getChapterList(state.manga.toSManga())
                 val getMs = System.currentTimeMillis() - getStart
                 logcat(LogPriority.DEBUG) {
-                    "TADAMI_PERF_MANGA_TITLE getChapterList-done id=${state.manga.id} count=${sourceChapters.size} took=${getMs}ms"
+                    "Takumi_PERF_MANGA_TITLE getChapterList-done id=${state.manga.id} count=${sourceChapters.size} took=${getMs}ms"
                 }
 
                 // Preview for display only: list becomes visible right after parse (before full sync cost).
@@ -1127,7 +1127,7 @@ class MangaScreenModel(
                     }
                 }
                 logcat(LogPriority.DEBUG) {
-                    "TADAMI_PERF_MANGA_TITLE preview-pushed id=${state.manga.id} count=${previewItems.size}"
+                    "Takumi_PERF_MANGA_TITLE preview-pushed id=${state.manga.id} count=${previewItems.size}"
                 }
 
                 val syncStart = System.currentTimeMillis()
@@ -1139,7 +1139,7 @@ class MangaScreenModel(
                 )
                 val syncMs = System.currentTimeMillis() - syncStart
                 logcat(LogPriority.DEBUG) {
-                    "TADAMI_PERF_MANGA_TITLE syncChapters-done id=${state.manga.id} new=${newChapters.size} took=${syncMs}ms"
+                    "Takumi_PERF_MANGA_TITLE syncChapters-done id=${state.manga.id} new=${newChapters.size} took=${syncMs}ms"
                 }
 
                 // Immediately push real chapters after sync (in addition to DB flow) so resolve is fast

@@ -1,6 +1,6 @@
 # LNReader Plugin Converter (Novel)
 
-Generates a repo JSON index for Tadami novel plugins and computes `sha256` for each plugin script.
+Generates a repo JSON index for Takumi novel plugins and computes `sha256` for each plugin script.
 
 ## Input format
 
@@ -44,7 +44,7 @@ Notes:
 
 - `hasSettings` is a repository metadata hint used for faster UI decisions.
 - Installed novel plugins can still expose settings at runtime through LNReader-style `pluginSettings` even when `hasSettings` is missing or `false`.
-- Tadami's novel runtime keeps backward compatibility with legacy array-style `settings` definitions as well.
+- Takumi's novel runtime keeps backward compatibility with legacy array-style `settings` definitions as well.
 
 ## Usage
 

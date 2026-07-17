@@ -26,7 +26,7 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-private const val TARGET_PACKAGE = "com.tadami.aurora.benchmark"
+private const val TARGET_PACKAGE = "com.Takumi.aurora.benchmark"
 
 /**
  * Run this benchmark from Studio to see startup measurements, and captured system traces

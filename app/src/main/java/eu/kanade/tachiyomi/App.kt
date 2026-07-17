@@ -27,8 +27,8 @@ import coil3.network.okhttp.OkHttpNetworkFetcherFactory
 import coil3.request.allowRgb565
 import coil3.request.crossfade
 import coil3.util.DebugLogger
-import com.tadami.aurora.BuildConfig
-import com.tadami.aurora.R
+import com.Takumi.aurora.BuildConfig
+import com.Takumi.aurora.R
 import dev.mihon.injekt.patchInjekt
 import eu.kanade.domain.DomainModule
 import eu.kanade.domain.SYDomainModule
@@ -126,7 +126,7 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
     @OptIn(DelicateCoilApi::class)
     override fun onCreate() {
         val launchStart = System.currentTimeMillis()
-        logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH app-oncreate-start" }
+        logcat(LogPriority.DEBUG) { "Takumi_PERF_LAUNCH app-oncreate-start" }
 
         LogcatLogger.install(AndroidLogcatLogger(LogPriority.VERBOSE))
         super<Application>.onCreate()
@@ -346,7 +346,7 @@ class App : Application(), DefaultLifecycleObserver, SingletonImageLoader.Factor
         }
 
         logcat(LogPriority.DEBUG) {
-            "TADAMI_PERF_LAUNCH app-oncreate-done took=${System.currentTimeMillis() - launchStart}ms"
+            "Takumi_PERF_LAUNCH app-oncreate-done took=${System.currentTimeMillis() - launchStart}ms"
         }
     }
 

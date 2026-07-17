@@ -27,7 +27,7 @@ object BackupDetector {
     fun isLegacyBackup(bytes: ByteArray): Boolean {
         return try {
             val fields = topLevelFieldNumbers(bytes)
-            // Legacy Aniyomi/Tadami stores anime/novel at top-level fields 3 and 5.
+            // Legacy Aniyomi/Takumi stores anime/novel at top-level fields 3 and 5.
             if (LEGACY_ANIME_FIELD in fields || LEGACY_NOVEL_FIELD in fields) {
                 return true
             }
@@ -50,9 +50,9 @@ object BackupDetector {
 
     /**
      * Positively identify a Mihon / Tachiyomi(-derived) backup (as opposed to a
-     * native Aniyomi/Tadami backup).
+     * native Aniyomi/Takumi backup).
      *
-     * Native Aniyomi/Tadami backups always carry at least one "native marker" field
+     * Native Aniyomi/Takumi backups always carry at least one "native marker" field
      * at the top level: legacy backupAnime(3), backupAnimeCategories(4),
      * legacy backupNovel(5), backupNovelCategories(6), or any field >= 500
      * (BackupCreator always writes isLegacy=false at field 500, and all

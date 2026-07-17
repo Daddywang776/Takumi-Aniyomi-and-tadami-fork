@@ -14,11 +14,11 @@ class WebViewCloudflareChallengeResponseTest {
                 "Cookie" to "cf_chl_rc_ni=2",
                 "Host" to "ravenscans.org",
                 "Connection" to "Keep-Alive",
-                "X-Requested-With" to "com.tadami.aurora.localdev",
+                "X-Requested-With" to "com.Takumi.aurora.localdev",
                 "sec-ch-ua" to "\"Android WebView\";v=\"145\"",
                 "sec-ch-ua-full-version-list" to "\"Android WebView\";v=\"145.0.0.0\"",
             ),
-            contextPackageName = "com.tadami.aurora.localdev",
+            contextPackageName = "com.Takumi.aurora.localdev",
             spoofedPackageName = "com.android.chrome",
         )
 
@@ -37,7 +37,7 @@ class WebViewCloudflareChallengeResponseTest {
             requestHeaders = mapOf(
                 "X-Requested-With" to "XMLHttpRequest",
             ),
-            contextPackageName = "com.tadami.aurora.localdev",
+            contextPackageName = "com.Takumi.aurora.localdev",
             spoofedPackageName = "com.android.chrome",
         )
 

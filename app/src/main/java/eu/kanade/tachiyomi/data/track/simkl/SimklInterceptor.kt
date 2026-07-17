@@ -1,6 +1,6 @@
 package eu.kanade.tachiyomi.data.track.simkl
 
-import com.tadami.aurora.BuildConfig
+import com.Takumi.aurora.BuildConfig
 import eu.kanade.tachiyomi.data.track.simkl.SimklApi.Companion.CLIENT_ID
 import eu.kanade.tachiyomi.data.track.simkl.dto.SimklOAuth
 import okhttp3.Interceptor
@@ -22,7 +22,7 @@ class SimklInterceptor(val simkl: Simkl) : Interceptor {
         val authRequest = originalRequest.newBuilder()
             .addHeader("Authorization", "Bearer ${oauth.accessToken}")
             .addHeader("simkl-api-key", CLIENT_ID)
-            .header("User-Agent", "Tadami v${BuildConfig.VERSION_NAME} (${BuildConfig.APPLICATION_ID})")
+            .header("User-Agent", "Takumi v${BuildConfig.VERSION_NAME} (${BuildConfig.APPLICATION_ID})")
             .build()
 
         return chain.proceed(authRequest)

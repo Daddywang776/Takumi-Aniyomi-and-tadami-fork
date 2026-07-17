@@ -65,7 +65,7 @@ internal abstract class BaseHomeHubScreenModel(
     protected fun initializeGreetingDeferred() {
         Handler(Looper.getMainLooper()).post {
             screenModelScope.launchIO {
-                logcat(LogPriority.DEBUG) { "TADAMI_PERF_LAUNCH home-greeting-real-load-started" }
+                logcat(LogPriority.DEBUG) { "Takumi_PERF_LAUNCH home-greeting-real-load-started" }
                 resolveAndSetGreeting()
             }
         }

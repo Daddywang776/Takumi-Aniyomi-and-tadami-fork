@@ -13,7 +13,7 @@
 package eu.kanade.tachiyomi.data.track.trakt
 
 import android.graphics.Color
-import com.tadami.aurora.R
+import com.Takumi.aurora.R
 import dev.icerock.moko.resources.StringResource
 import eu.kanade.tachiyomi.data.database.models.anime.AnimeTrack
 import eu.kanade.tachiyomi.data.track.AnimeTracker
@@ -45,10 +45,10 @@ class Trakt(id: Long) : BaseTracker(id, "Trakt"), AnimeTracker, DeletableAnimeTr
         const val DROPPED = 4L
         const val PLAN_TO_WATCH = 5L
 
-        // App-level credentials registered for Tadami at https://trakt.tv/oauth/applications.
+        // App-level credentials registered for Takumi at https://trakt.tv/oauth/applications.
         const val CLIENT_ID = "4a511500abc05fcb848d043e27a464b711c5c78eb26cf891001914778591ed39"
         const val CLIENT_SECRET = "3bfe7635729ef450c19cf80c1283a4a26c7d96d26d31b7eae78ed1d6dd315416"
-        const val REDIRECT_URI = "tadami://trakt-auth"
+        const val REDIRECT_URI = "Takumi://trakt-auth"
 
         private val SCORE_LIST = IntRange(0, 10)
             .map(Int::toString)

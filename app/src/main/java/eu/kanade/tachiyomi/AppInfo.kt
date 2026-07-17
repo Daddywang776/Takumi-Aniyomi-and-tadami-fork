@@ -1,6 +1,6 @@
 package eu.kanade.tachiyomi
 
-import com.tadami.aurora.BuildConfig
+import com.Takumi.aurora.BuildConfig
 import tachiyomi.core.common.util.system.ImageUtil
 
 /**

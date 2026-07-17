@@ -2,9 +2,9 @@
 
 _Last updated: 2026-06-25_
 
-The Tadami project respects intellectual property rights and **does not host or
+The Takumi project respects intellectual property rights and **does not host or
 distribute copyrighted content**. This repository contains **software source code
-only**. Tadami does not ship sources, extensions, or repositories, and does not
+only**. Takumi does not ship sources, extensions, or repositories, and does not
 host the third-party content delivered by user-added sources.
 
 ## Reporting material in this repository
@@ -31,9 +31,9 @@ disabling the identified material.
 
 ## Content delivered by user-added sources
 
-Tadami **does not host** the content delivered by third-party sources that a user
+Takumi **does not host** the content delivered by third-party sources that a user
 chooses to add. If your notice concerns such content, it should be directed to
-the operators of those sources or to their hosting providers, not to the Tadami
+the operators of those sources or to their hosting providers, not to the Takumi
 project, which has no control over them.
 
 ## Counter-notice

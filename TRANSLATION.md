@@ -1,10 +1,10 @@
-# Translating Tadami
+# Translating Takumi
 
-Thank you for your interest in translating Tadami! This guide will help you understand where to find translation files, how to use AI models to help translate them accurately, and how to submit your translations via a Pull Request (PR).
+Thank you for your interest in translating Takumi! This guide will help you understand where to find translation files, how to use AI models to help translate them accurately, and how to submit your translations via a Pull Request (PR).
 
 ## 📂 Translation Files & Structure
 
-Tadami's translation resources are stored in the `:i18n` module.
+Takumi's translation resources are stored in the `:i18n` module.
 The base language of the app is English, and all other languages inherit from it.
 
 - **Base English Resources:**
@@ -56,7 +56,7 @@ Replace the English text inside the tag with the translation for your language:
 AI models (like Claude, ChatGPT, Gemini, or DeepL) are incredibly helpful for bulk translation. Here is how to use them effectively:
 
 ### 💡 Tips for Best Results
-1. **Provide Context:** Tell the AI what the application is (Tadami, a community fork of Aniyomi, which is an Anime, Manga, and Novel reader for Android). This helps it choose the right vocabulary (e.g., translating "chapters" or "sources" correctly in context).
+1. **Provide Context:** Tell the AI what the application is (Takumi, a community fork of Aniyomi, which is an Anime, Manga, and Novel reader for Android). This helps it choose the right vocabulary (e.g., translating "chapters" or "sources" correctly in context).
 2. **Explicit Instructions:** Instruct the AI to preserve XML tags and string placeholders.
 3. **Review Output:** Always review the AI's output to ensure that slang or technical terms are translated appropriately and that placeholders weren't broken.
 
@@ -67,7 +67,7 @@ Copy and paste this prompt when asking an AI for translations:
 You are an expert translator. Translate the following English Android XML strings into [Target Language] (e.g., Russian).
 
 Context:
-- The app is "Tadami", a polished community fork of Aniyomi.
+- The app is "Takumi", a polished community fork of Aniyomi.
 - It is an Android app for reading/viewing Anime, Manga, and Light Novels (Ranobe).
 - Use a friendly, natural, and modern tone suitable for a reading application.
 
@@ -107,4 +107,4 @@ Once you have completed your translations:
    ```
 6. **Open a PR:** Go to the GitHub repository and open a Pull Request to merge your translation branch into the main repository.
 
-Thank you for making Tadami accessible to more readers around the world!
+Thank you for making Takumi accessible to more readers around the world!

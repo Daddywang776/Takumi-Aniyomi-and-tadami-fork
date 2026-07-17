@@ -62,7 +62,7 @@ class OmniBuilderScreen(val url: String) : Screen() {
             val current = state
             if (current is OmniBuilderScreenModel.State.Active) {
                 webViewRef?.evaluateJavascript(
-                    "window.TadamiPicker.setInteractionMode(${current.isInteractionMode});",
+                    "window.TakumiPicker.setInteractionMode(${current.isInteractionMode});",
                     null,
                 )
             }
@@ -111,19 +111,19 @@ class OmniBuilderScreen(val url: String) : Screen() {
                     WebView(context).apply {
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
-                        addJavascriptInterface(screenModel.bridge, "TadamiBridge")
+                        addJavascriptInterface(screenModel.bridge, "TakumiBridge")
 
                         webViewClient = object : WebViewClient() {
                             override fun onPageFinished(view: WebView, url: String) {
                                 super.onPageFinished(view, url)
                                 val js = try {
-                                    context.assets.open("TadamiPicker.js").bufferedReader().use { it.readText() }
+                                    context.assets.open("TakumiPicker.js").bufferedReader().use { it.readText() }
                                 } catch (e: Exception) {
                                     null
                                 }
                                 if (js != null) {
                                     view.evaluateJavascript(js, null)
-                                    view.evaluateJavascript("window.TadamiPicker.enable();", null)
+                                    view.evaluateJavascript("window.TakumiPicker.enable();", null)
                                 }
                                 if (screenModel.state.value is OmniBuilderScreenModel.State.Init) {
                                     screenModel.start()

@@ -1,7 +1,7 @@
-# Tadami Android Project - Codebase Index
+# Takumi Android Project - Codebase Index
 
 ## Project Overview
-**Tadami** is a fork of Aniyomi - an Android media reader application for anime, manga, and novels with a modern Aurora UI theme. Application ID: `com.tadami.aurora`, version 0.32 (code 149).
+**Takumi** is a fork of Aniyomi - an Android media reader application for anime, manga, and novels with a modern Aurora UI theme. Application ID: `com.Takumi.aurora`, version 0.32 (code 149).
 
 ## Tech Stack
 - **Language**: Kotlin with Coroutines + Flow

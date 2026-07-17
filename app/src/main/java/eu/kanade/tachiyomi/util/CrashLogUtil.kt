@@ -2,7 +2,7 @@ package eu.kanade.tachiyomi.util
 
 import android.content.Context
 import android.os.Build
-import com.tadami.aurora.BuildConfig
+import com.Takumi.aurora.BuildConfig
 import eu.kanade.tachiyomi.data.backup.BackupDiagnosticLog
 import eu.kanade.tachiyomi.extension.anime.AnimeExtensionManager
 import eu.kanade.tachiyomi.extension.manga.MangaExtensionManager
@@ -28,7 +28,7 @@ class CrashLogUtil(
 
     suspend fun dumpLogs(exception: Throwable? = null) = withNonCancellableContext {
         try {
-            val file = context.createFileInCacheDir("tadami_crash_logs.txt")
+            val file = context.createFileInCacheDir("Takumi_crash_logs.txt")
 
             file.writeText(getDebugInfo() + "\n\n")
 
@@ -42,7 +42,7 @@ class CrashLogUtil(
             getAnimeExtensionsInfo()?.let { file.appendText("$it\n\n") }
             exception?.let { file.appendText("$it\n\n") }
 
-            val logcatFile = context.createFileInCacheDir("tadami_logcat_dump.tmp")
+            val logcatFile = context.createFileInCacheDir("Takumi_logcat_dump.tmp")
             dumpLogcat(logcatFile)
 
             if (logcatFile.exists() && logcatFile.length() > 0) {

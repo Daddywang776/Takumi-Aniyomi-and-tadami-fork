@@ -221,7 +221,7 @@ class TranslationNotificationManager(
         error: String,
         chapterId: Long,
     ) = runCatching {
-        context.createFileInCacheDir("tadami_translation_error_$chapterId.txt").apply {
+        context.createFileInCacheDir("Takumi_translation_error_$chapterId.txt").apply {
             bufferedWriter().use { out ->
                 out.write("Novel translation error\n\n")
                 out.write("Chapter ID: $chapterId\n")

@@ -16,12 +16,12 @@ data class MihonBackup(
     @ProtoNumber(105) var backupSourcePreferences: List<BackupSourcePreferences> = emptyList(),
     @ProtoNumber(106) var backupExtensionRepo: List<BackupExtensionRepos> = emptyList(),
 ) {
-    fun toTadamiBackup(
+    fun toTakumiBackup(
         mangaSourceManager: MangaSourceManager,
         novelSourceManager: NovelSourceManager,
         animeSourceManager: AnimeSourceManager,
     ): Backup {
-        return toTadamiBackup(
+        return toTakumiBackup(
             mangaSourceClassifier = { sourceId ->
                 mangaSourceManager.get(sourceId) != null ||
                     mangaSourceManager.getStubSources().any { it.id == sourceId }
@@ -37,7 +37,7 @@ data class MihonBackup(
         )
     }
 
-    internal fun toTadamiBackup(
+    internal fun toTakumiBackup(
         mangaSourceClassifier: (Long) -> Boolean,
         novelSourceClassifier: (Long) -> Boolean,
         animeSourceClassifier: (Long) -> Boolean,
@@ -248,7 +248,7 @@ fun BackupManga.toBackupAnime(): BackupAnime {
  * Chapter entry as serialized by Mihon / Tachiyomi(-derived) apps.
  *
  * Identical to [BackupChapter] on fields 1..12. Mihon adds @ProtoNumber(13) as a
- * `memo` (ByteArray), whereas Tadami uses 13 for `dateUploadRaw` (String). Both are
+ * `memo` (ByteArray), whereas Takumi uses 13 for `dateUploadRaw` (String). Both are
  * length-delimited so there is no decode crash, but reading Mihon's memo bytes into
  * a String would corrupt dateUploadRaw - so field 13 is intentionally omitted here
  * and skipped by the decoder.
@@ -303,17 +303,17 @@ fun BackupChapter.toMihonBackupChapter(): MihonBackupChapter = MihonBackupChapte
 /**
  * Manga entry as serialized by Mihon / Tachiyomi(-derived) apps.
  *
- * Mihon and Tadami/Aniyomi share field numbers 1..109 but DIVERGE afterwards.
- * Decoding a Mihon backup with Tadami's [BackupManga] throws a wire-type mismatch
- * (Tadami expects `rating: Float` (fixed32) at 110 and `notes: String` at 111,
+ * Mihon and Takumi/Aniyomi share field numbers 1..109 but DIVERGE afterwards.
+ * Decoding a Mihon backup with Takumi's [BackupManga] throws a wire-type mismatch
+ * (Takumi expects `rating: Float` (fixed32) at 110 and `notes: String` at 111,
  * while Mihon stores `notes: String` at 110 and `initialized: Boolean` at 111).
  *
  * Real Mihon layout (verified against mihonapp/mihon):
- *   108 -> excludedScanlators (same as Tadami)
- *   109 -> version            (same as Tadami)
- *   110 -> notes              (Tadami: rating)
- *   111 -> initialized        (Tadami: notes)      -- omitted, skipped on decode
- *   112 -> memo               (Tadami: none)       -- omitted, skipped on decode
+ *   108 -> excludedScanlators (same as Takumi)
+ *   109 -> version            (same as Takumi)
+ *   110 -> notes              (Takumi: rating)
+ *   111 -> initialized        (Takumi: notes)      -- omitted, skipped on decode
+ *   112 -> memo               (Takumi: none)       -- omitted, skipped on decode
  */
 @Serializable
 data class MihonBackupManga(
@@ -342,7 +342,7 @@ data class MihonBackupManga(
     @ProtoNumber(109) var version: Long = 0,
     @ProtoNumber(110) var notes: String = "",
     // 111 (initialized: Boolean) and 112 (memo: ByteArray) intentionally omitted -
-    // Tadami has no equivalent; the decoder skips them.
+    // Takumi has no equivalent; the decoder skips them.
 ) {
     fun toBackupManga(): BackupManga = BackupManga(
         source = this.source,

@@ -3,8 +3,8 @@ package eu.kanade.tachiyomi.ui.download.anime
 import android.view.MenuItem
 import cafe.adriel.voyager.core.model.ScreenModel
 import cafe.adriel.voyager.core.model.screenModelScope
-import com.tadami.aurora.R
-import com.tadami.aurora.databinding.DownloadListBinding
+import com.Takumi.aurora.R
+import com.Takumi.aurora.databinding.DownloadListBinding
 import eu.kanade.tachiyomi.data.download.anime.AnimeDownloadManager
 import eu.kanade.tachiyomi.data.download.anime.model.AnimeDownload
 import kotlinx.coroutines.Job
