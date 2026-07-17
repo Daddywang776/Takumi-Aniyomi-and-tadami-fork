@@ -39,13 +39,13 @@ jobs:
 
       - name: Build app (quick)
         if: github.ref != 'refs/heads/main' && !startsWith(github.ref, 'refs/tags/')
-        run: ./gradlew assembleDebug --console=plain
+        run: ./gradlew clean assembleDebug --console=plain
 
       - name: Build app (release for main/tags)
         if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
         run: |
           set -euo pipefail
-          ./gradlew assembleDebug -Penable-updater --console=plain 2>&1 | tee build_release.log
+          ./gradlew clean assemble-updater --console=plain 2>&1 | tee build_release.log
           python3 tools/ci/report-release-warnings.py build_release.log --enforce
 
       - name: Upload APK
