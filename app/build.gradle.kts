@@ -17,8 +17,8 @@ android {
     namespace = "eu.kanade.tachiyomi"
 
     defaultConfig {
-        applicationId = "com.tadami.aurora"
-        versionCode = 189
+        applicationId = "eu.kanade.tachiyomi"
+        versionCode = 190
 
         versionName = "0.56.1"
 
